@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
     "-c", "--category", dest="c", action="store", type=str, default="all"
-)  # all, solid, fluid, flow0d, solid_flow0d, fluid_flow0d, fluid_ale_flow0d, solid_constraint, fsi, fsi_flow0d
+)  # all, solid, fluid, flow0d, solid_flow0d, fluid_flow0d, fluid_ale_flow0d, solid_constraint, fsi, fsi_flow0d, phasefield, scatra
 
 args = parser.parse_args()
 
@@ -762,6 +762,9 @@ if category == "phasefield" or category == "all":
     errs["test_phasefield_cahnhilliard_square 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_phasefield_cahnhilliard_square.py"])
     errs["test_phasefield_cahnhilliard_square 2 restart"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_phasefield_cahnhilliard_square.py", str(3)])
 
+if category == "scatra" or category == "all":
+    errs["test_scatra 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_scatra.py"])
+    errs["test_scatra 2 restart"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_scatra.py", str(8)])
 
 err = 0
 for e in range(len(errs)):

@@ -1321,7 +1321,7 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi"],
                     funcs_to_update=self.ti.funcs_to_update,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update,
-                    return_type="force",
+                    return_type="strong",
                 ))
                 f_body_old.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
@@ -1331,7 +1331,7 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi_old"],
                     funcs_to_update=self.ti.funcs_to_update_old,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-                    return_type="force",
+                    return_type="strong",
                 ))
                 f_body_mid.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
@@ -1341,7 +1341,7 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi_mid"],
                     funcs_to_update=self.ti.funcs_to_update_mid,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-                    return_type="force",
+                    return_type="strong",
                 ))
             else:
                 f_body.append(ufl.constantvalue.zero(self.dim))

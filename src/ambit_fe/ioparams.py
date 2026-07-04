@@ -171,6 +171,14 @@ def check_params_fem_phasefield(params):
             raise RuntimeError("Unknown parameter found in phase field / Cahn-Hilliard FEM params: " + k)
 
 
+def check_params_fem_scatra(params):
+    valid_params = ["order_conc", "quad_degree"]
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in scalar transport FEM params: " + k)
+
+
 def check_params_fem_electrophysiology(params):
     valid_params = ["order_phi", "quad_degree"]
 

@@ -728,6 +728,36 @@ class Ambit:
             self.mp.set_variational_forms()
             self.ms = phasefield_main.PhasefieldSolver(self.mp, solver_params)
 
+        elif problem_type == "scatra":
+            from .scatra import scatra_main
+
+            io = ioroutines.IO_scatra(io_params, [constitutive_params], self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
+            io.set_mesh_fields(io.mesh)
+            io.m_id_scatra = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
+
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
+
+            self.mp = scatra_main.ScatraProblem(
+                pbase,
+                io_params,
+                time_params,
+                fem_params,
+                constitutive_params,
+                boundary_conditions,
+                time_curves,
+                io,
+                mor_params=mor_params,
+            )
+            self.mp.set_variational_forms()
+            self.ms = scatra_main.ScatraSolver(self.mp, solver_params)
+
         elif problem_type == "electrophysiology":
             raise RuntimeError("Electrophysiology not yet fully implemented!")
 

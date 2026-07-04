@@ -27,7 +27,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
         # list entries of mats which do not return a flux/driving force
-        self.mat_void = ["id"]
+        self.mat_void = ["id", "source"]
 
         self.phi_range = phi_range
 

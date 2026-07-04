@@ -54,6 +54,18 @@ class variationalform(variationalform_base):
     def weakform_robin_flux(self, phi, c1, phi0, dboundary, F=None):
         return (c1 * (phi - phi0) * self.var_phi) * dboundary
 
+    def weakform_advective_influx(self, phi, c1, phi0, dboundary, v=None, w=None, F=None):
+        vn = ufl.dot(v, self.n0)
+        return (c1 * ufl.max_value(-vn, 0.0) * (phi - phi0) * self.var_phi) * dboundary
+
+    def source_term_phi(self, func, phi_prod, ddomain, F=None, phi=None, return_type="weak"):
+        source = func * 0.5*(phi_prod - phi)
+        if return_type=="weak":
+            return ufl.dot(source, self.tstfnc1) * ddomain
+        elif return_type=="strong":
+            return source
+        else:
+            raise ValueError("Unknown return type.")
 
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)
@@ -99,3 +111,18 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
         return (c1 * (phi - phi0) * self.var_phi) * ja*dboundary
+
+    def weakform_advective_influx(self, phi, c1, phi0, dboundary, v=None, w=None, F=None):
+        J = ufl.det(F)
+        vwn = ufl.dot(v - w, J * ufl.inv(F).T * self.n0)
+        return (c1 * ufl.max_value(-vwn, 0.0) * (phi - phi0) * self.var_phi) * dboundary
+
+    def source_term_phi(self, func, phi_prod, ddomain, F=None, phi=None, return_type="weak"):
+        J = ufl.det(F)
+        source = J * func * 0.5*(phi_prod - phi)
+        if return_type=="weak":
+            return ufl.dot(source, self.tstfnc1) * ddomain
+        elif return_type=="strong":
+            return source
+        else:
+            raise ValueError("Unknown return type.")

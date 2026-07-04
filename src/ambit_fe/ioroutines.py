@@ -2123,6 +2123,171 @@ class IO_phasefield(IO):
                 raise ValueError("Unknown restart_io_type!")
 
 
+
+class IO_scatra(IO):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+        if self.indicate_results_by == "time":
+            indicator = t
+        elif self.indicate_results_by == "step":
+            indicator = N
+        elif self.indicate_results_by == "step0":
+            if self.write_results_every > 0:
+                indicator = int(N / self.write_results_every) - 1
+            else:
+                indicator = 0
+        else:
+            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
+
+        if writemesh:
+            if self.write_results_every > 0:
+                for res in pb.results_to_write:
+                    if res not in self.results_pre:
+                        outfile = io.XDMFFile(
+                            self.comm,
+                            self.output_path
+                            + "/results_"
+                            + pb.pbase.simname
+                            + "_"
+                            + pb.problem_physics
+                            + "_"
+                            + res
+                            + ".xdmf",
+                            "w",
+                        )
+                        outfile.write_mesh(pb.mesh)
+                        pb.resultsfiles[res] = outfile
+
+            return
+
+        else:
+            # write results every write_results_every steps
+            if self.write_results_every > 0 and N % self.write_results_every == 0:
+                # save solution to XDMF format
+                for res in pb.results_to_write:
+                    if res == "concentration":
+                        # if self.output_midpoint:
+                        #     c_proj = project(
+                        #         pb.phi_mid,
+                        #         pb.V_phi,
+                        #         pb.dx,
+                        #         domids=pb.domain_ids,
+                        #         nm="PhaseField",
+                        #         comm=self.comm,
+                        #         entity_maps=self.entity_maps,
+                        #     )
+                        #     c_out = fem.Function(pb.V_out_scalar, name=phi_proj.name)
+                        #     c_out.interpolate(phi_proj)
+                        # else:
+                        for i in range(pb.num_species):
+                            c_out = fem.Function(pb.V_out_scalar, name=pb.c[i].name)
+                            c_out.interpolate(pb.c[i])
+                            pb.resultsfiles[res].write_function(c_out, indicator)
+                    elif res == "counters":
+                        # iteration counters, written by base class
+                        pass
+                    else:
+                        raise NameError("Unknown output to write for scalar transport problem!")
+
+    def readcheckpoint(self, pb, N_rest):
+        vecs_to_read = {}
+        for i in range(pb.num_species):
+            vecs_to_read[pb.c[i]] = "c" + str(i+1)
+            vecs_to_read[pb.c_old[i]] = "c_old" + str(i+1)
+            vecs_to_read[pb.c_veryold[i]] = "c_veryold" + str(i+1)  # for BDF2 scheme
+            vecs_to_read[pb.cdot_old[i]] = "cdot_old" + str(i+1)
+
+        for key in vecs_to_read:
+            if self.restart_io_type == "petscvector":
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_read[key]
+                    + "_"
+                    + str(N_rest)
+                    + "_"
+                    + str(self.comm.size)
+                    + "proc.dat",
+                    "r",
+                    self.comm,
+                )
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                viewer.destroy()
+            elif self.restart_io_type == "plaintext":  # only working for nodal fields!
+                self.readfunction(
+                    key,
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_read[key]
+                    + "_"
+                    + str(N_rest)
+                    + ".txt",
+                    filetype='plaintext',
+                )
+            else:
+                raise ValueError("Unknown restart_io_type!")
+
+    def writecheckpoint(self, pb, N):
+        vecs_to_write = {}
+        for i in range(pb.num_species):
+            vecs_to_write[pb.c[i]] = "c" + str(i+1)
+            vecs_to_write[pb.c_old[i]] = "c_old" + str(i+1)
+            vecs_to_write[pb.c_veryold[i]] = "c_veryold" + str(i+1)
+            vecs_to_write[pb.cdot_old[i]] = "cdot_old" + str(i+1)
+
+        for key in vecs_to_write:
+            if self.restart_io_type == "petscvector":
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_write[key]
+                    + "_"
+                    + str(N)
+                    + "_"
+                    + str(self.comm.size)
+                    + "proc.dat",
+                    "w",
+                    self.comm,
+                )
+                key.x.petsc_vec.view(viewer)
+                viewer.destroy()
+            elif self.restart_io_type == "plaintext":  # only working for nodal fields!
+                self.writefunction(
+                    key,
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_write[key]
+                    + "_"
+                    + str(N),
+                    filetype='plaintext',
+                )
+            else:
+                raise ValueError("Unknown restart_io_type!")
+
+
 class IO_fluid_ale(IO_fluid, IO_ale):
     def write_output(self, pb, writemesh=False, N=1, t=0):
         IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)

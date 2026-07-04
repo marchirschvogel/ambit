@@ -77,7 +77,7 @@ class variationalform_base:
 
     # body force external virtual work
     # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V
-    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, chi=None, scale_dens=False, return_type="work"):
+    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, chi=None, scale_dens=False, return_type="weak"):
         if scale_dens:
             fac = self.get_density(rho, chi=chi)
         else:
@@ -87,9 +87,9 @@ class variationalform_base:
             bodyforce = fac * J * func * funcdir  # for ALE fluid
         else:
             bodyforce = fac * func * funcdir
-        if return_type=="work":
+        if return_type=="weak":
             return ufl.dot(bodyforce, self.tstfnc1) * ddomain
-        elif return_type=="force":
+        elif return_type=="strong":
             return bodyforce
         else:
             raise ValueError("Unknown return type.")

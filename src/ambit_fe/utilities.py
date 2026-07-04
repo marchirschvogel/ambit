@@ -45,6 +45,12 @@ def print_problem(ptype, sname, comm, numdof):
             comm,
         )
 
+    elif ptype == "scatra":
+        print_status(
+            "############################# Welcome to scalar transport #############################",
+            comm,
+        )
+
     elif ptype == "fluid_ale":
         print_status(
             "#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###",

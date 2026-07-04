@@ -427,6 +427,10 @@ class sol_utils:
             )
             v1, v2 = "phi", "mu"
             numres = 2
+        elif ptype == "scatra":
+            eq1 = "concentration"
+            v1 = "c"
+            numres = 1
         else:
             raise NameError("Unknown problem type!")
 

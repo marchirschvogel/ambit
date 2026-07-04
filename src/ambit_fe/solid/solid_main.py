@@ -97,6 +97,9 @@ class SolidmechanicsProblem(problem_base):
         else:
             raise ValueError("Unknown setting for 'incompressibility'. Choose 'no', 'full', or 'nearly'.")
 
+        self.has_diffusion = False
+        self.is_poroelastic = False
+
         self.fem_params = fem_params
 
         # collect domain data

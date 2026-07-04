@@ -1041,6 +1041,83 @@ class timeintegration_phasefield(timeintegration_fluid):
         return timefac_m, timefac
 
 
+
+class timeintegration_scatra(timeintegration_fluid):
+    def __init__(
+        self,
+        time_params,
+        dt,
+        Nmax,
+        time_curves=None,
+        t_init=0.0,
+        dim=3,
+        comm=None,
+    ):
+        timeintegration.__init__(
+            self,
+            time_params,
+            dt,
+            Nmax,
+            time_curves=time_curves,
+            t_init=t_init,
+            dim=dim,
+            comm=comm,
+        )
+
+        if self.timint == "ost":
+            self.theta_ost = time_params["theta_ost"]
+            if np.isclose(self.theta_ost,1.0): # Backward-Euler
+                self.res_eval = "back"
+
+        self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
+
+    def update_timestep(self, c, c_old, c_veryold, cdot, cdot_old):
+        # update old fields with new quantities
+        self.update_fields(c, c_old, c_veryold, cdot, cdot_old)
+        # update old time-dependent load curves
+        self.update_time_funcs_old()
+
+    def set_cdot(self, c, c_old, c_veryold, cdot_old):
+        return self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold, uflform=True)
+
+    def update_fields(self, c, c_old, c_veryold, cdot, cdot_old):
+        # use update functions using vector arguments
+        self.update_dvar(
+            c.x.petsc_vec,
+            c_old.x.petsc_vec,
+            cdot_old.x.petsc_vec,
+            self.dt,
+            var_veryold=c_veryold.x.petsc_vec,
+            dvarout=cdot.x.petsc_vec,
+            uflform=False,
+        )
+
+        self.update_cdot_c_old(cdot_old, c_veryold, c_old, cdot, c)
+
+    def update_cdot_c_old(self, cdot_old, c_veryold, c_old, cdot, c):
+        # update time derivative of phase field: cdot_old <- cdot
+        cdot_old.x.petsc_vec.axpby(1.0, 0.0, cdot.x.petsc_vec)
+        cdot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update phase field: c_veryold <- c_old
+        c_veryold.x.petsc_vec.axpby(1.0, 0.0, c_old.x.petsc_vec)
+        c_veryold.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update phase field: c_old <- c
+        c_old.x.petsc_vec.axpby(1.0, 0.0, c.x.petsc_vec)
+        c_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+    def timefactors(self):
+        if self.timint == "ost":
+            timefac_m, timefac = self.theta_ost, self.theta_ost
+        elif self.timint == "bdf2":
+            timefac_m, timefac = 1.0, 1.0
+        else:
+            raise NameError("Unknown time-integration scheme.")
+
+        return timefac_m, timefac
+
+
 # Flow0d time integration class
 class timeintegration_flow0d(timeintegration):
     # initialize base class

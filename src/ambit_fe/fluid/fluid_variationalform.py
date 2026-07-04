@@ -274,14 +274,14 @@ class variationalform(variationalform_base):
             return (ufl.dot(n0, v))(fcts) * dboundary
 
     # capillary force in multiphase flow
-    def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):
+    def capillary_force(self, phi, mu, ddomain, F=None, return_type="weak"):
         """ TeX:
         \int\limits_{\mathit{\Omega}}\phi\nabla\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
         return ufl.dot(phi * ufl.grad(mu), self.var_v) * ddomain
 
     # Generalized form of Korteweg stress in multiphase flow
-    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="work"):
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="weak"):
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\kappa\nabla\phi\otimes\nabla\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\nabla\phi\cdot\nabla\phi\right)\boldsymbol{I}\right) : \nabla\delta\boldsymbol{v}\,\mathrm{d}V
         """
@@ -606,7 +606,7 @@ class variationalform_ale(variationalform):
             return (J * ufl.dot(ufl.inv(F).T * n0, (v - w)))(fcts) * dboundary
 
     # capillary force in multiphase flow
-    def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):
+    def capillary_force(self, phi, mu, ddomain, F=None, return_type="weak"):
         """ TeX:
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\phi\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
@@ -614,7 +614,7 @@ class variationalform_ale(variationalform):
         return J * ufl.dot(phi * ufl.inv(F).T*ufl.grad(mu), self.var_v) * ddomain
 
     # Generalized form of Korteweg stress in multiphase flow
-    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="work"):
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="weak"):
         """ TeX:
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\left(\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\otimes\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\cdot\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\right)\boldsymbol{I}\right)\widehat{\boldsymbol{F}}^{-\mathrm{T}} : \nabla_0\delta\boldsymbol{v}\,\mathrm{d}V
         """

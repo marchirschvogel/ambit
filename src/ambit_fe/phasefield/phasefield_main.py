@@ -276,6 +276,7 @@ class PhasefieldProblem(problem_base):
         # Neumann or Robin BCs "grad mu n" are diffusive flux BCs and enter the phase field residual - denoted by suffix "flux"
         self.have_neumann_wetting, self.have_neumann_flux = False, False
         self.have_robin_wetting, self.have_robin_flux = False, False
+        self.have_source_phi = False
 
         w_neumann_wetting, w_robin_wetting = ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_wetting_old, w_robin_wetting_old = ufl.as_ufl(0), ufl.as_ufl(0)
@@ -287,7 +288,7 @@ class PhasefieldProblem(problem_base):
 
         if "neumann_wetting" in self.bc_dict.keys():
             self.have_neumann_wetting = True
-            w_neumann_wetting = self.bc.neumann_bcs(
+            w_neumann_wetting += self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
                 F=self.alevar["Fale"],
@@ -295,7 +296,7 @@ class PhasefieldProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
                 bspec="wetting",
             )
-            w_neumann_wetting_old = self.bc.neumann_bcs(
+            w_neumann_wetting_old += self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
                 F=self.alevar["Fale_old"],
@@ -303,7 +304,7 @@ class PhasefieldProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
                 bspec="wetting",
             )
-            w_neumann_wetting_mid = self.bc.neumann_bcs(
+            w_neumann_wetting_mid += self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
                 F=self.alevar["Fale_mid"],
@@ -313,7 +314,7 @@ class PhasefieldProblem(problem_base):
             )
         if "neumann_flux" in self.bc_dict.keys():
             self.have_neumann_flux = True
-            w_neumann_flux = self.bc.neumann_bcs(
+            w_neumann_flux += self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
                 F=self.alevar["Fale"],
@@ -321,7 +322,7 @@ class PhasefieldProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
                 bspec="flux",
             )
-            w_neumann_flux_old = self.bc.neumann_bcs(
+            w_neumann_flux_old += self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
                 F=self.alevar["Fale_old"],
@@ -329,7 +330,7 @@ class PhasefieldProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
                 bspec="flux",
             )
-            w_neumann_flux_mid = self.bc.neumann_bcs(
+            w_neumann_flux_mid += self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
                 F=self.alevar["Fale_mid"],
@@ -339,59 +340,145 @@ class PhasefieldProblem(problem_base):
             )
         if "robin_wetting" in self.bc_dict.keys():
             self.have_robin_wetting = True
-            w_robin_wetting = self.bc.robin_bcs(
+            w_robin_wetting += self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
                 v=self.fluidvar["v"],
+                w=self.alevar["w"],
                 F=self.alevar["Fale"],
                 bspec="wetting",
             )
-            w_robin_wetting_old = self.bc.robin_bcs(
+            w_robin_wetting_old += self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
                 v=self.fluidvar["v_old"],
+                w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
                 bspec="wetting",
             )
-            w_robin_wetting_mid = self.bc.robin_bcs(
+            w_robin_wetting_mid += self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
                 v=self.fluidvar["v_mid"],
+                w=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
                 bspec="wetting",
             )
         if "robin_flux" in self.bc_dict.keys():
             self.have_robin_flux = True
-            w_robin_flux = self.bc.robin_bcs(
+            w_robin_flux += self.bc.robin_bcs(
                 self.bc_dict["robin_flux"],
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
+                v=self.fluidvar["v"],
+                w=self.alevar["w"],
                 F=self.alevar["Fale"],
                 bspec="flux",
             )
-            w_robin_flux_old = self.bc.robin_bcs(
+            w_robin_flux_old += self.bc.robin_bcs(
                 self.bc_dict["robin_flux"],
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
+                v=self.fluidvar["v_old"],
+                w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
                 bspec="flux",
             )
-            w_robin_flux_mid = self.bc.robin_bcs(
+            w_robin_flux_mid += self.bc.robin_bcs(
                 self.bc_dict["robin_flux"],
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
+                v=self.fluidvar["v_mid"],
+                w=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
                 bspec="flux",
             )
+        if "advective_influx" in self.bc_dict.keys():
+            self.have_robin_flux = True
+            w_robin_flux += self.bc.robin_bcs(
+                self.bc_dict["advective_influx"],
+                self.phi,
+                self.phidot_expr,
+                self.bmeasures,
+                v=self.fluidvar["v"],
+                w=self.alevar["w"],
+                F=self.alevar["Fale"],
+                bspec="flux",
+            )
+            w_robin_flux_old += self.bc.robin_bcs(
+                self.bc_dict["advective_influx"],
+                self.phi_old,
+                self.phidot_old,
+                self.bmeasures,
+                v=self.fluidvar["v_old"],
+                w=self.alevar["w_old"],
+                F=self.alevar["Fale_old"],
+                bspec="flux",
+            )
+            w_robin_flux_mid += self.bc.robin_bcs(
+                self.bc_dict["advective_influx"],
+                self.phi_mid,
+                self.phidot_mid,
+                self.bmeasures,
+                v=self.fluidvar["v_mid"],
+                w=self.alevar["w_mid"],
+                F=self.alevar["Fale_mid"],
+                bspec="flux",
+            )
+
+        # now take care of source terms - collect sources, later multiply with test function and integrate over domain (might be beneficial if we need the strong residual expression at some point...)
+        f_source, f_source_old, f_source_mid = [], [], []
+        for n, M in enumerate(self.domain_ids):
+            if "source" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                self.have_source_phi = True
+                f_source.append(self.bc.source(
+                    self.constitutive_models["MAT" + str(n + 1)]["source"],
+                    self.dx(M),
+                    F=self.alevar["Fale"],
+                    phi=self.phi,
+                    funcs_to_update=self.ti.funcs_to_update,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update,
+                    return_type="strong",
+                ))
+                f_source_old.append(self.bc.source(
+                    self.constitutive_models["MAT" + str(n + 1)]["source"],
+                    self.dx(M),
+                    F=self.alevar["Fale_old"],
+                    phi=self.phi_old,
+                    funcs_to_update=self.ti.funcs_to_update_old,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+                    return_type="strong",
+                ))
+                f_source_mid.append(self.bc.source(
+                    self.constitutive_models["MAT" + str(n + 1)]["source"],
+                    self.dx(M),
+                    F=self.alevar["Fale_mid"],
+                    phi=self.phi_mid,
+                    funcs_to_update=self.ti.funcs_to_update_mid,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+                    return_type="strong",
+                ))
+            else:
+                f_source.append(ufl.as_ufl(0))
+                f_source_old.append(ufl.as_ufl(0))
+                f_source_mid.append(ufl.as_ufl(0))
+
+        w_source, w_source_old, w_source_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        # now calculate body force virtual work
+        for n, M in enumerate(self.domain_ids):
+            if "source" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                w_source += ufl.dot(f_source[n], self.var_phi) * self.dx(M)
+                w_source_old += ufl.dot(f_source_old[n], self.var_phi) * self.dx(M)
+                w_source_mid += ufl.dot(f_source_mid[n], self.var_phi) * self.dx(M)
 
         if self.ti.res_eval == "trap":
             # phase field residual
@@ -401,6 +488,8 @@ class PhasefieldProblem(problem_base):
                 self.weakform_phi += -(self.timefac * w_neumann_flux + (1.-self.timefac) * w_neumann_flux_old)
             if self.have_robin_flux:
                 self.weakform_phi += (self.timefac * w_robin_flux + (1.-self.timefac) * w_robin_flux_old)
+            if self.have_source_phi:
+                self.weakform_phi += -(self.timefac * w_source + (1.-self.timefac) * w_source_old)
             # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
@@ -421,6 +510,8 @@ class PhasefieldProblem(problem_base):
                 self.weakform_phi += -w_neumann_flux_mid
             if self.have_robin_flux:
                 self.weakform_phi += w_robin_flux_mid
+            if self.have_source_phi:
+                self.weakform_phi += -w_source_mid
             # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
@@ -441,6 +532,8 @@ class PhasefieldProblem(problem_base):
                 self.weakform_phi += -w_neumann_flux
             if self.have_robin_flux:
                 self.weakform_phi += w_robin_flux
+            if self.have_source_phi:
+                self.weakform_phi += -w_source
             # chemical potential residual
             self.weakform_mu = self.potential
             if self.have_neumann_wetting:

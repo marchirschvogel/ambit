@@ -682,7 +682,7 @@ class boundary_cond:
         return w, idmem, bstress, bstrainenergy, bintpower
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, mdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="work"):
+    def bodyforce(self, mdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="weak"):
         func, func_dir = (
             fem.Function(self.Vdisc_scalar),
             fem.Function(self.V_field),
@@ -1053,7 +1053,7 @@ class boundary_cond_phasefield(boundary_cond):
         return w
 
     # set Robin BCs
-    def robin_bcs(self, bcdict, phi, phidot, ds_, v=None, F=None, bspec="wetting"):
+    def robin_bcs(self, bcdict, phi, phidot, ds_, v=None, w=None, F=None, bspec="wetting"):
         w = ufl.as_ufl(0)
 
         for b in bcdict:
@@ -1080,7 +1080,100 @@ class boundary_cond_phasefield(boundary_cond):
                 for i in range(len(b[ID])):
                     w += self.pb.vf.weakform_robin_flux(phi, c1_, b["phi0"], ds_[dind](b[ID][i]), F=F)
 
+            elif bspec == "advective_influx":
+                for i in range(len(b[ID])):
+                    w += self.pb.vf.weakform_advective_influx(phi, c1_, b["phi0"], ds_[dind](b[ID][i]), v=v, w=w, F=F)
+
             else:
                 raise NameError("Unknown type option for Robin wetting BC!")
+
+        return w
+
+    # set source tems (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
+    def source(self, mdict, dx_, F=None, phi=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="weak"):
+        func = fem.Function(self.Vdisc_scalar)
+
+        if "curve" in mdict.keys():
+            assert "val" not in mdict.keys() and "expression" not in mdict.keys()
+            load = expression.template()
+            load.val = self.pb.ti.timecurves(mdict["curve"])(self.pb.ti.t_init)
+            func.interpolate(load.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
+            funcs_to_update.append({func: self.pb.ti.timecurves(mdict["curve"])})
+        elif "val" in mdict.keys():
+            assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
+            func.x.petsc_vec.set(mdict["val"])
+        elif "expression" in mdict.keys():
+            assert "curve" not in mdict.keys() and "val" not in mdict.keys()
+            expr = mdict["expression"]()
+            expr.t = self.pb.ti.t_init
+            func.interpolate(expr.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
+            funcsexpr_to_update[func] = expr
+        else:
+            raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+
+        # which phase the source should produce
+        phi_prod = mdict.get("phi_prod", 1.0)
+
+        return self.pb.vf.source_term_phi(func, phi_prod, dx_, F=F, phi=phi, return_type=return_type)
+
+
+
+class boundary_cond_scatra(boundary_cond):
+    # set Neumann BCs
+    def neumann_bcs(
+        self,
+        bcdict,
+        ds_,
+        F=None,
+        funcs_to_update=None,
+        funcsexpr_to_update=None,
+    ):
+        w = ufl.as_ufl(0)
+
+        for n in bcdict:
+            codim = n.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            ID, dind = "id", 0
+            if "is_locator" in n.keys(): dind=2
+            if "id_loc" in n.keys(): ID="id_loc"
+
+            func = fem.Function(self.V_field)
+
+            if "curve" in n.keys():
+                assert "val" not in n.keys() and "expression" not in n.keys()
+                load = expression.template()
+                load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                func.interpolate(load.evaluate)
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+            elif "val" in n.keys():
+                assert "curve" not in n.keys() and "expression" not in n.keys()
+                func.x.petsc_vec.set(n["val"])
+            elif "expression" in n.keys():
+                assert "curve" not in n.keys() and "val" not in n.keys()
+                expr = n["expression"]()
+                expr.t = self.pb.ti.t_init
+                func.interpolate(expr.evaluate)
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                funcsexpr_to_update[func] = expr
+            else:
+                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+
+            for i in range(len(n[ID])):
+                w += self.pb.vf[0].weakform_neumann(func, ds_[dind](n[ID][i]), F=F)
 
         return w
