@@ -636,12 +636,21 @@ class IO_solid(IO):
                         self.a_out.interpolate(fem.Expression(acc, pb.V_out_vector.element.interpolation_points))
                         pb.resultsfiles[res].write_function(self.a_out, indicator)
                     elif res == "pressure":
-                        p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
-                        if self.output_midpoint:
-                            p_out.interpolate(fem.Expression(pb.ps_mid, pb.V_out_scalar.element.interpolation_points))
-                        else:
-                            p_out.interpolate(pb.p)
-                        pb.resultsfiles[res].write_function(p_out, indicator)
+                        if pb.p is not None:
+                            p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
+                            if self.output_midpoint:
+                                p_out.interpolate(fem.Expression(pb.ps_mid, pb.V_out_scalar.element.interpolation_points))
+                            else:
+                                p_out.interpolate(pb.p)
+                            pb.resultsfiles[res].write_function(p_out, indicator)
+                    elif res == "porepressure":
+                        if pb.pporo is not None:
+                            pp_out = fem.Function(pb.V_out_scalar, name=pb.pporo.name)
+                            if self.output_midpoint:
+                                pp_out.interpolate(fem.Expression(pb.pporo_mid, pb.V_out_scalar.element.interpolation_points))
+                            else:
+                                pp_out.interpolate(pb.pporo)
+                            pb.resultsfiles[res].write_function(pp_out, indicator)
                     elif res == "cauchystress":
                         if self.output_midpoint:
                             u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
@@ -1153,6 +1162,8 @@ class IO_solid(IO):
         vecs_to_read[pb.u] = "u"
         if pb.incompressible_2field:
             vecs_to_read[pb.p] = "p"
+        if pb.is_poroelastic:
+            vecs_to_read[pb.pporo] = "pporo"
         if pb.have_growth:
             vecs_to_read[pb.theta] = "theta"
             vecs_to_read[pb.theta_old] = "theta"
@@ -1170,6 +1181,8 @@ class IO_solid(IO):
             vecs_to_read[pb.a_old] = "a_old"
             if pb.incompressible_2field:
                 vecs_to_read[pb.p_old] = "p"
+            if pb.is_poroelastic:
+                vecs_to_read[pb.pporo_old] = "pporo"
 
         if pb.pbase.problem_type == "solid_flow0d_multiscale_gandr":
             vecs_to_read[pb.u_set] = "u_set"
@@ -1230,6 +1243,8 @@ class IO_solid(IO):
         vecs_to_write[pb.u] = "u"
         if pb.incompressible_2field:
             vecs_to_write[pb.p] = "p"
+        if pb.is_poroelastic:
+            vecs_to_write[pb.pporo] = "pporo"
         if pb.have_growth:
             vecs_to_write[pb.theta] = "theta"
         if any(pb.mat_active_stress):

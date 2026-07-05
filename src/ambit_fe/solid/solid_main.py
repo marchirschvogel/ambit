@@ -104,8 +104,9 @@ class SolidmechanicsProblem(problem_base):
         if self.incompressible_2field:
             self.offs += 1
 
+        self.is_poroelastic = fem_params.get("poroelasticity", False)
+
         self.has_diffusion = False
-        self.is_poroelastic = False
 
         if self.is_poroelastic:
             self.offs += 1
@@ -368,7 +369,6 @@ class SolidmechanicsProblem(problem_base):
             time_params,
             self.pbase.dt,
             self.pbase.numstep,
-            incompr=self.incompressible_2field,
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,
@@ -662,10 +662,13 @@ class SolidmechanicsProblem(problem_base):
         )
         self.bc_dict = bc_dict
         self.dbcs = []
+        self.dbcs_poro = []
 
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
+        if "dirichlet_poro" in self.bc_dict.keys(): # for pore pressure
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet_poro"], self.dbcs_poro, V_dbc=self.V_pporo)
 
         # number of fields involved
         self.nfields = 1
@@ -704,7 +707,7 @@ class SolidmechanicsProblem(problem_base):
             vlist_.append(self.p.x.petsc_vec)
         if self.is_poroelastic:
             is_ghosted.append(1)
-            vlist_.append(self.pporos.x.petsc_vec)
+            vlist_.append(self.pporo.x.petsc_vec)
         return vlist_, is_ghosted
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
@@ -821,9 +824,9 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_p_old += self.vf.deltaW_int_pres_nearly(J_old, self.p_old, self.bulkmod, self.dx(M))
                 self.deltaW_p_mid += self.vf.deltaW_int_pres_nearly(J_mid, self.ps_mid, self.bulkmod, self.dx(M))
             if self.is_poroelastic:
-                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma[n].Q(self.pporo), self.dx(M))
-                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma[n].Q(self.pporo_old), self.dx(M))
-                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma[n].Q(self.pporo_mid), self.dx(M))
+                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma[n].Q(self.u, self.pporo), self.dx(M))
+                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma[n].Q(self.u_old, self.pporo_old), self.dx(M))
+                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma[n].Q(self.us_mid, self.pporo_mid), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = (
@@ -1426,16 +1429,19 @@ class SolidmechanicsProblem(problem_base):
                     if self.incompressibility == "nearly":
                         self.weakform_lin_pp += self.vf.Lin_deltaW_int_pres_nearly_dp(self.bulkmod, self.dx(M))
 
-                    if self.is_poroelastic:
-                        self.weakform_lin_pporopporo += ufl.derivative(self.weakform_pporo, self.pporo, self.dpporo)
-                        self.weakform_lin_pporou += ufl.derivative(self.weakform_pporo, self.u, self.du)
-                        self.weakform_lin_upporp += ufl.derivative(self.weakform_u, self.pporo, self.dpporo)
-
                 else:
-                    assert(not self.is_poroelastic)
-                    self.weakform_lin_pp += ufl.derivative(self.weakform_p, self.p, self.dp)
-                    self.weakform_lin_pu += ufl.derivative(self.weakform_p, self.u, self.du)
-                    self.weakform_lin_up += ufl.derivative(self.weakform_u, self.p, self.dp)
+                    pass  # inverse mechanics: derivative computed outside of domain loop
+
+            if self.inverse_mechanics:  # outside of domain loop - we have all domain contributions at this stage for derivative
+                assert(not self.is_poroelastic)
+                self.weakform_lin_pp = ufl.derivative(self.weakform_p, self.p, self.dp)
+                self.weakform_lin_pu = ufl.derivative(self.weakform_p, self.u, self.du)
+                self.weakform_lin_up = ufl.derivative(self.weakform_u, self.p, self.dp)
+
+        if self.is_poroelastic:
+            self.weakform_lin_pporopporo = ufl.derivative(self.weakform_pporo, self.pporo, self.dpporo)
+            self.weakform_lin_pporou = ufl.derivative(self.weakform_pporo, self.u, self.du)
+            self.weakform_lin_upporo = ufl.derivative(self.weakform_u, self.pporo, self.dpporo)
 
         if self.prestress_initial or self.prestress_initial_only:
             assert(not self.is_poroelastic)
@@ -1712,9 +1718,9 @@ class SolidmechanicsProblem(problem_base):
 
             self.K_upporo = fem.petsc.assemble_matrix(self.jac_upporo, self.dbcs)
             self.K_upporo.assemble()
-            self.K_pporou = fem.petsc.assemble_matrix(self.jac_pporou, [])
+            self.K_pporou = fem.petsc.assemble_matrix(self.jac_pporou, self.dbcs_poro)
             self.K_pporou.assemble()
-            self.K_pporopporo = fem.petsc.assemble_matrix(self.jac_pporopporo, [])
+            self.K_pporopporo = fem.petsc.assemble_matrix(self.jac_pporopporo, self.dbcs_poro)
             self.K_pporopporo.assemble()
 
         te = time.time() - ts
@@ -1751,7 +1757,15 @@ class SolidmechanicsProblem(problem_base):
             with self.r_pporo.localForm() as r_local:
                 r_local.set(0.0)
             fem.petsc.assemble_vector(self.r_pporo, self.res_pporo)
+            fem.apply_lifting(
+                self.r_pporo,
+                [self.jac_pporopporo],
+                [self.dbcs_poro],
+                x0=[self.pporo.x.petsc_vec],
+                alpha=-1.0,
+            )
             self.r_pporo.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(self.r_pporo, self.dbcs_poro, x0=self.pporo.x.petsc_vec, alpha=-1.0)
 
             self.r_list[self.offs] = self.r_pporo
 
@@ -1792,11 +1806,11 @@ class SolidmechanicsProblem(problem_base):
             self.K_upporo.assemble()
 
             self.K_pporou.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pporou, self.jac_pporou, [])  # currently, we do not consider pressure DBCs
+            fem.petsc.assemble_matrix(self.K_pporou, self.jac_pporou, self.dbcs_poro)
             self.K_pporou.assemble()
 
             self.K_pporopporo.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pporopporo, self.jac_pporopporo, [])
+            fem.petsc.assemble_matrix(self.K_pporopporo, self.jac_pporopporo, self.dbcs_poro)
             self.K_pporopporo.assemble()
 
             self.K_list[0][self.offs] = self.K_upporo
@@ -1912,6 +1926,8 @@ class SolidmechanicsProblem(problem_base):
             self.a_old,
             self.p,
             self.p_old,
+            self.pporo,
+            self.pporo_old,
             self.internalvars,
             self.internalvars_old,
         )

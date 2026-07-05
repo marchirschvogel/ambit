@@ -66,7 +66,7 @@ class variationalform(variationalform_base):
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
         J = ufl.det(F)
         Jdot = J * ufl.inner(ufl.inv(F).T, Fdot)
-        return ( Jdot * self.var_pporo + ufl.dot(Q, ufl.grad(self.var_ppor)) ) * ddomain
+        return ( Jdot * self.var_pporo - ufl.dot(Q, ufl.grad(self.var_pporo)) ) * ddomain
 
     # linearization of internal virtual work
     # we could use ufl to compute the derivative directly via ufl.derivative(...), however then, no material tangents from nonlinear consitutive laws

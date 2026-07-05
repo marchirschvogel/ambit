@@ -481,7 +481,6 @@ class timeintegration_solid(timeintegration):
         time_params,
         dt,
         Nmax,
-        incompr=False,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -514,8 +513,6 @@ class timeintegration_solid(timeintegration):
             self.theta_ost = time_params["theta_ost"]
             if np.isclose(self.theta_ost,1.0): # Backward-Euler
                 self.res_eval = "back"
-
-        self.incompr = incompr
 
     def set_acc_vel(self, u, u_old, v_old, a_old):
         # set forms for acc and vel
@@ -550,6 +547,8 @@ class timeintegration_solid(timeintegration):
         a_old,
         p,
         p_old,
+        pporo,
+        pporo_old,
         internalvars,
         internalvars_old,
     ):
@@ -557,9 +556,14 @@ class timeintegration_solid(timeintegration):
         self.update_fields(u, u_old, v, v_old, a, a_old)
 
         # update pressure variable
-        if self.incompr:
+        if p is not None:
             p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
             p_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update porous pressure
+        if pporo is not None:
+            pporo_old.x.petsc_vec.axpby(1.0, 0.0, pporo.x.petsc_vec)
+            pporo_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
         for i in range(len(internalvars_old)):

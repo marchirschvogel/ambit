@@ -123,6 +123,7 @@ def check_params_fem_solid(params):
         "order_disp",
         "order_pporo",
         "order_pres",
+        "poroelasticity",
         "prestress_from_file",
         "prestress_initial",
         "prestress_initial_only",

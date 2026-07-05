@@ -28,6 +28,7 @@ class constitutive:
     ):
         self.kin = kin
 
+        # TODO: Revamp this...
         self.matmodels = []
         for i in range(len(materials.keys())):
             self.matmodels.append(list(materials.keys())[i])
@@ -36,13 +37,15 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        self.materials = materials
+
         self.mat_growth = mat_growth
         self.mat_remodel = mat_remodel
         self.mat_plastic = mat_plastic
         self.incompr_2field = incompr_2field
 
         # list entries of mats which do not return a stress
-        self.mat_void = ["inertia", "growth", "plastic", "bodyforce", "id"]
+        self.mat_void = ["inertia", "growth", "plastic", "mat_poro", "bodyforce", "id"]
 
         if self.mat_growth:
             # growth & remodeling parameters
@@ -590,12 +593,14 @@ class constitutive:
         F = self.kin.F(u_)
         J = ufl.det(F)
 
-        Qpk1 = ufl.constantvalue.zero(self.kin.dim)
-        # TODO: Read-in parameters
-        k=1.0
-        Qpk1 += -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(pp)
+        Q_ = ufl.constantvalue.zero(self.kin.dim)
 
-        return Qpk1
+        material = self.materials["mat_poro"]
+        k = material["k"]
+
+        Q_ += -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(pp)
+
+        return Q_
 
 
 
