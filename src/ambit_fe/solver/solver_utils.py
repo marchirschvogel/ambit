@@ -52,387 +52,12 @@ class sol_utils:
         sub=False,
         ptype=None,
     ):
-        if ptype == "solid":
-            if self.solver.pb[0].incompressible_2field:
-                eq1, eq2 = "solid momentum", "solid incompressibility"
-                v1, v2 = "u", "p"
-                numres = 2
-            else:
-                eq1 = "solid momentum"
-                v1 = "u"
-                numres = 1
-        elif ptype == "fluid":
-            eq1, eq2 = "fluid momentum", "fluid continuity"
-            v1, v2 = "v", "p"
-            numres = 2
-        elif ptype == "ale":
-            eq1 = "ALE momentum"
-            v1 = "d"
-            numres = 1
-        elif ptype == "flow0d":
-            eq1 = "flow-0d"
-            v1 = "s"
-            numres = 1
-        elif ptype == "signet":
-            eq1 = "signet-0d"
-            v1 = "s"
-            numres = 1
-        elif ptype == "solid_flow0d":
-            if self.solver.pb[0].incompressible_2field:
-                if self.solver.pb[0].coupling_type == "monolithic_direct":
-                    eq1, eq2, eq3 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "flow-0d",
-                    )
-                    v1, v2, v3 = "u", "p", "s"
-                if self.solver.pb[0].coupling_type == "monolithic_lagrange":
-                    eq1, eq2, eq3 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "3D0D coup constraint",
-                    )
-                    v1, v2, v3 = (
-                        "u",
-                        "p",
-                        "LM",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                numres = 3
-            else:
-                if self.solver.pb[0].coupling_type == "monolithic_direct":
-                    eq1, eq2 = "solid momentum", "flow-0d"
-                    v1, v2 = "u", "s"
-                if self.solver.pb[0].coupling_type == "monolithic_lagrange":
-                    eq1, eq2 = "solid momentum", "3D0D coup constraint"
-                    v1, v2 = (
-                        "u",
-                        "LM",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                numres = 2
-        elif ptype == "solid_constraint":
-            if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3 = (
-                    "solid momentum",
-                    "solid incompressibility",
-                    "constraint",
-                )
-                v1, v2, v3 = (
-                    "u",
-                    "p",
-                    "LM",
-                )  # using greek symbol print (Λ) is not supported everywhere...
-                numres = 3
-            else:
-                eq1, eq2 = "solid momentum", "3D0D coup constraint"
-                v1, v2 = "u", "lm"
-                numres = 2
-        elif ptype == "fluid_constraint":
-            eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "constraint"
-            v1, v2, v3 = (
-                "v",
-                "p",
-                "LM",
-            )  # using greek symbol print (Λ) is not supported everywhere...
-            numres = 3
-        elif ptype == "fluid_flow0d":
-            if not self.solver.pb[0].condense_0d:
-                eq1, eq2, eq3 = (
-                    "fluid momentum",
-                    "fluid continuity",
-                    "3D0D coup constraint",
-                )
-                v1, v2, v3 = (
-                    "v",
-                    "p",
-                    "LM",
-                )  # using greek symbol print (Λ) is not supported everywhere...
-                numres = 3
-            else:
-                eq1, eq2 = "fluid momentum", "fluid continuity"
-                v1, v2 = "v", "p"
-                numres = 2
-        elif ptype == "fluid_ale":
-            eq1, eq2, eq3 = (
-                "fluid momentum",
-                "fluid continuity",
-                "ALE momentum",
-            )
-            v1, v2, v3 = "v", "p", "d"
-            numres = 3
-        elif ptype == "fluid_multiphase":
-            eq1, eq2, eq3, eq4 = (
-                "fluid momentum",
-                "fluid continuity",
-                "phase field",
-                "potential",
-            )
-            v1, v2, v3, v4 = "v", "p", "phi", "mu"
-            numres = 4
-        elif ptype == "fluid_ale_multiphase":
-            eq1, eq2, eq3, eq4, eq5 = (
-                "fluid momentum",
-                "fluid continuity",
-                "phase field",
-                "potential",
-                "ALE momentum",
-            )
-            v1, v2, v3, v4, v5 = "v", "p", "phi", "mu", "d"
-            numres = 5
-        elif ptype == "fluid_ale_flow0d":
-            eq1, eq2, eq3, eq4 = (
-                "fluid momentum",
-                "fluid continuity",
-                "3D0D coup constraint",
-                "ALE momentum",
-            )
-            v1, v2, v3, v4 = (
-                "v",
-                "p",
-                "LM",
-                "d",
-            )  # using greek symbol print (Λ) is not supported everywhere...
-            numres = 4
-        elif ptype == "fluid_ale_constraint":
-            eq1, eq2, eq3, eq4 = (
-                "fluid momentum",
-                "fluid continuity",
-                "constraint",
-                "ALE momentum",
-            )
-            v1, v2, v3, v4 = (
-                "v",
-                "p",
-                "LM",
-                "d",
-            )  # using greek symbol print (Λ) is not supported everywhere...
-            numres = 4
-        elif ptype == "fsi":
-            if self.solver.pb[0].fsi_system == "neumann_neumann":
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5, eq6 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "FSI coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6 = (
-                        "u",
-                        "p",
-                        "v",
-                        "p",
-                        "lm",
-                        "d",
-                    )  # using greek symbol print (λ) is not supported everywhere...
-                    numres = 6
-                else:
-                    eq1, eq2, eq3, eq4, eq5 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "FSI coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5 = (
-                        "u",
-                        "v",
-                        "p",
-                        "lm",
-                        "d",
-                    )  # using greek symbol print (λ) is not supported everywhere...
-                    numres = 5
-            else:
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5 = "u", "p", "v", "p", "d"
-                    numres = 5
-                else:
-                    eq1, eq2, eq3, eq4 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4 = "u", "v", "p", "d"
-                    numres = 4
-        elif ptype == "fsi_flow0d":
-            if self.solver.pb[0].fsi_system == "neumann_neumann":
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "FSI coup constraint",
-                        "3D0D coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6, v7 = (
-                        "u",
-                        "p",
-                        "v",
-                        "p",
-                        "lm",
-                        "LM",
-                        "d",
-                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                    numres = 7
-                else:
-                    eq1, eq2, eq3, eq4, eq5, eq6 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "FSI coup constraint",
-                        "3D0D coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6 = (
-                        "u",
-                        "v",
-                        "p",
-                        "lm",
-                        "LM",
-                        "d",
-                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                    numres = 6
-            else:
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5, eq6 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "3D0D coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6 = (
-                        "u",
-                        "p",
-                        "v",
-                        "p",
-                        "LM",
-                        "d",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                    numres = 6
-                else:
-                    eq1, eq2, eq3, eq4, eq5 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "3D0D coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5 = (
-                        "u",
-                        "v",
-                        "p",
-                        "LM",
-                        "d",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                    numres = 5
-        elif ptype == "fsi_multiphase":
-            if self.solver.pb[0].fsi_system == "neumann_neumann":
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "phase field",
-                        "potential",
-                        "FSI coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6, v7, v8 = (
-                        "u",
-                        "p",
-                        "v",
-                        "p",
-                        "phi",
-                        "mu",
-                        "lm",
-                        "d",
-                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                    numres = 8
-                else:
-                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "phase field",
-                        "potential",
-                        "FSI coup constraint",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6, v7 = (
-                        "u",
-                        "v",
-                        "p",
-                        "phi",
-                        "mu",
-                        "lm",
-                        "d",
-                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                    numres = 7
-            else:
-                if self.solver.pb[0].incompressible_2field:
-                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
-                        "solid momentum",
-                        "solid incompressibility",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "phase field",
-                        "potential",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6, v7 = (
-                        "u",
-                        "p",
-                        "v",
-                        "p",
-                        "phi",
-                        "mu",
-                        "d",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                    numres = 7
-                else:
-                    eq1, eq2, eq3, eq4, eq5, eq6 = (
-                        "solid momentum",
-                        "fluid momentum",
-                        "fluid continuity",
-                        "phase field",
-                        "potential",
-                        "ALE momentum",
-                    )
-                    v1, v2, v3, v4, v5, v6 = (
-                        "u",
-                        "v",
-                        "p",
-                        "phi",
-                        "mu",
-                        "d",
-                    )  # using greek symbol print (Λ) is not supported everywhere...
-                    numres = 6
-        elif ptype == "phasefield":
-            eq1, eq2 = (
-                "phase field",
-                "potential",
-            )
-            v1, v2 = "phi", "mu"
-            numres = 2
-        elif ptype == "scatra":
-            eq1 = "concentration"
-            v1 = "c"
-            numres = 1
+
+        if ptype == "flow0d" or ptype == "signet":
+            eqs, vrs = self.solver.pb.eq_names, self.solver.pb.var_names
         else:
-            raise NameError("Unknown problem type!")
+            eqs, vrs = self.solver.pb[0].eq_names, self.solver.pb[0].var_names
+        numres = len(eqs)
 
         # using greek symbol print (Δ) is not supported everywhere... so use d instead
         if header:
@@ -440,7 +65,7 @@ class sol_utils:
                 if not sub:
                     utilities.print_status(
                         ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<7s}").format(
-                            " ", "it |", eq1, "| ", "timings"
+                            " ", "it |", eqs[0], "| ", "timings"
                         ),
                         self.solver.comm,
                     )
@@ -448,8 +73,8 @@ class sol_utils:
                         ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}").format(
                             " ",
                             "#  |",
-                            "||r_" + v1 + "||_2",
-                            "||d" + v1 + "||_2",
+                            "||r_" + vrs[0] + "||_2",
+                            "||d" + vrs[0] + "||_2",
                             "| ",
                             "te",
                             "ts",
@@ -464,7 +89,7 @@ class sol_utils:
                     )
                     utilities.print_status(
                         ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}").format(
-                            " ", " ", "it |", eq1, "| ", "timings"
+                            " ", " ", "it |", eqs[0], "| ", "timings"
                         ),
                         self.solver.comm,
                     )
@@ -473,8 +98,8 @@ class sol_utils:
                             " ",
                             " ",
                             "#  |",
-                            "||r_" + v1 + "||_2",
-                            "||d" + v1 + "||_2",
+                            "||r_" + vrs[0] + "||_2",
+                            "||d" + vrs[0] + "||_2",
                             "| ",
                             "te",
                             "ts",
@@ -484,7 +109,7 @@ class sol_utils:
             elif numres == 2:
                 utilities.print_status(
                     ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}").format(
-                        " ", "it |", eq1, "| ", eq2, "| ", "timings"
+                        " ", "it |", eqs[0], "| ", eqs[1], "| ", "timings"
                     ),
                     self.solver.comm,
                 )
@@ -496,11 +121,11 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -510,7 +135,7 @@ class sol_utils:
             elif numres == 3:
                 utilities.print_status(
                     ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}").format(
-                        " ", "it |", eq1, "| ", eq2, "| ", eq3, "| ", "timings"
+                        " ", "it |", eqs[0], "| ", eqs[1], "| ", eqs[2], "| ", "timings"
                     ),
                     self.solver.comm,
                 )
@@ -522,14 +147,14 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -545,13 +170,13 @@ class sol_utils:
                     ).format(
                         " ",
                         "it |",
-                        eq1,
+                        eqs[0],
                         "| ",
-                        eq2,
+                        eqs[1],
                         "| ",
-                        eq3,
+                        eqs[2],
                         "| ",
-                        eq4,
+                        eqs[3],
                         "| ",
                         "timings",
                     ),
@@ -565,17 +190,17 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
-                        "||r_" + v4 + "||_2",
-                        "||d" + v4 + "||_2",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -591,15 +216,15 @@ class sol_utils:
                     ).format(
                         " ",
                         "it |",
-                        eq1,
+                        eqs[0],
                         "| ",
-                        eq2,
+                        eqs[1],
                         "| ",
-                        eq3,
+                        eqs[2],
                         "| ",
-                        eq4,
+                        eqs[3],
                         "| ",
-                        eq5,
+                        eqs[4],
                         "| ",
                         "timings",
                     ),
@@ -613,20 +238,20 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
-                        "||r_" + v4 + "||_2",
-                        "||d" + v4 + "||_2",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
                         "| ",
-                        "||r_" + v5 + "||_2",
-                        "||d" + v5 + "||_2",
+                        "||r_" + vrs[4] + "||_2",
+                        "||d" + vrs[4] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -642,17 +267,17 @@ class sol_utils:
                     ).format(
                         " ",
                         "it |",
-                        eq1,
+                        eqs[0],
                         "| ",
-                        eq2,
+                        eqs[1],
                         "| ",
-                        eq3,
+                        eqs[2],
                         "| ",
-                        eq4,
+                        eqs[3],
                         "| ",
-                        eq5,
+                        eqs[4],
                         "| ",
-                        eq6,
+                        eqs[5],
                         "| ",
                         "timings",
                     ),
@@ -666,23 +291,23 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
-                        "||r_" + v4 + "||_2",
-                        "||d" + v4 + "||_2",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
                         "| ",
-                        "||r_" + v5 + "||_2",
-                        "||d" + v5 + "||_2",
+                        "||r_" + vrs[4] + "||_2",
+                        "||d" + vrs[4] + "||_2",
                         "| ",
-                        "||r_" + v6 + "||_2",
-                        "||d" + v6 + "||_2",
+                        "||r_" + vrs[5] + "||_2",
+                        "||d" + vrs[5] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -698,19 +323,19 @@ class sol_utils:
                     ).format(
                         " ",
                         "it |",
-                        eq1,
+                        eqs[0],
                         "| ",
-                        eq2,
+                        eqs[1],
                         "| ",
-                        eq3,
+                        eqs[2],
                         "| ",
-                        eq4,
+                        eqs[3],
                         "| ",
-                        eq5,
+                        eqs[4],
                         "| ",
-                        eq6,
+                        eqs[5],
                         "| ",
-                        eq7,
+                        eqs[6],
                         "| ",
                         "timings",
                     ),
@@ -724,26 +349,26 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
-                        "||r_" + v4 + "||_2",
-                        "||d" + v4 + "||_2",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
                         "| ",
-                        "||r_" + v5 + "||_2",
-                        "||d" + v5 + "||_2",
+                        "||r_" + vrs[4] + "||_2",
+                        "||d" + vrs[4] + "||_2",
                         "| ",
-                        "||r_" + v6 + "||_2",
-                        "||d" + v6 + "||_2",
+                        "||r_" + vrs[5] + "||_2",
+                        "||d" + vrs[5] + "||_2",
                         "| ",
-                        "||r_" + v7 + "||_2",
-                        "||d" + v7 + "||_2",
+                        "||r_" + vrs[6] + "||_2",
+                        "||d" + vrs[6] + "||_2",
                         "| ",
                         "te",
                         "ts",
@@ -759,21 +384,21 @@ class sol_utils:
                     ).format(
                         " ",
                         "it |",
-                        eq1,
+                        eqs[0],
                         "| ",
-                        eq2,
+                        eqs[1],
                         "| ",
-                        eq3,
+                        eqs[2],
                         "| ",
-                        eq4,
+                        eqs[3],
                         "| ",
-                        eq5,
+                        eqs[4],
                         "| ",
-                        eq6,
+                        eqs[5],
                         "| ",
-                        eq7,
+                        eqs[6],
                         "| ",
-                        eq8,
+                        eqs[7],
                         "| ",
                         "timings",
                     ),
@@ -787,29 +412,29 @@ class sol_utils:
                     ).format(
                         " ",
                         "#  |",
-                        "||r_" + v1 + "||_2",
-                        "||d" + v1 + "||_2",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
                         "| ",
-                        "||r_" + v2 + "||_2",
-                        "||d" + v2 + "||_2",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
                         "| ",
-                        "||r_" + v3 + "||_2",
-                        "||d" + v3 + "||_2",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
                         "| ",
-                        "||r_" + v4 + "||_2",
-                        "||d" + v4 + "||_2",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
                         "| ",
-                        "||r_" + v5 + "||_2",
-                        "||d" + v5 + "||_2",
+                        "||r_" + vrs[4] + "||_2",
+                        "||d" + vrs[4] + "||_2",
                         "| ",
-                        "||r_" + v6 + "||_2",
-                        "||d" + v6 + "||_2",
+                        "||r_" + vrs[5] + "||_2",
+                        "||d" + vrs[5] + "||_2",
                         "| ",
-                        "||r_" + v7 + "||_2",
-                        "||d" + v7 + "||_2",
+                        "||r_" + vrs[6] + "||_2",
+                        "||d" + vrs[6] + "||_2",
                         "| ",
-                        "||r_" + v8 + "||_2",
-                        "||d" + v8 + "||_2",
+                        "||r_" + vrs[7] + "||_2",
+                        "||d" + vrs[7] + "||_2",
                         "| ",
                         "te",
                         "ts",

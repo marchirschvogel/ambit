@@ -133,6 +133,10 @@ class FluidmechanicsAleProblem(problem_base):
         # number of fields involved
         self.nfields = 3
 
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names = self.pbf.var_names + self.pba.var_names
+        self.eq_names = self.pbf.eq_names + self.pba.eq_names
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,

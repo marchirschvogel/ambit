@@ -149,6 +149,9 @@ class SignallingNetworkProblem(problem_base):
         # number of fields involved
         self.nfields = 1
 
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names, self.eq_names = ["s"], ["signet-0d"]
+
         # residual and matrix lists
         self.r_list = [None] * self.nfields
         self.K_list = [[None] * self.nfields for _ in range(self.nfields)]

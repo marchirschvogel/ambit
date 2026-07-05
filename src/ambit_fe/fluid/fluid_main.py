@@ -410,8 +410,7 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid variational form class
         if not self.is_ale:
             self.vf = fluid_variationalform.variationalform(
-                tstfnc1=self.var_v,
-                tstfnc2=self.var_p_,
+                tstfncs=[self.var_v, self.var_p_],
                 n0=self.io.n0,
                 formulation=[self.fluid_formulation,self.mass_formulation],
             )
@@ -419,8 +418,7 @@ class FluidmechanicsProblem(problem_base):
         else:
             # fully consistent ALE formulation of Navier-Stokes
             self.vf = fluid_variationalform.variationalform_ale(
-                tstfnc1=self.var_v,
-                tstfnc2=self.var_p_,
+                tstfncs=[self.var_v, self.var_p_],
                 n0=self.io.n0,
                 formulation=[self.fluid_formulation,self.mass_formulation],
             )
@@ -473,7 +471,9 @@ class FluidmechanicsProblem(problem_base):
         if self.have_robin_valve_implicit:
             self.nfields += 1
 
+        # store some info on variable and equation names (used e.g. in solver print)
         self.var_names = ["v", "p"]
+        self.eq_names = ["fluid momentum", "fluid continuity"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (

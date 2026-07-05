@@ -12,17 +12,15 @@ from ..variationalform import variationalform_base
 class variationalform(variationalform_base):
     def __init__(
         self,
-        tstfnc1=None,
-        tstfnc2=None,
-        trlfnc1=None,
-        trlfnc2=None,
+        tstfncs=None,
+        trlfncs=None,
         n0=None,
         x_ref=None,
         ro0=None,
     ):
-        self.var_phi = tstfnc1
-        self.var_mu = tstfnc2
-        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, ro0=ro0)
+        self.var_phi = tstfncs[0]
+        self.var_mu = tstfncs[1]
+        variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
 
     def cahnhilliard_phase(self, phidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow

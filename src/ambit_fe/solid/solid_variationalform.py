@@ -19,19 +19,18 @@ Principle of Virtual Work
 class variationalform(variationalform_base):
     def __init__(
         self,
-        tstfnc1=None,
-        tstfnc2=None,
-        trlfnc1=None,
-        trlfnc2=None,
+        tstfncs=None,
+        trlfncs=None,
         n0=None,
         x_ref=None,
         ro0=None,
     ):
-        self.var_u = tstfnc1
-        self.var_p = tstfnc2
-        self.du = trlfnc1
-        self.dp = trlfnc2
-        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, ro0=ro0)
+        self.var_u = tstfncs[0]
+        self.var_p = tstfncs[1]
+        self.var_pporo = tstfncs[2]
+        self.du = trlfncs[0]
+        self.dp = trlfncs[1]
+        variationalform_base.__init__(self, tstfncs=tstfncs,  trlfncs=trlfncs, n0=n0, x_ref=x_ref, ro0=ro0)
 
     ### Kinetic virtual work
     # TeX: \delta \mathcal{W}_{\mathrm{kin}} := \int\limits_{\Omega_{0}} \rho_{0}\boldsymbol{a} \cdot \delta\boldsymbol{u} \,\mathrm{d}V
@@ -52,7 +51,7 @@ class variationalform(variationalform_base):
 
     def deltaW_int_spatial(self, S, F, ddomain):
         # TeX: \int\limits_{\Omega_t}\boldsymbol{sigma} : \delta \nabla\delta\boldsymbol{u}\mathrm{d}v
-        sigma = (1./ufl.det(F))*F*S*F.T
+        sigma = (1./ufl.det(F))*F*S*c
         return ufl.inner(sigma, ufl.grad(self.var_u)) * ddomain
 
     def deltaW_int_pres(self, J, ddomain):
@@ -62,6 +61,12 @@ class variationalform(variationalform_base):
     def deltaW_int_pres_nearly(self, J, p, bulk, ddomain):
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1+\frac{1}{\kappa} p\right)\delta p\,\mathrm{d}V
         return (J - 1.0 + (1.0 / bulk) * p) * self.var_p * ddomain
+
+    def deltaW_int_poro(self, F, Fdot, Q, ddomain):
+        # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
+        J = ufl.det(F)
+        Jdot = J * ufl.inner(ufl.inv(F).T, Fdot)
+        return ( Jdot * self.var_pporo + ufl.dot(Q, ufl.grad(self.var_ppor)) ) * ddomain
 
     # linearization of internal virtual work
     # we could use ufl to compute the derivative directly via ufl.derivative(...), however then, no material tangents from nonlinear consitutive laws

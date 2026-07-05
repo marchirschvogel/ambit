@@ -121,6 +121,7 @@ def check_params_fem_solid(params):
         "inverse_mechanics",
         "lin_remodeling_full",
         "order_disp",
+        "order_pporo",
         "order_pres",
         "prestress_from_file",
         "prestress_initial",

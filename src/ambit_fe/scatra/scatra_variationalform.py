@@ -16,16 +16,14 @@ Scalar transport variational forms class
 class variationalform(variationalform_base):
     def __init__(
         self,
-        tstfnc1=None,
-        tstfnc2=None,
-        trlfnc1=None,
-        trlfnc2=None,
+        tstfncs=None,
+        trlfncs=None,
         n0=None,
         x_ref=None,
         ro0=None,
     ):
-        self.var_c = tstfnc1
-        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, ro0=ro0)
+        self.var_c = tstfncs[0]
+        variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
 
     def diffusion(self, cdot, c, difflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow

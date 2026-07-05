@@ -149,6 +149,10 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         # number of fields involved
         self.nfields = 4
 
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names = self.pbf.var_names + ["LM"] + self.pba.var_names
+        self.eq_names = self.pbf.eq_names + ["3D0D coup constraint"] + self.pba.eq_names
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,

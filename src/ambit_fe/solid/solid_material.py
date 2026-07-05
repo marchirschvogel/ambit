@@ -416,3 +416,8 @@ class activestress_activation:
             amp *= self.act_weight()
 
         return (tau_a_old + amp * self.sigma0 * uabs_plus * dt) / (1.0 + uabs * dt)
+
+
+class materiallaw_poro:
+    def __init__(self):
+        pass

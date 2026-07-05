@@ -64,8 +64,9 @@ class constitutive:
 
     # 2nd Piola-Kirchhoff stress core routine
     # we have everything in a Total Lagrangian setting and use S and C to express our internal virtual work
-    def S(self, u_, p_, v_, ivar=None, returnquantity="stress"):
+    def S(self, u_, p_, v_, pp=None, ivar=None, returnquantity="stress"):
         C_ = ufl.variable(self.kin.C(u_))
+        J = ufl.sqrt(ufl.det(C_))
 
         if not isinstance(v_, ufl.constantvalue.Zero):
             Cdot_ = ufl.variable(self.kin.Cdot(u_, v_))
@@ -82,6 +83,7 @@ class constitutive:
             assert not self.mat_plastic
 
             theta_ = ivar["theta"]
+            Je_ = ufl.sqrt(ufl.det(self.C_e(C_, theta_)))
 
             # material has to be evaluated with C_e (and Cdot_v) only, however total S has
             # to be computed by differentiating w.r.t. C (and Cdot)
@@ -121,10 +123,15 @@ class constitutive:
         if self.incompr_2field:
             if self.mat_growth:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J^{\mathrm{e}}-1)]}{\partial \boldsymbol{C}}
-                stress += -2.0 * ufl.diff(p_ * (ufl.sqrt(ufl.det(self.C_e(C_, theta_))) - 1.0), C_)
+                stress += -2.0 * ufl.diff(p_ * (Je_ - 1.0), C_)
             else:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -Jp\boldsymbol{C}^{-1}
-                stress += -2.0 * ufl.diff(p_ * (ufl.sqrt(ufl.det(C_)) - 1.0), C_)
+                stress += -2.0 * J * p_ * ufl.inv(C_)
+
+        # porosity ("fluid") pressure
+        if pp is not None:
+            # TeX: S_{\mathrm{vol}} = -Jp_{\mathrm{f}}\boldsymbol{C}^{-1}
+            stress += -2.0 * J * pp * ufl.inv(C_)
 
         if returnquantity == "stress":
             return stress
@@ -203,45 +210,45 @@ class constitutive:
             raise NameError("Unknown solid material law!")
 
     # Cauchy stress tensor: sigma = (1/J) * F*S*F^T
-    def sigma(self, u_, p_, v_, ivar):
-        return (1.0 / self.kin.J(u_)) * self.kin.F(u_) * self.S(u_, p_, v_, ivar) * self.kin.F(u_).T
+    def sigma(self, u_, p_, v_, pp=None, ivar=None):
+        return (1.0 / self.kin.J(u_)) * self.kin.F(u_) * self.S(u_, p_, v_, pp=pp, ivar=ivar) * self.kin.F(u_).T
 
     # deviatoric part of Cauchy stress tensor: sigma_dev = sigma - tr(sigma)/3 I
-    def sigma_dev(self, u_, p_, v_, ivar):
-        return ufl.dev(self.sigma(u_, p_, v_, ivar))
+    def sigma_dev(self, u_, p_, v_, pp=None, ivar=None):
+        return ufl.dev(self.sigma(u_, p_, v_, pp=pp, ivar=ivar))
 
     # von Mises Cauchy stress
-    def sigma_vonmises(self, u_, p_, v_, ivar):
+    def sigma_vonmises(self, u_, p_, v_, pp=None, ivar=None):
         return ufl.sqrt(
             3.0
             * 0.5
             * ufl.inner(
-                self.sigma_dev(u_, p_, v_, ivar),
-                self.sigma_dev(u_, p_, v_, ivar),
+                self.sigma_dev(u_, p_, v_, pp=pp, ivar=ivar),
+                self.sigma_dev(u_, p_, v_, pp=pp, ivar=ivar),
             )
         )
 
     # 1st Piola-Kirchhoff stress tensor: P = F*S
-    def P(self, u_, p_, v_, ivar):
-        return self.kin.F(u_) * self.S(u_, p_, v_, ivar)
+    def P(self, u_, p_, v_, pp=None, ivar=None):
+        return self.kin.F(u_) * self.S(u_, p_, v_, pp=pp, ivar=ivar)
 
     # Kirchhoff stress tensor: tau = J * sigma
-    def tau_kirch(self, u_, p_, v_, ivar):
-        return self.kin.J(u_) * self.sigma(u_, p_, v_, ivar)
+    def tau_kirch(self, u_, p_, v_, pp=None, ivar=None):
+        return self.kin.J(u_) * self.sigma(u_, p_, v_, pp=pp, ivar=ivar)
 
     # Mandel stress tensor: M = C*S
-    def M(self, u_, p_, v_, ivar):
-        return self.kin.C(u_) * self.S(u_, p_, v_, ivar)
+    def M(self, u_, p_, v_, pp=None, ivar=None):
+        return self.kin.C(u_) * self.S(u_, p_, v_, pp=pp, ivar=ivar)
 
     # elastic 2nd Piola-Kirchhoff stress tensor
-    def S_e(self, u_, p_, v_, ivar):
+    def S_e(self, u_, p_, v_, pp=None, ivar=None):
         theta_ = ivar["theta"]
-        return self.F_g(theta_) * self.S(u_, p_, v_, ivar) * self.F_g(theta_).T
+        return self.F_g(theta_) * self.S(u_, p_, v_, ivar=ivar) * self.F_g(theta_).T
 
     # elastic Mandel stress tensor: M = C*S
-    def M_e(self, u_, p_, v_, C_, ivar):
+    def M_e(self, u_, p_, v_, C_, pp=None, ivar=None):
         theta_ = ivar["theta"]
-        return self.C_e(C_, theta_) * self.S_e(u_, p_, v_, ivar)
+        return self.C_e(C_, theta_) * self.S_e(u_, p_, v_, pp=pp, ivar=ivar)
 
     # growth kinematics are here in the constitutive class, since this is initialized per material law
     # (we can have different mats with different growth settings, or some with and some without growth...),
@@ -345,7 +352,7 @@ class constitutive:
             return phi
 
     # growth residual and increment at Gauss point
-    def res_dtheta_growth(self, u_, p_, v_, ivar, theta_old_, dt, thres, rquant):
+    def res_dtheta_growth(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres, rquant):
         theta_ = ivar["theta"]
 
         grfnc = growthfunction(theta_, self.I)
@@ -363,7 +370,7 @@ class constitutive:
 
         # trace of elastic Mandel stress
         if self.growth_trig == "volstress":
-            trigger = reduc * ufl.tr(self.M_e(u_, p_, v_, self.kin.C(u_), ivar))
+            trigger = reduc * ufl.tr(self.M_e(u_, p_, v_, self.kin.C(u_), pp=pp, ivar=ivar))
 
         # elastic fiber stretch
         elif self.growth_trig == "fibstretch":
@@ -393,23 +400,23 @@ class constitutive:
         else:
             raise NameError("Unknown return quantity!")
 
-    def dtheta_dC(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def dtheta_dC(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         dFg_dtheta = self.F_g(theta_, tang=True)
 
-        ktheta = self.res_dtheta_growth(u_, p_, v_, ivar, theta_old_, dt, thres, "ktheta")
-        K_growth = self.res_dtheta_growth(u_, p_, v_, ivar, theta_old_, dt, thres, "tang")
+        ktheta = self.res_dtheta_growth(u_, p_, v_, pp, ivar, theta_old_, dt, thres, "ktheta")
+        K_growth = self.res_dtheta_growth(u_, p_, v_, pp, ivar, theta_old_, dt, thres, "tang")
 
         i, j, k, l = ufl.indices(4)
 
         if self.growth_trig == "volstress":
-            Cmat, _ = self.S(u_, p_, v_, ivar, returnquantity="tangent")
+            Cmat, _ = self.S(u_, p_, v_, ivar=ivar, returnquantity="tangent")
 
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}}\left(\boldsymbol{S} + \boldsymbol{C} : \frac{1}{2} \check{\mathbb{C}}\right)
 
             tangdC = (ktheta * dt / K_growth) * (
-                self.S(u_, p_, v_, ivar) + 0.5 * ufl.as_tensor(self.kin.C(u_)[i, j] * Cmat[i, j, k, l], (k, l))
+                self.S(u_, p_, v_, pp=pp, ivar=ivar) + 0.5 * ufl.as_tensor(self.kin.C(u_)[i, j] * Cmat[i, j, k, l], (k, l))
             )
 
         elif self.growth_trig == "fibstretch":
@@ -434,10 +441,10 @@ class constitutive:
     # \mathbb{I}             = \boldsymbol{1}\,\overline{\otimes}\,\boldsymbol{1} = \delta_{ik}\delta_{jl} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
     # \bar{\mathbb{I}}       = \boldsymbol{1}\,\underline{\otimes}\,\boldsymbol{1} = \delta_{il}\delta_{jk} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
     # \bar{\bar{\mathbb{I}}} = \boldsymbol{1}\otimes\boldsymbol{1} = \delta_{ij}\delta_{kl} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
-    def dS_dFg(self, u_, p_, v_, ivar, theta_old_, dt):
+    def dS_dFg(self, u_, p_, v_, pp, ivar, theta_old_, dt):
         theta_ = ivar["theta"]
 
-        Cmat, _ = self.S(u_, p_, v_, ivar, returnquantity="tangent")
+        Cmat, _ = self.S(u_, p_, v_, pp=pp, ivar=ivar, returnquantity="tangent")
 
         i, j, k, l, m, n = ufl.indices(6)
 
@@ -451,11 +458,11 @@ class constitutive:
         )
 
         Fginv_outertop_S = ufl.as_tensor(
-            ufl.inv(self.F_g(theta_))[i, k] * self.S(u_, p_, v_, ivar)[j, l],
+            ufl.inv(self.F_g(theta_))[i, k] * self.S(u_, p_, v_, pp=pp, ivar=ivar)[j, l],
             (i, j, k, l),
         )
         S_outerbot_Fginv = ufl.as_tensor(
-            self.S(u_, p_, v_, ivar)[i, l] * ufl.inv(self.F_g(theta_))[j, k],
+            self.S(u_, p_, v_, pp=pp, ivar=ivar)[i, l] * ufl.inv(self.F_g(theta_))[j, k],
             (i, j, k, l),
         )
         Fginv_outertop_Fginv = ufl.as_tensor(
@@ -486,16 +493,16 @@ class constitutive:
     # growth material tangent: Cgrowth = 2 (dS/dF_g : dF_g/dtheta) \otimes dtheta/dC
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def Cgrowth(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         dFg_dtheta = self.F_g(theta_, tang=True)
 
         i, j, k, l = ufl.indices(4)
 
-        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, pp, ivar, theta_old_, dt, thres)
 
-        dS_dFg_ = self.dS_dFg(u_, p_, v_, ivar, theta_old_, dt)
+        dS_dFg_ = self.dS_dFg(u_, p_, v_, pp, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i, j, k, l] * dFg_dtheta[k, l], (i, j))
 
@@ -504,16 +511,16 @@ class constitutive:
         return Cgrowth
 
     # for a 2-field functional with u and p as variables, theta can depend on p in case of stress-mediated growth!
-    def dtheta_dp(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def dtheta_dp(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         dFg_dtheta = self.F_g(theta_, tang=True)
 
-        ktheta = self.res_dtheta_growth(u_, p_, v_, ivar, theta_old_, dt, thres, "ktheta")
-        K_growth = self.res_dtheta_growth(u_, p_, v_, ivar, theta_old_, dt, thres, "tang")
+        ktheta = self.res_dtheta_growth(u_, p_, v_, pp, ivar, theta_old_, dt, thres, "ktheta")
+        K_growth = self.res_dtheta_growth(u_, p_, v_, pp, ivar, theta_old_, dt, thres, "tang")
 
         if self.growth_trig == "volstress":
-            tangdp = (ktheta * dt / K_growth) * (ufl.diff(ufl.tr(self.M_e(u_, p_, v_, self.kin.C(u_), ivar)), p_))
+            tangdp = (ktheta * dt / K_growth) * (ufl.diff(ufl.tr(self.M_e(u_, p_, v_, self.kin.C(u_), pp=pp, ivar=ivar)), p_))
 
         elif self.growth_trig == "fibstretch":
             tangdp = as_ufl(0)
@@ -526,16 +533,16 @@ class constitutive:
     # growth material tangent for 2-field functional: Cgrowth_p = (dS/dF_g : dF_g/dtheta) * dtheta/dp
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth_p(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def Cgrowth_p(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         dFg_dtheta = self.F_g(theta_, tang=True)
 
         i, j, k, l = ufl.indices(4)
 
-        dtheta_dp_ = self.dtheta_dp(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dp_ = self.dtheta_dp(u_, p_, v_, pp, ivar, theta_old_, dt, thres)
 
-        dS_dFg_ = self.dS_dFg(u_, p_, v_, ivar, theta_old_, dt)
+        dS_dFg_ = self.dS_dFg(u_, p_, v_, pp, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i, j, k, l] * dFg_dtheta[k, l], (i, j))
 
@@ -546,13 +553,13 @@ class constitutive:
     # remodeling material tangent: Cremod = 2 dphi/dC * (S_remod - S_base) = 2 dphi/dtheta * dtheta/dC * (S_remod - S_base)
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cremod(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def Cremod(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         i, j, k, l = ufl.indices(4)
 
         dphi_dtheta_ = self.phi_remod(theta_, tang=True)
-        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, pp, ivar, theta_old_, dt, thres)
 
         Cremod = (
             2.0
@@ -568,15 +575,28 @@ class constitutive:
     # remodeling material tangent for 2-field functional: Cremod_p = dphi/dp * (S_remod - S_base) = 2 dphi/dtheta * dtheta/dp * (S_remod - S_base)
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cremod_p(self, u_, p_, v_, ivar, theta_old_, dt, thres):
+    def Cremod_p(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres):
         theta_ = ivar["theta"]
 
         dphi_dtheta_ = self.phi_remod(theta_, tang=True)
-        dtheta_dp_ = self.dtheta_dp(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dp_ = self.dtheta_dp(u_, p_, v_, pp, ivar, theta_old_, dt, thres)
 
         Cremod_p = 2.0 * dphi_dtheta_ * dtheta_dp_ * (self.stress_remod - self.stress_base)
 
         return Cremod_p
+
+    # Piola-Kirchhoff flux (for poroelastic model)
+    def Q(self, u_, pp):
+        F = self.kin.F(u_)
+        J = ufl.det(F)
+
+        Qpk1 = ufl.constantvalue.zero(self.kin.dim)
+        # TODO: Read-in parameters
+        k=1.0
+        Qpk1 += -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(pp)
+
+        return Qpk1
+
 
 
 class kinematics:

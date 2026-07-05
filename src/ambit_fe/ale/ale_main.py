@@ -202,7 +202,7 @@ class AleProblem(problem_base):
             )
 
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(tstfnc1=self.var_d, n0=self.io.n0, ro0=self.io.ro0)
+        self.vf = ale_variationalform.variationalform(tstfncs=[self.var_d], n0=self.io.n0, ro0=self.io.ro0)
 
         # set form for domain velocity
         self.wel = self.ti.set_wel(self.d, self.d_old, self.d_veryold, self.w_old)
@@ -223,7 +223,8 @@ class AleProblem(problem_base):
         # number of fields involved
         self.nfields = 1
 
-        self.var_names = ["d"]
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names, self.eq_names = ["d"], ["ALE momentum"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -370,6 +371,13 @@ class AleProblem(problem_base):
 
     def print_to_screen(self):
         pass
+
+    def get_nonlinear_solver_print_info(self, eqs=[], vrs=[]):
+        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        eqs,vrs=[],[]
+        eqs.append("ALE momentum")
+        vrs.append("d")
+        return eqs, vrs
 
     def induce_state_change(self):
         pass

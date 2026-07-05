@@ -17,18 +17,13 @@ Variational form base class
 class variationalform_base:
     def __init__(
         self,
-        tstfnc1=None,
-        tstfnc2=None,
-        trlfnc1=None,
-        trlfnc2=None,
+        tstfncs=None,
+        trlfncs=None,
         n0=None,
         x_ref=None,
         ro0=None,
     ):
-        self.tstfnc1 = tstfnc1
-        self.tstfnc2 = tstfnc2
-        self.trlfnc1 = trlfnc1
-        self.trlfnc2 = trlfnc2
+        self.tstfnc1 = tstfncs[0]
 
         self.n0 = n0  # reference normal field
         self.x_ref = x_ref  # reference coordinates

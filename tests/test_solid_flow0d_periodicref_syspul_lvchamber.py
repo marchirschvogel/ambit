@@ -40,7 +40,6 @@ def test_main():
         "fiber_data": [np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])],
         "results_to_write": [
             "displacement",
-            "pressure",
             "fibers",
             "counters",
             "tau_a",

@@ -82,8 +82,6 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbrom = self.pbs
         self.pbrom_host = self
 
-        self.incompressible_2field = self.pbs.incompressible_2field
-
         self.numdof = self.pbs.numdof + self.LM.getSize()
 
         self.localsolve = self.pbs.localsolve
@@ -107,10 +105,13 @@ class SolidmechanicsConstraintProblem(problem_base):
         )
 
         # number of fields involved
-        if self.pbs.incompressible_2field:
-            self.nfields = 3
-        else:
-            self.nfields = 2
+        self.nfields = 2
+        # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
+        self.nfields += self.pbs.offs
+
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names = self.pbs.var_names + ["LM"]
+        self.eq_names = self.pbs.eq_names + ["constraint"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -457,11 +458,6 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.assemble_residual_coupling(t)
 
     def assemble_residual_coupling(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
         # interpolate LM into function
         self.set_multiplier(self.LM, self.coupfuncs)
 
@@ -491,14 +487,9 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.r_lm.assemble()
 
-        self.r_list[1 + off] = self.r_lm
+        self.r_list[1 + self.pbs.offs] = self.r_lm
 
     def assemble_stiffness(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
         # solid main blocks
         self.pbs.assemble_stiffness(t)
 
@@ -563,8 +554,8 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.K_su.assemble()
 
-        self.K_list[0][1 + off] = self.K_us
-        self.K_list[1 + off][0] = self.K_su
+        self.K_list[0][1 + self.pbs.offs] = self.K_us
+        self.K_list[1 + self.pbs.offs][0] = self.K_su
 
         if self.have_regularization:
             ls, le = self.K_lm.getOwnershipRange()
@@ -573,7 +564,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
             self.K_lm.assemble()
 
-            self.K_list[1 + off][1 + off] = self.K_lm
+            self.K_list[1 + self.pbs.offs][1 + self.pbs.offs] = self.K_lm
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

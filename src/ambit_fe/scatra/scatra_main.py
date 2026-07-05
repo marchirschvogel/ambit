@@ -202,9 +202,9 @@ class ScatraProblem(problem_base):
         self.vf = []
         for i in range(self.num_species):
             if not self.is_ale:
-                self.vf.append(scatra_variationalform.variationalform(tstfnc1=self.var_c[i], n0=self.io.n0))
+                self.vf.append(scatra_variationalform.variationalform(tstfncs=[self.var_c[i]], n0=self.io.n0))
             else:
-                self.vf.append(scatra_variationalform.variationalform_ale(tstfnc1=self.var_c[i], n0=self.io.n0))
+                self.vf.append(scatra_variationalform.variationalform_ale(tstfncs=[self.var_c[i]], n0=self.io.n0))
 
         # set form for cdot
         self.cdot_expr = []
@@ -237,6 +237,12 @@ class ScatraProblem(problem_base):
         self.var_names = []
         for i in range(self.num_species):
             self.var_names.append("c" + str(i+1))
+
+        # store some info on variable and equation names (used e.g. in solver print)
+        self.var_names = []
+        for i in range(self.num_species):
+            self.var_names.append("c" + str(i+1))
+        self.eq_names = ["concentration"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (

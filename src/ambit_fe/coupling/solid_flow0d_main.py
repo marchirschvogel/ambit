@@ -84,8 +84,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
 
-        self.incompressible_2field = self.pbs.incompressible_2field
-
         # for multiscale G&R analysis
         self.t_prev = 0
         self.t_gandr_setpoint = 0
@@ -126,10 +124,17 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pb0.c = [[]] * (self.num_coupling_surf)
 
         # number of fields involved
-        if self.pbs.incompressible_2field:
-            self.nfields = 3
-        else:
-            self.nfields = 2
+        self.nfields = 2
+        # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
+        self.nfields += self.pbs.offs
+
+        # store some info on variable and equation names (used e.g. in solver print)
+        if self.coupling_type == "monolithic_lagrange":
+            self.var_names = self.pbs.var_names + ["LM"]
+            self.eq_names = self.pbs.eq_names + ["3D0D coup constraint"]
+        elif self.coupling_type == "monolithic_direct":
+            self.var_names = self.pbs.var_names + ["flow-0d"]
+            self.eq_names = self.pbs.eq_names + ["s"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -573,20 +578,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.r_list[1] = self.pbs.r_list[1]
 
         if self.coupling_type == "monolithic_direct":
-            if self.pbs.incompressible_2field:
-                off = 1
-            else:
-                off = 0
             # 0D rhs vector
             self.pb0.assemble_residual(t)
-            self.r_list[1 + off] = self.pb0.r_list[0]
+            self.r_list[1 + self.pbs.offs] = self.pb0.r_list[0]
 
     def assemble_residual_coupling(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
         if self.coupling_type == "monolithic_lagrange":
             for i in range(self.num_coupling_surf):
                 cq = fem.assemble_scalar(self.cq_form[i])
@@ -648,16 +644,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.r_lm.assemble()
 
-            self.r_list[1 + off] = self.r_lm
+            self.r_list[1 + self.pbs.offs] = self.r_lm
 
             del LM_sq
 
     def assemble_stiffness(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
         if self.coupling_type == "monolithic_lagrange":
             # Lagrange multipliers (pressures) to be passed to 0D model
             LM_sq = allgather_vec(self.LM, self.comm)
@@ -675,7 +666,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             # 0D stiffness
             self.pb0.assemble_stiffness(t)
 
-            self.K_list[1 + off][1 + off] = self.pb0.K_list[0][0]
+            self.K_list[1 + self.pbs.offs][1 + self.pbs.offs] = self.pb0.K_list[0][0]
 
         if self.coupling_type == "monolithic_lagrange":
             # assemble 0D rhs contributions
@@ -719,7 +710,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.K_lm.assemble()
 
-            self.K_list[1 + off][1 + off] = self.K_lm
+            self.K_list[1 + self.pbs.offs][1 + self.pbs.offs] = self.K_lm
 
             del LM_sq
 
@@ -784,8 +775,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.K_su.assemble()
 
-        self.K_list[0][1 + off] = self.K_us
-        self.K_list[1 + off][0] = self.K_su
+        self.K_list[0][1 + self.pbs.offs] = self.K_us
+        self.K_list[1 + self.pbs.offs][0] = self.K_su
 
 
         # solid main blocks

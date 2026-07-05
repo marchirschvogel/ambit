@@ -18,18 +18,16 @@ Principle of Virtual Power
 class variationalform(variationalform_base):
     def __init__(
         self,
-        tstfnc1=None,
-        tstfnc2=None,
-        trlfnc1=None,
-        trlfnc2=None,
+        tstfncs=None,
+        trlfncs=None,
         n0=None,
         x_ref=None,
         formulation=None,
         ro0=None,
     ):
-        self.var_v = tstfnc1
-        self.var_p = tstfnc2
-        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, ro0=ro0)
+        self.var_v = tstfncs[0]
+        self.var_p = tstfncs[1]
+        variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
         self.formulation, self.mass_formulation = formulation[0], formulation[1]
         self.I = ufl.Identity(len(self.var_v))
 

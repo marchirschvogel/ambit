@@ -122,9 +122,6 @@ class FSIFlow0DProblem(problem_base):
         self.pbf.results_to_write = io_params["results_to_write"][1]
         self.pba.results_to_write = io_params["results_to_write"][2]
 
-        self.incompressible_2field = self.pbs.incompressible_2field
-        self.fsi_system = self.pbfsi.fsi_system
-
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
@@ -137,15 +134,20 @@ class FSIFlow0DProblem(problem_base):
 
         # number of fields involved
         if self.pbfsi.fsi_system == "neumann_neumann":
-            if self.pbs.incompressible_2field:
-                self.nfields = 7
-            else:
-                self.nfields = 6
+            self.nfields = 6
         else:
-            if self.pbs.incompressible_2field:
-                self.nfields = 6
-            else:
-                self.nfields = 5
+            self.nfields = 5
+
+        # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
+        self.nfields += self.pbs.offs
+
+        # store some info on variable and equation names (used e.g. in solver print)
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            self.var_names = self.pbs.var_names + self.pbf.var_names + ["lm"] + ["LM"] + self.pba.var_names
+            self.eq_names = self.pbs.eq_names + self.pbf.eq_names + ["FSI coup constraint"] + ["3D0D coup constraint"] + self.pba.eq_names
+        else:
+            self.var_names = self.pbs.var_names + self.pbf.var_names + ["LM"] + self.pba.var_names
+            self.eq_names = self.pbs.eq_names + self.pbf.eq_names + ["3D0D coup constraint"] + self.pba.eq_names
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -258,10 +260,6 @@ class FSIFlow0DProblem(problem_base):
         pass
 
     def assemble_residual(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            ofs = 1
-        else:
-            ofs = 0
         if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
@@ -277,20 +275,16 @@ class FSIFlow0DProblem(problem_base):
         if self.pbs.incompressible_2field:
             self.r_list[1] = self.pbfsi.r_list[1]
         # fluid
-        self.r_list[1 + ofs] = self.pbfsi.r_list[1 + ofs]
-        self.r_list[2 + ofs] = self.pbfsi.r_list[2 + ofs]
+        self.r_list[1 + self.pbs.offs] = self.pbfsi.r_list[1 + self.pbs.offs]
+        self.r_list[2 + self.pbs.offs] = self.pbfsi.r_list[2 + self.pbs.offs]
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.r_list[3 + ofs] = self.pbfsi.r_list[3 + ofs]
+            self.r_list[3 + self.pbs.offs] = self.pbfsi.r_list[3 + self.pbs.offs]
         # 3D-0D constraint
-        self.r_list[3 + ofc + ofs] = self.pbf0.r_list[2]
+        self.r_list[3 + ofc + self.pbs.offs] = self.pbf0.r_list[2]
         # ALE
-        self.r_list[4 + ofc + ofs] = self.pbfsi.r_list[3 + ofc + ofs]
+        self.r_list[4 + ofc + self.pbs.offs] = self.pbfsi.r_list[3 + ofc + self.pbs.offs]
 
     def assemble_stiffness(self, t, subsolver=None):
-        if self.pbs.incompressible_2field:
-            ofs = 1
-        else:
-            ofs = 0
         if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
@@ -308,9 +302,9 @@ class FSIFlow0DProblem(problem_base):
         if self.pbs.incompressible_2field:
             self.K_list[0][1] = self.pbfsi.K_list[0][1]              # w.r.t. solid pressure
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.K_list[0][3 + ofs] = self.pbfsi.K_list[0][3 + ofs]  # w.r.t. Lagrange multiplier
+            self.K_list[0][3 + self.pbs.offs] = self.pbfsi.K_list[0][3 + self.pbs.offs]  # w.r.t. Lagrange multiplier
         if self.pbfsi.fsi_system == "neumann_dirichlet":
-            self.K_list[0][1 + ofs] = self.pbfsi.K_list[0][1 + ofs]  # w.r.t. fluid velocity
+            self.K_list[0][1 + self.pbs.offs] = self.pbfsi.K_list[0][1 + self.pbs.offs]  # w.r.t. fluid velocity
 
         # solid incompressibility
         if self.pbs.incompressible_2field:
@@ -318,36 +312,36 @@ class FSIFlow0DProblem(problem_base):
             self.K_list[1][1] = self.pbfsi.K_list[1][1]                  # w.r.t. solid pressure
 
         # fluid momentum
-        self.K_list[1 + ofs][1 + ofs] = self.pbfsi.K_list[1 + ofs][1 + ofs]              # w.r.t. fluid velocity
-        self.K_list[1 + ofs][2 + ofs] = self.pbfsi.K_list[1 + ofs][2 + ofs]              # w.r.t. fluid pressure
+        self.K_list[1 + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[1 + self.pbs.offs][1 + self.pbs.offs]              # w.r.t. fluid velocity
+        self.K_list[1 + self.pbs.offs][2 + self.pbs.offs] = self.pbfsi.K_list[1 + self.pbs.offs][2 + self.pbs.offs]              # w.r.t. fluid pressure
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.K_list[1 + ofs][3 + ofs] = self.pbfsi.K_list[1 + ofs][3 + ofs]          # w.r.t. Lagrange multiplier
+            self.K_list[1 + self.pbs.offs][3 + self.pbs.offs] = self.pbfsi.K_list[1 + self.pbs.offs][3 + self.pbs.offs]          # w.r.t. Lagrange multiplier
         if self.pbfsi.fsi_system == "neumann_dirichlet":
-            self.K_list[1 + ofs][0] = self.pbfsi.K_list[1 + ofs][0]                      # w.r.t. solid displacement
+            self.K_list[1 + self.pbs.offs][0] = self.pbfsi.K_list[1 + self.pbs.offs][0]                      # w.r.t. solid displacement
             if self.pbs.incompressible_2field:
-                self.K_list[1 + ofs][1] = self.pbfsi.K_list[1 + ofs][1]                  # w.r.t. solid pressure
-        self.K_list[1 + ofs][3 + ofc + ofs] = self.pbf0.K_vs                             # w.r.t. 0D LM
-        self.K_list[1 + ofs][4 + ofc + ofs] = self.pbfsi.K_list[1 + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
+                self.K_list[1 + self.pbs.offs][1] = self.pbfsi.K_list[1 + self.pbs.offs][1]                  # w.r.t. solid pressure
+        self.K_list[1 + self.pbs.offs][3 + ofc + self.pbs.offs] = self.pbf0.K_vs                             # w.r.t. 0D LM
+        self.K_list[1 + self.pbs.offs][4 + ofc + self.pbs.offs] = self.pbfsi.K_list[1 + self.pbs.offs][3 + ofc + self.pbs.offs]  # w.r.t. ALE displacement
 
         # fluid continuity
-        self.K_list[2 + ofs][1 + ofs] = self.pbfsi.K_list[2 + ofs][1 + ofs]              # w.r.t. fluid velocity
-        self.K_list[2 + ofs][2 + ofs] = self.pbfsi.K_list[2 + ofs][2 + ofs]              # w.r.t. fluid pressure
-        self.K_list[2 + ofs][4 + ofc + ofs] = self.pbfsi.K_list[2 + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
+        self.K_list[2 + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[2 + self.pbs.offs][1 + self.pbs.offs]              # w.r.t. fluid velocity
+        self.K_list[2 + self.pbs.offs][2 + self.pbs.offs] = self.pbfsi.K_list[2 + self.pbs.offs][2 + self.pbs.offs]              # w.r.t. fluid pressure
+        self.K_list[2 + self.pbs.offs][4 + ofc + self.pbs.offs] = self.pbfsi.K_list[2 + self.pbs.offs][3 + ofc + self.pbs.offs]  # w.r.t. ALE displacement
 
         # FSI coupling constraint
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.K_list[3 + ofs][0] = self.pbfsi.K_list[3 + ofs][0]              # w.r.t. solid displacement
-            self.K_list[3 + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofs][1 + ofs]  # w.r.t. fluid velocity
-            self.K_list[3 + ofs][3 + ofs] = self.pbfsi.K_list[3 + ofs][3 + ofs]  # w.r.t. Lagrange multiplier (zero, only LM DBCs)
+            self.K_list[3 + self.pbs.offs][0] = self.pbfsi.K_list[3 + self.pbs.offs][0]              # w.r.t. solid displacement
+            self.K_list[3 + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[3 + self.pbs.offs][1 + self.pbs.offs]  # w.r.t. fluid velocity
+            self.K_list[3 + self.pbs.offs][3 + self.pbs.offs] = self.pbfsi.K_list[3 + self.pbs.offs][3 + self.pbs.offs]  # w.r.t. Lagrange multiplier (zero, only LM DBCs)
 
         # 3D-0D
-        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbf0.K_sv         # w.r.t. fluid velocity
-        self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbf0.K_lm   # w.r.t. 0D LM
-        self.K_list[3 + ofc + ofs][4 + ofc + ofs] = self.pbfa0.K_sd  # w.r.t. ALE displacement
+        self.K_list[3 + ofc + self.pbs.offs][1 + self.pbs.offs] = self.pbf0.K_sv         # w.r.t. fluid velocity
+        self.K_list[3 + ofc + self.pbs.offs][3 + ofc + self.pbs.offs] = self.pbf0.K_lm   # w.r.t. 0D LM
+        self.K_list[3 + ofc + self.pbs.offs][4 + ofc + self.pbs.offs] = self.pbfa0.K_sd  # w.r.t. ALE displacement
 
         # ALE
-        self.K_list[4 + ofc + ofs][4 + ofc + ofs] = self.pbfsi.K_list[3 + ofc + ofs][3 + ofc + ofs]  # w.r.t. fluid velocity
-        self.K_list[4 + ofc + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofc + ofs][1 + ofs]              # w.r.t. ALE displacement
+        self.K_list[4 + ofc + self.pbs.offs][4 + ofc + self.pbs.offs] = self.pbfsi.K_list[3 + ofc + self.pbs.offs][3 + ofc + self.pbs.offs]  # w.r.t. fluid velocity
+        self.K_list[4 + ofc + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[3 + ofc + self.pbs.offs][1 + self.pbs.offs]              # w.r.t. ALE displacement
 
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):

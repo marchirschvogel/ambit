@@ -183,9 +183,9 @@ class PhasefieldProblem(problem_base):
 
         # initialize pahse field (Cahn-Hilliard) variational form class
         if not self.is_ale:
-            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
+            self.vf = phasefield_variationalform.variationalform(tstfncs=[self.var_phi, self.var_mu], n0=self.io.n0)
         else:
-            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
+            self.vf = phasefield_variationalform.variationalform_ale(tstfncs=[self.var_phi, self.var_mu], n0=self.io.n0)
 
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
@@ -211,7 +211,9 @@ class PhasefieldProblem(problem_base):
         # number of fields involved
         self.nfields = 2
 
+        # store some info on variable and equation names (used e.g. in solver print)
         self.var_names = ["phi", "mu"]
+        self.eq_names = ["phase field", "potential"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (

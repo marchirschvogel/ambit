@@ -23,7 +23,6 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "results_to_write": [
             "displacement",
-            "pressure",
             "theta",
             "trmandelstress",
             "trmandelstress_e",

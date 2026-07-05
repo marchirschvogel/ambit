@@ -105,6 +105,14 @@ class FluidmechanicsFlow0DProblem(problem_base):
         else:
             self.nfields = 2
 
+        # store some info on variable and equation names (used e.g. in solver print)
+        if not self.condense_0d:
+            self.var_names = self.pbf.var_names + ["LM"]
+            self.eq_names = self.pbf.eq_names + ["3D0D coup constraint"]
+        else:
+            self.var_names = self.pbf.var_names
+            self.eq_names = self.pbf.eq_names
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,
