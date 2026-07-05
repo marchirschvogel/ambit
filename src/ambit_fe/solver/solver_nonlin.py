@@ -690,7 +690,7 @@ class solver_nonlinear:
             else:
                 self.indlen = self.indlen_[1]
 
-            self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr])
+            self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr], pi=npr)
 
             tes = time.time()
 
@@ -699,7 +699,7 @@ class solver_nonlinear:
 
             te = time.time() - tes
 
-            self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], te=te, ptype=self.ptype[npr])
+            self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], te=te, ptype=self.ptype[npr], pi=npr)
 
         it += 1
 
@@ -890,6 +890,7 @@ class solver_nonlinear:
                     ts=ts,
                     te=te,
                     ptype=self.ptype[npr],
+                    pi=npr,
                 )
 
                 # get converged state of each problem

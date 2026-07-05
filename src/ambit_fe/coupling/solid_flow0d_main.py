@@ -133,8 +133,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.var_names = self.pbs.var_names + ["LM"]
             self.eq_names = self.pbs.eq_names + ["3D0D coup constraint"]
         elif self.coupling_type == "monolithic_direct":
-            self.var_names = self.pbs.var_names + ["flow-0d"]
-            self.eq_names = self.pbs.eq_names + ["s"]
+            self.var_names = self.pbs.var_names + ["s"]
+            self.eq_names = self.pbs.eq_names + ["flow-0d"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (

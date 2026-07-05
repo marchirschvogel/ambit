@@ -51,12 +51,13 @@ class sol_utils:
         te=0,
         sub=False,
         ptype=None,
+        pi=0,
     ):
 
         if ptype == "flow0d" or ptype == "signet":
             eqs, vrs = self.solver.pb.eq_names, self.solver.pb.var_names
         else:
-            eqs, vrs = self.solver.pb[0].eq_names, self.solver.pb[0].var_names
+            eqs, vrs = self.solver.pb[pi].eq_names, self.solver.pb[pi].var_names
         numres = len(eqs)
 
         # using greek symbol print (Δ) is not supported everywhere... so use d instead

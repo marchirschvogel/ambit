@@ -372,13 +372,6 @@ class AleProblem(problem_base):
     def print_to_screen(self):
         pass
 
-    def get_nonlinear_solver_print_info(self, eqs=[], vrs=[]):
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-        eqs,vrs=[],[]
-        eqs.append("ALE momentum")
-        vrs.append("d")
-        return eqs, vrs
-
     def induce_state_change(self):
         pass
 

@@ -126,12 +126,12 @@ class constitutive:
                 stress += -2.0 * ufl.diff(p_ * (Je_ - 1.0), C_)
             else:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -Jp\boldsymbol{C}^{-1}
-                stress += -2.0 * J * p_ * ufl.inv(C_)
+                stress += -J * p_ * ufl.inv(C_)
 
         # porosity ("fluid") pressure
         if pp is not None:
             # TeX: S_{\mathrm{vol}} = -Jp_{\mathrm{f}}\boldsymbol{C}^{-1}
-            stress += -2.0 * J * pp * ufl.inv(C_)
+            stress += -J * pp * ufl.inv(C_)
 
         if returnquantity == "stress":
             return stress
