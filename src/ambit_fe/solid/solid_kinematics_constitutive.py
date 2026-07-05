@@ -246,7 +246,7 @@ class constitutive:
     # elastic 2nd Piola-Kirchhoff stress tensor
     def S_e(self, u_, p_, v_, pp=None, ivar=None):
         theta_ = ivar["theta"]
-        return self.F_g(theta_) * self.S(u_, p_, v_, ivar=ivar) * self.F_g(theta_).T
+        return self.F_g(theta_) * self.S(u_, p_, v_, pp=pp, ivar=ivar) * self.F_g(theta_).T
 
     # elastic Mandel stress tensor: M = C*S
     def M_e(self, u_, p_, v_, C_, pp=None, ivar=None):
@@ -414,7 +414,7 @@ class constitutive:
         i, j, k, l = ufl.indices(4)
 
         if self.growth_trig == "volstress":
-            Cmat, _ = self.S(u_, p_, v_, ivar=ivar, returnquantity="tangent")
+            Cmat, _ = self.S(u_, p_, v_, pp=pp, ivar=ivar, returnquantity="tangent")
 
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}}\left(\boldsymbol{S} + \boldsymbol{C} : \frac{1}{2} \check{\mathbb{C}}\right)
 
