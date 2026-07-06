@@ -82,7 +82,11 @@ class Ambit:
         if problem_type == "solid":
             from .solid import solid_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
+            diffusion = fem_params[0].get("diffusion", False)
+            if diffusion:
+                io = ioroutines.IO_solid_scatra(io_params, constitutive_params, self.entity_maps, self.comm)
+            else:
+                io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)

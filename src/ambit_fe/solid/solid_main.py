@@ -729,6 +729,13 @@ class SolidmechanicsProblem(problem_base):
         self.pbrom_host = self
         self.V_rom = self.V_u
 
+        # finally set the defotmation metrics for the diffusion problem, if present
+        if self.has_diffusion:
+            self.pbscat.alevar["Fale"] = self.ki.F(self.u)
+            self.pbscat.alevar["Fale_old"] = self.ki.F(self.u_old)
+            self.pbscat.alevar["w"] = None
+            self.pbscat.alevar["w_old"] = None
+
     def get_problem_var_list(self):
         vlist_, is_ghosted = [self.u.x.petsc_vec], [1]
         if self.incompressible_2field:
@@ -1985,8 +1992,6 @@ class SolidmechanicsProblem(problem_base):
 
     def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
-        if self.has_diffusion:
-            self.pbscat.write_output(N, t, msh=msh)
 
     def update(self):
         # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
@@ -2017,8 +2022,6 @@ class SolidmechanicsProblem(problem_base):
 
     def write_restart(self, sname, N, force=False):
         self.io.write_restart(self, N, force=force)
-        if self.has_diffusion:
-            self.pbscat.write_restart(sname, N, force=force)
 
     def check_abort(self, t):
         if self.pbase.problem_type == "solid_flow0d_multiscale_gandr" and abs(self.growth_rate) <= self.tol_stop_large:

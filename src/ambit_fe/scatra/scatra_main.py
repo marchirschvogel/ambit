@@ -129,6 +129,9 @@ class ScatraProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
+        # ALE problem variables
+        self.alevar = {}
+
         # function space for c
         self.V_c = fem.functionspace(self.mesh, ("Lagrange", self.order_conc))
 
@@ -280,9 +283,9 @@ class ScatraProblem(problem_base):
 
         for i in range(self.num_species):
             for n, M in enumerate(self.domain_ids):
-                self.variational_form[i] += self.vf[i].diffusion(self.cdot_expr[i], self.c[i], self.ma[i][n].diffusive_flux(self.c[i], self.cdot_expr[i]), self.dx(M))
-                self.variational_form_old[i] += self.vf[i].diffusion(self.cdot_old[i], self.c_old[i], self.ma[i][n].diffusive_flux(self.c_old[i], self.cdot_old[i]), self.dx(M))
-                self.variational_form_mid[i] += self.vf[i].diffusion(self.cdot_mid[i], self.c_mid[i], self.ma[i][n].diffusive_flux(self.c_mid[i], self.cdot_mid[i]), self.dx(M))
+                self.variational_form[i] += self.vf[i].diffusion(self.cdot_expr[i], self.c[i], self.ma[i][n].diffusive_flux(self.c[i], self.cdot_expr[i]), self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
+                self.variational_form_old[i] += self.vf[i].diffusion(self.cdot_old[i], self.c_old[i], self.ma[i][n].diffusive_flux(self.c_old[i], self.cdot_old[i]), self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
+                self.variational_form_mid[i] += self.vf[i].diffusion(self.cdot_mid[i], self.c_mid[i], self.ma[i][n].diffusive_flux(self.c_mid[i], self.cdot_mid[i]), self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
 
         w_neumann, w_neumann_old, w_neumann_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 

@@ -2712,6 +2712,22 @@ class IO_fsi_multiphase(IO_fsi, IO_phasefield):
             IO_phasefield.writecheckpoint(self, pb.pbp, N)
 
 
+# coupled problem where scatra is a sub-problem to solid
+class IO_solid_scatra(IO_solid, IO_scatra):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+        IO_solid.write_output(self, pb, writemesh=writemesh, N=N, t=t)
+        IO_scatra.write_output(self, pb.pbscat, writemesh=writemesh, N=N, t=t)
+
+    def readcheckpoint(self, pb, N_rest):
+        IO_solid.readcheckpoint(self, pb, N_rest)
+        IO_scatra.readcheckpoint(self, pb.pbscat, N_rest)
+
+    def write_restart(self, pb, N, force=False):
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
+            IO_solid.writecheckpoint(self, pb, N)
+            IO_scatra.writecheckpoint(self, pb.pbscat, N)
+
+
 class IO_0D():  # 0D "dummy" IO class, carries only one parameter so far...
     def __init__(self, io_params):
         self.write_counters = io_params.get("write_counters", False)
