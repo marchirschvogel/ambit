@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-solid mechanics, poroelasticity of sphere
+solid mechanics, poroelasticity on unit sphere
 """
 
 import ambit_fe
@@ -24,8 +24,8 @@ def test_main():
 
     IO_PARAMS = {
         "problem_type": "solid",
-        "mesh_domain": basepath + "/input/sphere-quad_domain.xdmf",
-        "mesh_boundary": basepath + "/input/sphere-quad_boundary.xdmf",
+        "mesh_domain": basepath + "/input/sphere-unit-quad_domain.xdmf",
+        "mesh_boundary": basepath + "/input/sphere-unit-quad_boundary.xdmf",
         "indicate_results_by": "step0",
         "write_results_every": 1,
         "write_restart_every": 4,
@@ -111,17 +111,17 @@ def test_main():
     tol = 1.0e-6
 
     check_node, check_node2 = [], []
-    check_node.append(np.array([17.419159327515, 17.419159327515, 17.121500420386]))
+    check_node.append(np.array([0.5806386442505, 0.5806386442505002, 0.5707166806795334]))
     check_node2.append(np.array([0.0, 0.0, 0.0]))
 
     u_corr, p_corr = np.zeros(3 * len(check_node)), np.zeros(len(check_node))
 
     ## correct results
-    u_corr[0] = -5.7361733579437170E-02  # x
-    u_corr[1] = -5.7361732864131196E-02  # y
-    u_corr[2] = -5.7924438049653519E-02  # z
+    u_corr[0] = -8.1050317190939653E-03  # x
+    u_corr[1] = -8.1050317001130426E-03  # y
+    u_corr[2] = -7.9805588796660921E-03  # z
 
-    p_corr[0] = 5.1981544004424063E-01
+    p_corr[0] = 5.5705312265436846E-01
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.u,
