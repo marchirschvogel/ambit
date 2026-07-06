@@ -733,8 +733,8 @@ class SolidmechanicsProblem(problem_base):
         if self.has_diffusion:
             self.pbscat.alevar["Fale"] = self.ki.F(self.u)
             self.pbscat.alevar["Fale_old"] = self.ki.F(self.u_old)
-            self.pbscat.alevar["w"] = None
-            self.pbscat.alevar["w_old"] = None
+            self.pbscat.alevar["w"] = self.vel
+            self.pbscat.alevar["w_old"] = self.v_old
 
     def get_problem_var_list(self):
         vlist_, is_ghosted = [self.u.x.petsc_vec], [1]
