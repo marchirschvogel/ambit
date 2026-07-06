@@ -15,6 +15,7 @@ from petsc4py import PETSc
 
 from . import ale_kinematics_constitutive
 from . import ale_variationalform
+from . import ale_io
 from .. import timeintegration
 from .. import utilities
 from ..solver import solver_nonlin
@@ -63,7 +64,7 @@ class AleProblem(problem_base):
             raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
+        self.io_field = ale_io.IO_ale(self)
 
         self.order_disp = self.fem_params["order_disp"]
         self.quad_degree = self.fem_params["quad_degree"]
@@ -340,13 +341,13 @@ class AleProblem(problem_base):
     def read_restart(self, sname, N):
         # read restart information
         if self.pbase.restart_step > 0:
-            self.io.readcheckpoint(self, N)
+            self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         pass
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.io_field.write_output(writemesh=True)
 
     def write_output_pre(self):
         pass
@@ -372,7 +373,7 @@ class AleProblem(problem_base):
         pass
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)
+        self.io_field.write_output(N=N, t=t)
 
     def update(self):
         self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.w, self.w_old)
@@ -383,14 +384,14 @@ class AleProblem(problem_base):
     def induce_state_change(self):
         pass
 
-    def write_restart(self, sname, N):
-        self.io.write_restart(self, N)
+    def write_restart(self, sname, N, force=False):
+        self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         pass
 
     def destroy(self):
-        self.io.close_output_files(self)
+        self.io_field.close_output_files()
 
 
 class AleSolver(solver_base):

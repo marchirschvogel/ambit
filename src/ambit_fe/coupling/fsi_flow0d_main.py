@@ -59,7 +59,6 @@ class FSIFlow0DProblem(problem_base):
         self.problem_physics = "fsi_flow0d"
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
 
         self.have_condensed_variables = False
 
@@ -441,12 +440,8 @@ class FSIFlow0DProblem(problem_base):
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
-        # fluid-ALE + flow0d problem
-        if N > 0:
-            self.io.readcheckpoint(self, N)
-
+        self.pbfsi.read_restart(sname, N)
         self.pb0.read_restart(sname, N)
-
         if self.pbase.restart_step > 0:
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname + "_lm", N, self.pbf0.LM)
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname + "_lm", N, self.pbf0.LM_old)
@@ -456,7 +451,6 @@ class FSIFlow0DProblem(problem_base):
         self.pbf0.evaluate_initial_coupling()
 
     def write_output_ini(self):
-        # self.io.write_output(self, writemesh=True)
         self.pbfsi.write_output_ini()
         #self.pb0.write_output_ini()
 
@@ -497,7 +491,7 @@ class FSIFlow0DProblem(problem_base):
         self.pb0.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.pbfsi.write_restart(self, N, force=force)
+        self.pbfsi.write_restart(sname, N, force=force)
         self.pb0.write_restart(sname, N, force=force)
 
         if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:

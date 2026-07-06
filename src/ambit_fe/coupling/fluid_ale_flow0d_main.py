@@ -140,8 +140,6 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
         self.sub_solve = True
 
-        self.io = self.pbf.io
-
         # number of fields involved
         self.nfields = 4
 
@@ -395,7 +393,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
     def read_restart(self, sname, N):
         # fluid-ALE + flow0d problem
         if N > 0:
-            self.io.readcheckpoint(self, N)
+            self.pbfa.readcheckpoint(N)
 
         self.pb0.read_restart(sname, N)
 
@@ -408,7 +406,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pbf0.evaluate_initial_coupling()
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.pbfa.write_output_ini()
 
     def write_output_pre(self):
         self.pbfa.write_output_pre()
@@ -427,7 +425,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pb0.set_output_state(N)
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
+        self.pbfa.write_output(N=N, t=t)
         self.pb0.write_output(N, t)
 
         if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:
@@ -462,8 +460,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pb0.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
-
+        self.pbfa.write_restart(sname, N, force=force)
         self.pb0.write_restart(sname, N, force=force)
 
         if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:

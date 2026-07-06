@@ -17,6 +17,7 @@ from petsc4py import PETSc
 
 from . import fluid_kinematics_constitutive
 from . import fluid_variationalform
+from . import fluid_io
 from .. import timeintegration
 from .. import utilities
 from .. import boundaryconditions
@@ -74,7 +75,7 @@ class FluidmechanicsProblem(problem_base):
             raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
+        self.io_field = fluid_io.IO_fluid(self)
 
         self.is_ale = is_ale
         self.is_multiphase = is_multiphase
@@ -2703,7 +2704,7 @@ class FluidmechanicsProblem(problem_base):
     def read_restart(self, sname, N):
         # read restart information
         if self.pbase.restart_step > 0:
-            self.io.readcheckpoint(self, N)
+            self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         if self.have_flux_monitor:
@@ -2728,7 +2729,7 @@ class FluidmechanicsProblem(problem_base):
             self.evaluate_robin_valve(self.pbase.t_init, self.dp_old_)
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.io_field.write_output(writemesh=True)
 
     def write_output_pre(self):
         if "fibers" in self.results_to_write and self.io.write_results_every > 0:
@@ -2742,7 +2743,7 @@ class FluidmechanicsProblem(problem_base):
                     comm=self.comm,
                     entity_maps=self.io.entity_maps,
                 )
-                self.io.write_output_pre(self, fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
+                self.io_field.write_output_pre(fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
@@ -2790,7 +2791,7 @@ class FluidmechanicsProblem(problem_base):
         pass
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)
+        self.io_field.write_output(N=N, t=t)
 
     def update(self):
         # update - velocity, acceleration, pressure, all internal variables, all time functions
@@ -2826,13 +2827,13 @@ class FluidmechanicsProblem(problem_base):
         pass
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
+        self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         pass
 
     def destroy(self):
-        self.io.close_output_files(self)
+        self.io_field.close_output_files()
 
 
 class FluidmechanicsSolver(solver_base):
@@ -2924,7 +2925,7 @@ class FluidmechanicsSolver(solver_base):
 
         # write prestress displacement (given that we want to write the fluid displacement)
         if "fluiddisplacement" in self.pb.results_to_write and self.pb.io.write_results_every > 0:
-            self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, self.pb.V_out_vector, 0.0, "fluiddisplacement_pre")
+            self.pb.io_field.write_output_pre(self.pb.uf_pre, self.pb.V_out_vector, 0.0, "fluiddisplacement_pre")
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in

@@ -224,7 +224,7 @@ def test_main():
     cauchy_corr[14] = 0.0
 
     check1 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.io.cauchystress_membrane_principal,
+        problem.mp.io_field.cauchystress_membrane_principal,
         check_node,
         cauchy_corr,
         problem.mp.Vd_vector,

@@ -112,7 +112,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.sub_solve = False
 
         self.io = self.pbs.io
-        self.write_restart_every = self.io.write_restart_every
 
         # 3D fluxes
         self.constr, self.constr_old = (

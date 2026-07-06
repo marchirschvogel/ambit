@@ -97,7 +97,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.have_condensed_variables = False
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
 
         self.set_coupling_parameters()
 
@@ -110,8 +109,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
             ]
 
         self.localsolve = False
-
-        self.io = self.pbf.io
 
         # number of fields involved
         self.nfields = 4
@@ -394,7 +391,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.pbfc.evaluate_initial_coupling()
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.pbfa.write_output_ini()
 
     def write_output_pre(self):
         self.pbfa.write_output_pre()
@@ -410,7 +407,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.pbfa.set_output_state(N)
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
+        self.pbfa.write_output(N=N, t=t)
 
         if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:
             if np.isclose(t, self.pbase.dt):
@@ -441,7 +438,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.pbfa.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
+        self.pbfa.write_restart(sname, N, force=force)
 
         if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
             LM_sq = allgather_vec(self.pbfc.LM, self.comm)

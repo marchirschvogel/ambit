@@ -379,7 +379,7 @@ class solver_base:
                 f.close()
 
     def write_step_time(self, N, t):
-        if (self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0):
+        if (self.pb.io.write_restart_every > 0 and N % self.pb.io.write_restart_every == 0):
             if self.pb.comm.rank == 0:
                 f = open(
                     self.pb.pbase.output_path + "/checkpoint_" + self.pb.pbase.simname + "_step_time_" + str(N) + ".txt",

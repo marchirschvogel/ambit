@@ -20,6 +20,7 @@ from .. import boundaryconditions
 
 from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from .fluid_ale_main import FluidmechanicsAleProblem
+from ..ioroutines import IO_field_fsi
 
 from ..base import problem_base, solver_base
 
@@ -67,7 +68,7 @@ class FSIProblem(problem_base):
         self.problem_physics = "fsi"
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
+        self.io_field = IO_field_fsi(self)
 
         # instantiate problem classes
         # solid
@@ -1027,15 +1028,19 @@ class FSIProblem(problem_base):
 
     def read_restart(self, sname, N):
         # read restart information
-        if N > 0:
-            self.io.readcheckpoint(self, N)
+        self.pbs.read_restart(sname, N)
+        self.pbfa.read_restart(sname, N)
+        if self.fsi_system == "neumann_neumann":
+            if N > 0:
+                self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         self.pbs.evaluate_initial()
         self.pbfa.evaluate_initial()
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.pbs.write_output_ini()
+        self.pbfa.write_output_ini()
 
     def write_output_pre(self):
         self.pbs.write_output_pre()
@@ -1054,7 +1059,8 @@ class FSIProblem(problem_base):
         self.pbfa.set_output_state(N)
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t) # combined FSI output routine
+        self.pbs.write_output(N=N, t=t)
+        self.pbfa.write_output(N=N, t=t)
 
     def update(self):
         # update time step - solid and ALE fluid
@@ -1077,7 +1083,10 @@ class FSIProblem(problem_base):
         self.pbfa.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
+        self.pbs.write_restart(sname, N, force=force)
+        self.pbfa.write_restart(sname, N, force=force)
+        if self.fsi_system == "neumann_neumann":
+            self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         return False

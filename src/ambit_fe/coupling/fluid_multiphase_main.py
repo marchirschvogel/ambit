@@ -107,7 +107,6 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.pbrom_host = self
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
@@ -118,8 +117,6 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.have_condensed_variables = False
 
         self.numdof = self.pbf.numdof + self.pbp.numdof
-
-        self.io = self.pbf.io
 
         # number of fields involved
         self.nfields = 4
@@ -436,16 +433,16 @@ class FluidmechanicsMultiphaseProblem(problem_base):
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
-        # read restart information
-        if N > 0:
-            self.io.readcheckpoint(self, N)
+        self.pbf.read_restart(sname, N)
+        self.pbp.read_restart(sname, N)
 
     def evaluate_initial(self):
         self.pbf.evaluate_initial()
         self.pbp.evaluate_initial()
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.pbf.write_output_ini()
+        self.pbp.write_output_ini()
 
     def write_output_pre(self):
         self.pbf.write_output_pre()
@@ -464,7 +461,8 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.pbp.set_output_state(N)
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)
+        self.pbf.write_output(N=N, t=t)
+        self.pbp.write_output(N=N, t=t)
 
     def update(self):
         # update time step - fluid and ALE
@@ -480,7 +478,8 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.pbp.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
+        self.pbf.write_restart(sname, N, force=force)
+        self.pbp.write_restart(sname, N, force=force)
 
     def check_abort(self, t):
         return False

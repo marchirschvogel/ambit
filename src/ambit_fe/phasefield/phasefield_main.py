@@ -15,6 +15,7 @@ from petsc4py import PETSc
 
 from . import phasefield_constitutive
 from . import phasefield_variationalform
+from . import phasefield_io
 from .. import timeintegration
 from .. import utilities
 from ..solver import solver_nonlin
@@ -64,7 +65,7 @@ class PhasefieldProblem(problem_base):
             raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
+        self.io_field = phasefield_io.IO_phasefield(self)
 
         self.is_ale = is_ale
         self.is_advected = is_advected
@@ -689,7 +690,7 @@ class PhasefieldProblem(problem_base):
     def read_restart(self, sname, N):
         # read restart information
         if self.pbase.restart_step > 0:
-            self.io.readcheckpoint(self, N)
+            self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         # read initial conditions from file
@@ -712,12 +713,12 @@ class PhasefieldProblem(problem_base):
                     self.phi_veryold.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.io_field.write_output(writemesh=True)
 
     def write_output_pre(self):
         if self.pbase.write_initial_fields:
             for n, fld in enumerate([self.phi_old, self.mu_old]):
-                self.io.write_output_pre(self, fld, self.V_out_scalar, 0.0, self.var_names[n]+"_initial")
+                self.io_field.write_output_pre(fld, self.V_out_scalar, 0.0, self.var_names[n]+"_initial")
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
@@ -741,7 +742,7 @@ class PhasefieldProblem(problem_base):
         pass
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)
+        self.io_field.write_output(N=N, t=t)
 
     def update(self):
         self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot, self.phidot_old, self.mu, self.mu_old)
@@ -752,14 +753,14 @@ class PhasefieldProblem(problem_base):
     def induce_state_change(self):
         pass
 
-    def write_restart(self, sname, N):
-        self.io.write_restart(self, N)
+    def write_restart(self, sname, N, force=False):
+        self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         pass
 
     def destroy(self):
-        self.io.close_output_files(self)
+        self.io_field.close_output_files()
 
 
 class PhasefieldSolver(solver_base):

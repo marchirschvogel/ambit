@@ -17,6 +17,7 @@ from petsc4py import PETSc
 
 from . import solid_kinematics_constitutive
 from . import solid_variationalform
+from . import solid_io
 from .. import timeintegration
 from .. import utilities
 from .. import boundaryconditions
@@ -75,7 +76,7 @@ class SolidmechanicsProblem(problem_base):
             raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
-        self.write_restart_every = self.io.write_restart_every
+        self.io_field = solid_io.IO_solid(self)
 
         self.order_disp = self.fem_params["order_disp"]
         self.order_pres = self.fem_params.get("order_pres", 1)
@@ -1918,13 +1919,13 @@ class SolidmechanicsProblem(problem_base):
     def read_restart(self, sname, N):
         # read restart information
         if N > 0:
-            self.io.readcheckpoint(self, N)
+            self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         pass
 
     def write_output_ini(self):
-        self.io.write_output(self, writemesh=True)
+        self.io_field.write_output(writemesh=True)
 
     def write_output_pre(self):
         if "fibers" in self.results_to_write and self.io.write_results_every > 0:
@@ -1938,7 +1939,7 @@ class SolidmechanicsProblem(problem_base):
                     comm=self.pbase.comm,
                     entity_maps=self.io.entity_maps,
                 )
-                self.io.write_output_pre(self, fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
+                self.io_field.write_output_pre(fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
@@ -1991,7 +1992,7 @@ class SolidmechanicsProblem(problem_base):
             self.pbscat.set_output_state(t)
 
     def write_output(self, N, t, msh=False):
-        self.io.write_output(self, N=N, t=t)
+        self.io_field.write_output(N=N, t=t)
 
     def update(self):
         # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
@@ -2021,14 +2022,14 @@ class SolidmechanicsProblem(problem_base):
             self.pbscat.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.io.write_restart(self, N, force=force)
+        self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         if self.pbase.problem_type == "solid_flow0d_multiscale_gandr" and abs(self.growth_rate) <= self.tol_stop_large:
             return True
 
     def destroy(self):
-        self.io.close_output_files(self)
+        self.io_field.close_output_files()
         if self.has_diffusion:
             self.pbscat.destroy()
 
@@ -2112,7 +2113,7 @@ class SolidmechanicsSolver(solver_base):
 
         # write prestress displacement (given that we want to write the displacement)
         if "displacement" in self.pb.results_to_write and self.pb.io.write_results_every > 0:
-            self.pb.io.write_output_pre(self.pb, self.pb.u_pre, self.pb.V_out_vector, 0.0, "displacement_pre")
+            self.pb.io_field.write_output_pre(self.pb.u_pre, self.pb.V_out_vector, 0.0, "displacement_pre")
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in

@@ -121,7 +121,7 @@ def test_main():
         nm="u",
     )
     check2 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.io.v_out,
+        problem.mp.io_field.v_out,
         check_node,
         v_corr,
         problem.mp.V_u,
@@ -130,7 +130,7 @@ def test_main():
         nm="v",
     )
     check3 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.io.a_out,
+        problem.mp.io_field.a_out,
         check_node,
         a_corr,
         problem.mp.V_u,

@@ -96,7 +96,6 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.have_regularization = False
 
         self.io = self.pbs.io
-        self.write_restart_every = self.io.write_restart_every
 
         # 3D constraint variable (volume or flux)
         self.constr, self.constr_old = (
