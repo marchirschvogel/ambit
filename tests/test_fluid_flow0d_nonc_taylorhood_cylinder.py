@@ -86,11 +86,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
+        [[TIME_PARAMS_FLUID], TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        [MATERIALS, MODEL_PARAMS_FLOW0D],
-        BC_DICT,
+        [FEM_PARAMS],
+        [[MATERIALS], MODEL_PARAMS_FLOW0D],
+        [BC_DICT],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS,
     )

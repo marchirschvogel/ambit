@@ -193,11 +193,11 @@ def main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
+        [[TIME_PARAMS_FLUID], TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D],
-        BC_DICT,
+        [FEM_PARAMS],
+        [[MATERIALS_FLUID], MODEL_PARAMS_FLOW0D],
+        [BC_DICT],
         coupling_params=COUPLING_PARAMS,
     )
 

@@ -46,8 +46,12 @@ class AleProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_ale(fem_params)
-        ioparams.check_params_time_fluid(time_params)
+        self.time_params = time_params[0]
+        self.fem_params = fem_params[0]
+        self.bc_dict = bc_dict[0]
+
+        ioparams.check_params_fem_ale(self.fem_params)
+        ioparams.check_params_time_fluid(self.time_params)
 
         self.problem_physics = "ale"
 
@@ -56,8 +60,8 @@ class AleProblem(problem_base):
         self.io = io
         self.write_restart_every = self.io.write_restart_every
 
-        self.order_disp = fem_params["order_disp"]
-        self.quad_degree = fem_params["quad_degree"]
+        self.order_disp = self.fem_params["order_disp"]
+        self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
         self.domain_ids = self.io.domain_ids[self.io.m_id_ale]
@@ -70,7 +74,7 @@ class AleProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
 
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
@@ -182,7 +186,7 @@ class AleProblem(problem_base):
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(
-            time_params,
+            self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
             time_curves=time_curves,
@@ -213,9 +217,8 @@ class AleProblem(problem_base):
             V_field=self.V_d,
             Vdisc_scalar=self.Vd_scalar,
         )
-        self.bc_dict = bc_dict
-        self.dbcs = []
 
+        self.dbcs = []
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)

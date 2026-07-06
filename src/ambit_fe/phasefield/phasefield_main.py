@@ -47,8 +47,12 @@ class PhasefieldProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_phasefield(fem_params)
-        ioparams.check_params_time_phasefield(time_params)
+        self.time_params = time_params[0]
+        self.fem_params = fem_params[0]
+        self.bc_dict = bc_dict[0]
+
+        ioparams.check_params_fem_phasefield(self.fem_params)
+        ioparams.check_params_time_phasefield(self.time_params)
 
         self.problem_physics = "phasefield"
 
@@ -60,11 +64,11 @@ class PhasefieldProblem(problem_base):
         self.is_ale = is_ale
         self.is_advected = is_advected
 
-        self.phi_range = fem_params.get("phi_range", [-1.0, 1.0])
+        self.phi_range = self.fem_params.get("phi_range", [-1.0, 1.0])
 
-        self.order_phi = fem_params["order_phi"]
-        self.order_mu = fem_params["order_mu"]
-        self.quad_degree = fem_params["quad_degree"]
+        self.order_phi = self.fem_params["order_phi"]
+        self.order_mu = self.fem_params["order_mu"]
+        self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
         self.domain_ids = self.io.domain_ids[self.io.m_id_phase]
@@ -77,7 +81,7 @@ class PhasefieldProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
 
         # collect domain data
         self.kappa = []
@@ -163,7 +167,7 @@ class PhasefieldProblem(problem_base):
 
         # initialize phase field time-integration class
         self.ti = timeintegration.timeintegration_phasefield(
-            time_params,
+            self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
             time_curves=time_curves,
@@ -201,9 +205,8 @@ class PhasefieldProblem(problem_base):
             V_field=self.V_phi,
             Vdisc_scalar=self.Vd_phi_scalar,
         )
-        self.bc_dict = bc_dict
-        self.dbcs = []
 
+        self.dbcs = []
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)

@@ -48,8 +48,12 @@ class ScatraProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_scatra(fem_params)
-        ioparams.check_params_time_fluid(time_params)
+        self.time_params = time_params[0]
+        self.fem_params = fem_params[0]
+        self.bc_dict = bc_dict[0]
+
+        ioparams.check_params_fem_scatra(self.fem_params)
+        ioparams.check_params_time_fluid(self.time_params)
 
         self.problem_physics = "scatra"
 
@@ -61,8 +65,8 @@ class ScatraProblem(problem_base):
         self.is_ale = is_ale
         self.is_advected = is_advected
 
-        self.order_conc = fem_params["order_conc"]
-        self.quad_degree = fem_params["quad_degree"]
+        self.order_conc = self.fem_params["order_conc"]
+        self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
         self.domain_ids = self.io.domain_ids[self.io.m_id_scatra]
@@ -75,7 +79,7 @@ class ScatraProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
 
         self.localsolve = False
         self.prestress_initial = False
@@ -179,7 +183,7 @@ class ScatraProblem(problem_base):
 
         # initialize scatra time-integration class
         self.ti = timeintegration.timeintegration_scatra(
-            time_params,
+            self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
             time_curves=time_curves,
@@ -223,7 +227,6 @@ class ScatraProblem(problem_base):
             V_field=self.V_c,
             Vdisc_scalar=self.Vd_scalar,
         )
-        self.bc_dict = bc_dict
 
         self.dbcs = [[]] * self.num_species
         # Dirichlet boundary conditions

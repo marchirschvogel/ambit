@@ -50,7 +50,7 @@ def test_main():
         "tol_inc": 1.0e-8,
     }
 
-    TIME_PARAMS_FLUID = {
+    TIME_PARAMS = {
         "timint": "ost",
         "theta_ost": 1.0,
         "fluid_governing_type": "navierstokes_transient",
@@ -108,11 +108,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS_FLUID,
+        [TIME_PARAMS],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        MATERIALS,
-        BC_DICT,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
         time_curves=time_curves(),
     )
 

@@ -223,11 +223,11 @@ def test_main():
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
-        [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D],
+        [[TIME_PARAMS_SOLID_SMALL], [TIME_PARAMS_SOLID_LARGE], TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        [MATERIALS, MODEL_PARAMS_FLOW0D],
-        BC_DICT,
+        [FEM_PARAMS],
+        [[MATERIALS], MODEL_PARAMS_FLOW0D],
+        [BC_DICT],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS,
         multiscale_params=MULTISCALE_GR_PARAMS,

@@ -42,7 +42,7 @@ def test_main():
         "tol_inc": 1.0e-8,
     }
 
-    TIME_PARAMS_SOLID = {"timint": "ost", "theta_ost": 0.5}
+    TIME_PARAMS = {"timint": "ost", "theta_ost": 0.5}
 
     FEM_PARAMS = {
         "order_disp": 2,
@@ -78,11 +78,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS_SOLID,
+        [TIME_PARAMS],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        MATERIALS,
-        BC_DICT,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
         time_curves=time_curves(),
         coupling_params=CONSTRAINT_PARAMS,
     )

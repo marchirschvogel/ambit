@@ -115,13 +115,13 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
+        [[TIME_PARAMS_FLUID], TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
-        [FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
-        [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D],
-        [BC_DICT_FLUID, BC_DICT_ALE],
+        [[FEM_PARAMS_FLUID], [FEM_PARAMS_ALE]],
+        [[MATERIALS_FLUID], [MATERIALS_ALE], MODEL_PARAMS_FLOW0D],
+        [[BC_DICT_FLUID], [BC_DICT_ALE]],
         time_curves=time_curves(),
-        coupling_params=[COUPLING_PARAMS,COUPLING_PARAMS_FLUID_FLOW0D],
+        coupling_params=[COUPLING_PARAMS, COUPLING_PARAMS_FLUID_FLOW0D],
     )
 
     # problem solve

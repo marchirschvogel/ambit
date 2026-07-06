@@ -117,6 +117,7 @@ def check_params_solver(params):
 def check_params_fem_solid(params):
     valid_params = [
         "bulkmod",
+        "diffusion",
         "incompressibility",
         "inverse_mechanics",
         "lin_remodeling_full",

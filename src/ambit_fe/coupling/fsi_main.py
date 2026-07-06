@@ -139,8 +139,8 @@ class FSIProblem(problem_base):
             self.dbcs_lm = []
             if bc_dict_lm is not None:
                 bc = boundaryconditions.boundary_cond(self, V_field=self.V_lm)
-                if "dirichlet" in bc_dict_lm.keys():
-                    bc.dirichlet_bcs(bc_dict_lm["dirichlet"], self.dbcs_lm)
+                if "dirichlet" in bc_dict_lm[0].keys():
+                    bc.dirichlet_bcs(bc_dict_lm[0]["dirichlet"], self.dbcs_lm)
 
         self.numdof = self.pbs.numdof + self.pbfa.numdof
         if self.fsi_system == "neumann_neumann":

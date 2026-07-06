@@ -34,13 +34,13 @@ def test_main():
         "incompressibility": "full",
     }
 
-    SOLVER_PARAMS_SOLID = {
+    SOLVER_PARAMS = {
         "solve_type": "direct",
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,
     }
 
-    TIME_PARAMS_SOLID = {"timint": "static"}
+    TIME_PARAMS = {"timint": "static"}
 
     MATERIALS = {
         "MAT1": {
@@ -66,11 +66,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS_SOLID,
-        SOLVER_PARAMS_SOLID,
-        FEM_PARAMS,
-        MATERIALS,
-        BC_DICT,
+        [TIME_PARAMS],
+        SOLVER_PARAMS,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
         time_curves=time_curves(),
     )
 

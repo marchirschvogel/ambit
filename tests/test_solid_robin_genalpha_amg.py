@@ -96,11 +96,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS,
+        [TIME_PARAMS],
         SOLVER_PARAMS,
-        FEM_PARAMS,
-        MATERIALS,
-        BC_DICT,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
     )
 
     # solve time-dependent problem

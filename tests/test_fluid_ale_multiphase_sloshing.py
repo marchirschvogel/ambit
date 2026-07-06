@@ -165,11 +165,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_PF],
+        [[TIME_PARAMS_FLUID], [TIME_PARAMS_PF]],
         SOLVER_PARAMS,
-        [FEM_PARAMS_FLUID, FEM_PARAMS_PF, FEM_PARAMS_ALE],
-        [MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
-        [BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE],
+        [[FEM_PARAMS_FLUID], [FEM_PARAMS_PF], [FEM_PARAMS_ALE]],
+        [[MATERIALS_FLUID], [MATERIALS_PF], [MATERIALS_ALE]],
+        [[BC_DICT_FLUID], [BC_DICT_PF], [BC_DICT_ALE]],
         coupling_params=[COUPLING_PARAMS_FLUID_ALE,{}],
     )
 

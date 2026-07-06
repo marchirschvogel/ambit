@@ -56,22 +56,26 @@ class SolidmechanicsProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_solid(fem_params)
-        ioparams.check_params_time_solid(time_params)
+        self.time_params = time_params[0]
+        self.fem_params = fem_params[0]
+        self.bc_dict = bc_dict[0]
+
+        ioparams.check_params_fem_solid(self.fem_params)
+        ioparams.check_params_time_solid(self.time_params)
 
         self.problem_physics = "solid"
 
-        self.timint = time_params.get("timint", "static")
+        self.timint = self.time_params.get("timint", "static")
 
         self.results_to_write = io_params["results_to_write"]
 
         self.io = io
         self.write_restart_every = self.io.write_restart_every
 
-        self.order_disp = fem_params["order_disp"]
-        self.order_pres = fem_params.get("order_pres", 1)
-        self.order_pporo = fem_params.get("order_pporo", 1)
-        self.quad_degree = fem_params["quad_degree"]
+        self.order_disp = self.fem_params["order_disp"]
+        self.order_pres = self.fem_params.get("order_pres", 1)
+        self.order_pporo = self.fem_params.get("order_pporo", 1)
+        self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
         self.domain_ids = self.io.domain_ids[self.io.m_id_solid]
@@ -84,12 +88,12 @@ class SolidmechanicsProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
 
         # solid mechanics variable offset
         self.offs = 0
 
-        self.incompressibility = fem_params.get("incompressibility", "no")
+        self.incompressibility = self.fem_params.get("incompressibility", "no")
 
         if self.incompressibility == "no":
             self.incompressible_2field = False
@@ -97,21 +101,33 @@ class SolidmechanicsProblem(problem_base):
             self.incompressible_2field = True
         elif self.incompressibility == "nearly":
             self.incompressible_2field = True
-            self.bulkmod = fem_params["bulkmod"]
+            self.bulkmod = self.fem_params["bulkmod"]
         else:
             raise ValueError("Unknown setting for 'incompressibility'. Choose 'no', 'full', or 'nearly'.")
 
         if self.incompressible_2field:
             self.offs += 1
 
-        self.is_poroelastic = fem_params.get("poroelasticity", False)
+        self.is_poroelastic = self.fem_params.get("poroelasticity", False)
 
-        self.has_diffusion = False
+        self.has_diffusion = self.fem_params.get("diffusion", False)
+
+        if self.has_diffusion:
+            from ..scatra.scatra_main import ScatraProblem
+            self.pbscat = ScatraProblem(
+                pbase,
+                io_params,
+                time_params[1],
+                fem_params[1],
+                constitutive_models[1],
+                bc_dict[1],
+                time_curves,
+                io,
+                mor_params=mor_params,
+            )
 
         if self.is_poroelastic:
             self.offs += 1
-
-        self.fem_params = fem_params
 
         # collect domain data
         self.rho0 = []
@@ -120,26 +136,26 @@ class SolidmechanicsProblem(problem_base):
             if self.timint != "static":
                 self.rho0.append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho0"])
 
-        self.inverse_mechanics = fem_params.get("inverse_mechanics", False)
+        self.inverse_mechanics = self.fem_params.get("inverse_mechanics", False)
         if self.inverse_mechanics:
             assert(self.timint == "static")
 
-        self.prestress_initial = fem_params.get("prestress_initial", False)
-        self.prestress_initial_only = fem_params.get("prestress_initial_only", False)
+        self.prestress_initial = self.fem_params.get("prestress_initial", False)
+        self.prestress_initial_only = self.fem_params.get("prestress_initial_only", False)
         self.prestress_maxtime = self.pbase.ctrl_params.get("prestress_maxtime", 1.0)
         self.prestress_numstep = self.pbase.ctrl_params.get("prestress_numstep", 1)
         self.prestress_dt = self.pbase.ctrl_params.get("prestress_dt", self.prestress_maxtime / self.prestress_numstep)
         if "prestress_dt" in self.pbase.ctrl_params.keys():
             self.prestress_numstep = int(self.prestress_maxtime / self.prestress_dt)
-        self.prestress_ptc = fem_params.get("prestress_ptc", False)
-        self.prestress_from_file = fem_params.get("prestress_from_file", False)
+        self.prestress_ptc = self.fem_params.get("prestress_ptc", False)
+        self.prestress_from_file = self.fem_params.get("prestress_from_file", False)
 
         if bool(self.prestress_from_file):
             self.prestress_initial, self.prestress_initial_only = False, False
 
         if self.prestress_initial or self.prestress_initial_only:
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(
-                constitutive_models, self.mesh
+                constitutive_models[0], self.mesh
             )
 
         self.have_condensed_variables = False
@@ -366,7 +382,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(
-            time_params,
+            self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
             time_curves=time_curves,
@@ -573,7 +589,7 @@ class SolidmechanicsProblem(problem_base):
 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
-        self.lin_remod_full = fem_params.get("lin_remodeling_full", True)
+        self.lin_remod_full = self.fem_params.get("lin_remodeling_full", True)
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
@@ -660,10 +676,9 @@ class SolidmechanicsProblem(problem_base):
             V_field=self.V_u,
             Vdisc_scalar=self.Vd_scalar,
         )
-        self.bc_dict = bc_dict
+
         self.dbcs = []
         self.dbcs_poro = []
-
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)

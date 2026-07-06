@@ -155,11 +155,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_PF],
+        [[TIME_PARAMS_FLUID], [TIME_PARAMS_PF]],
         SOLVER_PARAMS,
-        [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
-        [MATERIALS_FLUID, MATERIALS_PF],
-        [BC_DICT_FLUID, BC_DICT_PF],
+        [[FEM_PARAMS_FLUID], [FEM_PARAMS_PF]],
+        [[MATERIALS_FLUID], [MATERIALS_PF]],
+        [[BC_DICT_FLUID], [BC_DICT_PF]],
         coupling_params=COUPLING_PARAMS_MULTIPHASE,
     )
 

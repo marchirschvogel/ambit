@@ -128,11 +128,11 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS_SOLID,
+        [TIME_PARAMS_SOLID],
         SOLVER_PARAMS_SOLID,
-        FEM_PARAMS,
-        MATERIALS,
-        BC_DICT,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
         time_curves=time_curves(),
     )
 

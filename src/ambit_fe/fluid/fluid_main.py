@@ -57,8 +57,12 @@ class FluidmechanicsProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_fluid(fem_params)
-        ioparams.check_params_time_fluid(time_params)
+        self.time_params = time_params[0]
+        self.fem_params = fem_params[0]
+        self.bc_dict = bc_dict[0]
+
+        ioparams.check_params_fem_fluid(self.fem_params)
+        ioparams.check_params_time_fluid(self.time_params)
 
         self.problem_physics = "fluid"
 
@@ -70,9 +74,9 @@ class FluidmechanicsProblem(problem_base):
         self.is_ale = is_ale
         self.is_multiphase = is_multiphase
 
-        self.order_vel = fem_params["order_vel"]
-        self.order_pres = fem_params["order_pres"]
-        self.quad_degree = fem_params["quad_degree"]
+        self.order_vel = self.fem_params["order_vel"]
+        self.order_pres = self.fem_params["order_pres"]
+        self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
         self.domain_ids = self.io.domain_ids[self.io.m_id_fluid]
@@ -85,7 +89,7 @@ class FluidmechanicsProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
 
         # collect domain data
         self.rho = [[] for _ in range(len(self.domain_ids))]
@@ -97,22 +101,22 @@ class FluidmechanicsProblem(problem_base):
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho1"])
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho2"])
 
-        self.fluid_formulation = fem_params.get("fluid_formulation", "nonconservative")
-        self.mass_formulation = fem_params.get("mass_formulation", "conservative_mass")
-        self.fluid_governing_type = time_params.get("fluid_governing_type", "navierstokes_transient")
-        self.stabilization = fem_params.get("stabilization", None)
+        self.fluid_formulation = self.fem_params.get("fluid_formulation", "nonconservative")
+        self.mass_formulation = self.fem_params.get("mass_formulation", "conservative_mass")
+        self.fluid_governing_type = self.time_params.get("fluid_governing_type", "navierstokes_transient")
+        self.stabilization = self.fem_params.get("stabilization", None)
 
-        self.prestress_initial = fem_params.get("prestress_initial", False)
-        self.prestress_initial_only = fem_params.get("prestress_initial_only", False)
+        self.prestress_initial = self.fem_params.get("prestress_initial", False)
+        self.prestress_initial_only = self.fem_params.get("prestress_initial_only", False)
         self.prestress_maxtime = self.pbase.ctrl_params.get("prestress_maxtime", 1.0)
         self.prestress_numstep = self.pbase.ctrl_params.get("prestress_numstep", 1)
         self.prestress_dt = self.pbase.ctrl_params.get("prestress_dt", self.prestress_maxtime / self.prestress_numstep)
         if "prestress_dt" in self.pbase.ctrl_params.keys():
             self.prestress_numstep = int(self.prestress_maxtime / self.prestress_dt)
-        self.prestress_ptc = fem_params.get("prestress_ptc", False)
-        self.prestress_kinetic = fem_params.get("prestress_kinetic", "none")
-        self.prestress_from_file = fem_params.get("prestress_from_file", False)
-        self.initial_fluid_pressure = fem_params.get("initial_fluid_pressure", [])
+        self.prestress_ptc = self.fem_params.get("prestress_ptc", False)
+        self.prestress_kinetic = self.fem_params.get("prestress_kinetic", "none")
+        self.prestress_from_file = self.fem_params.get("prestress_from_file", False)
+        self.initial_fluid_pressure = self.fem_params.get("initial_fluid_pressure", [])
 
         if self.prestress_from_file:
             self.prestress_initial, self.prestress_initial_only = False, False
@@ -376,7 +380,7 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(
-            time_params,
+            self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
             time_curves=time_curves,
@@ -451,10 +455,8 @@ class FluidmechanicsProblem(problem_base):
             Vdisc_scalar=self.Vd_scalar,
         )
 
-        self.bc_dict = bc_dict
         self.dbcs = []
         self.dbcs_pres = []
-
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
