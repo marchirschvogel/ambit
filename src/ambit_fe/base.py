@@ -363,7 +363,7 @@ class solver_base:
         self.li_.append(self.solnln.li)
 
         # write file for counters if requested
-        if "counters" in self.pb.pbase.results_to_write:
+        if self.pb.io.write_counters:
             # mode: 'wt' generates new file, 'a' appends to existing one
             if np.isclose(t, self.pb.pbase.dt):
                 mode = "wt"

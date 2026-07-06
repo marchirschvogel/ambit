@@ -37,6 +37,7 @@ def check_params_io(params):
         "results_to_write",
         "simname",
         "volume_laplace",
+        "write_counters",
         "write_initial_fields",
         "write_results_every",
         "write_results_every_0D",

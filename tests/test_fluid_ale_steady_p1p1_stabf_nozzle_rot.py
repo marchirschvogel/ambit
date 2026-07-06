@@ -26,7 +26,7 @@ def test_main():
         "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
         "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
-        "results_to_write": [["velocity", "pressure", "cauchystress"],["aledisplacement", "alevelocity", "alestress"]],
+        "results_to_write": {"fluid": ["velocity", "pressure", "cauchystress"], "ale": ["aledisplacement", "alevelocity", "alestress"]},
         "simname": "fluid_ale_steady_p1p1_stabf_nozzle_rot",
     }
 

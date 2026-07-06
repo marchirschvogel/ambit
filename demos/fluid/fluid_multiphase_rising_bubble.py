@@ -28,11 +28,13 @@ def main():
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]}, # 32,64   64,128   128,256
         # which results to write
-        "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
+        "results_to_write": {"fluid": ["velocity", "pressure", "density"], "phasefield": ["phase", "potential"]},
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
         "simname": "fluid_multiphase_rising_bubble"+str(case),
         # write the initial fields (e.g., the phase field, for visualization/checks)
         "write_initial_fields": True,
+        # write iteration counters and solver timings
+        "write_counters": True,
         # report mass and phase field conservation
         "report_conservation_properties": True,
     }

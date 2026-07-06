@@ -72,11 +72,9 @@ def main():
         "mesh_domain": basepath + "/input/channel-flag_domain.xdmf",
         "mesh_boundary": basepath + "/input/channel-flag_boundary.xdmf",
         "mesh_encoding": "HDF5",
-        "results_to_write": [
-            ["displacement", "velocity"],
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement", "alevelocity"],
-        ],
+        "results_to_write": {"solid": ["displacement", "velocity"],
+                             "fluid": ["fluiddisplacement", "velocity", "pressure"],
+                             "ale": ["aledisplacement", "alevelocity"]},
         "simname": "fsi_channel_flag_turek_" + case,
     }
 

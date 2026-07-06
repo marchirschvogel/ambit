@@ -964,7 +964,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs.set_output_state(t)
         self.pb0.set_output_state(t)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.pbs.write_output(N, t)
         self.pb0.write_output(N, t)
         self.write_output_coupling(N, t)

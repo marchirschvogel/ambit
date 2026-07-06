@@ -28,10 +28,7 @@ def test_main():
             basepath + "/input/fib_blocks3_c.xdmf",
             basepath + "/input/fib_blocks3_l.xdmf",
         ],
-        "results_to_write": [
-            ["velocity", "pressure"],
-            ["aledisplacement"],
-        ],  # first fluid, then ale results
+        "results_to_write": {"fluid": ["velocity", "pressure"], "ale": ["aledisplacement"]},
         "simname": "frsi_blocks_active",
     }
 

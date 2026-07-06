@@ -119,10 +119,6 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
 
-        # modify results to write...
-        self.pbf.results_to_write = io_params["results_to_write"][0]
-        self.pba.results_to_write = io_params["results_to_write"][1]
-
         self.io = io
         self.write_restart_every = self.io.write_restart_every
 

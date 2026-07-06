@@ -15,6 +15,7 @@ from .. import ioparams
 from .. import utilities
 
 from ..base import problem_base, solver_base
+from ..ioroutines import IO_0D
 
 # framework of 0D flow models, relating pressure p (and its derivative) to fluxes q
 
@@ -39,6 +40,8 @@ class Flow0DProblem(problem_base):
         ioparams.check_params_time_flow0d(time_params)
 
         self.problem_physics = "flow0d"
+
+        self.io = IO_0D(io_params)
 
         self.time_params = time_params
 

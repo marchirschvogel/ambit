@@ -120,12 +120,6 @@ class FSIMultiphaseProblem(problem_base):
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
 
-        # modify results to write...
-        self.pbs.results_to_write = io_params["results_to_write"][0]
-        self.pbf.results_to_write = io_params["results_to_write"][1]
-        self.pbp.results_to_write = io_params["results_to_write"][2]
-        self.pba.results_to_write = io_params["results_to_write"][3]
-
         self.localsolve = False
         self.print_subiter = False
         self.sub_solve = False
@@ -546,7 +540,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfsi.set_output_state(N)
         self.pbp.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t) # combined multiphase FSI output routine
 
     def update(self):

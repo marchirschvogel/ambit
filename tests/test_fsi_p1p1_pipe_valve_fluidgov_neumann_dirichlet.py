@@ -33,11 +33,9 @@ def test_main():
         "write_restart_every": -1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": [
-            ["displacement"],
-            ["velocity", "pressure"],
-            ["aledisplacement"],
-        ],
+        "results_to_write": {"solid": ["displacement"],
+                             "fluid": ["velocity", "pressure"],
+                             "ale": ["aledisplacement"]},
         "simname": "fsi_p1p1_pipe_valve_fluidgov_neumann_dirichlet",
     }
 

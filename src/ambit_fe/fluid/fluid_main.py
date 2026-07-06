@@ -66,7 +66,12 @@ class FluidmechanicsProblem(problem_base):
 
         self.problem_physics = "fluid"
 
-        self.results_to_write = io_params["results_to_write"]
+        if isinstance(io_params["results_to_write"], list):
+            self.results_to_write = io_params["results_to_write"]
+        elif isinstance(io_params["results_to_write"], dict):
+            self.results_to_write = io_params["results_to_write"][self.problem_physics]
+        else:
+            raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
         self.write_restart_every = self.io.write_restart_every

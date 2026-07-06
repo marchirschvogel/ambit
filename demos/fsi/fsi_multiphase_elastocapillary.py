@@ -67,12 +67,10 @@ def main():
         "mesh_domain": mesh_,
         "mesh_encoding": "ASCII", # HDF5, ASCII
         "refine_mesh": {"region": locate_refine_region(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
-        "results_to_write": [
-            ["displacement"],
-            ["velocity", "pressure", "density"],
-            ["phase", "potential"],
-            ["aledisplacement"],
-        ],
+        "results_to_write": {"solid": ["displacement"],
+                             "fluid": ["velocity", "pressure", "density"],
+                             "phasefield": ["phase", "potential"],
+                             "ale": ["aledisplacement"]},
         "write_initial_fields": True,
         "report_conservation_properties": True,
         # "write_submeshes": True,

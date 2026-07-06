@@ -21,7 +21,7 @@ def test_main():
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"unit_square", "celltype":"triangle", "meshsize":[10,10]},
-        "results_to_write": [["velocity", "pressure"],["aledisplacement"]],
+        "results_to_write": {"fluid": ["velocity", "pressure"], "ale": ["aledisplacement"]},
         "simname": "fluid_ale_uniform_pressurized",
     }
 

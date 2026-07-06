@@ -67,7 +67,12 @@ class SolidmechanicsProblem(problem_base):
 
         self.timint = self.time_params.get("timint", "static")
 
-        self.results_to_write = io_params["results_to_write"]
+        if isinstance(io_params["results_to_write"], list):
+            self.results_to_write = io_params["results_to_write"]
+        elif isinstance(io_params["results_to_write"], dict):
+            self.results_to_write = io_params["results_to_write"][self.problem_physics]
+        else:
+            raise RuntimeError("Unknown instance of results_to_write!")
 
         self.io = io
         self.write_restart_every = self.io.write_restart_every
@@ -114,20 +119,24 @@ class SolidmechanicsProblem(problem_base):
 
         if self.has_diffusion:
             from ..scatra.scatra_main import ScatraProblem
+            io.m_id_scatra = self.io.m_id_solid  # needed for sub-problem, which has to be on the same mesh!
             self.pbscat = ScatraProblem(
                 pbase,
                 io_params,
-                time_params[1],
-                fem_params[1],
-                constitutive_models[1],
-                bc_dict[1],
+                [time_params[1]],
+                [fem_params[1]],
+                [constitutive_models[1]],
+                [bc_dict[1]],
                 time_curves,
                 io,
                 mor_params=mor_params,
+                is_ale=True,
             )
 
         if self.is_poroelastic:
             self.offs += 1
+        if self.has_diffusion:
+            self.offs += self.pbscat.num_species
 
         # collect domain data
         self.rho0 = []
@@ -691,6 +700,8 @@ class SolidmechanicsProblem(problem_base):
             self.nfields += 1
         if self.is_poroelastic:
             self.nfields += 1
+        if self.has_diffusion:
+            self.nfields += self.pbscat.num_species
 
         # store some info on variable and equation names (used e.g. in solver print)
         self.var_names, self.eq_names = ["u"], ["solid momentum"]
@@ -700,6 +711,9 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             self.var_names.append("pporo")
             self.eq_names.append("solid porous flux")
+        if self.has_diffusion:
+            self.var_names += self.pbscat.var_names
+            self.eq_names += self.pbscat.eq_names
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -723,6 +737,10 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             is_ghosted.append(1)
             vlist_.append(self.pporo.x.petsc_vec)
+        if self.has_diffusion:
+            for i in range(self.pbscat.num_species):
+                is_ghosted.append(1)
+                vlist_.append(self.pbscat.c[i].x.petsc_vec)
         return vlist_, is_ghosted
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
@@ -1199,6 +1217,9 @@ class SolidmechanicsProblem(problem_base):
             if self.incompressible_2field:
                 self.weakform_prestress_p = self.deltaW_p
 
+        if self.has_diffusion:
+            self.pbscat.set_variational_forms_residual()
+
     ### Jacobians
     def set_variational_forms_jacobian(self):
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
@@ -1467,6 +1488,9 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
                 self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
 
+        if self.has_diffusion:
+            self.pbscat.set_variational_forms_jacobian()
+
     # active stress projection
     def evaluate_active_stress(self):
         if self.have_frank_starling:
@@ -1706,6 +1730,9 @@ class SolidmechanicsProblem(problem_base):
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
+        if self.has_diffusion:
+            self.pbscat.set_problem_residual_jacobian_forms()
+
     def set_problem_vector_matrix_structures(self):
         ts = time.time()
         utilities.print_status("Creating vector and matrix data structures for solid...", self.pbase.comm, e=" ")
@@ -1741,6 +1768,9 @@ class SolidmechanicsProblem(problem_base):
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
+        if self.has_diffusion:
+            self.pbscat.set_problem_vector_matrix_structures()
+
     def assemble_residual(self, t, subsolver=None):
         # assemble rhs vector
         with self.r_u.localForm() as r_local:
@@ -1758,16 +1788,19 @@ class SolidmechanicsProblem(problem_base):
 
         self.r_list[0] = self.r_u
 
+        off=0
         if self.incompressible_2field:
+            off+=1
             # assemble pressure rhs vector
             with self.r_p.localForm() as r_local:
                 r_local.set(0.0)
             fem.petsc.assemble_vector(self.r_p, self.res_p)
             self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-            self.r_list[1] = self.r_p
+            self.r_list[off] = self.r_p
 
         if self.is_poroelastic:
+            off+=1
             # assemble pressure rhs vector
             with self.r_pporo.localForm() as r_local:
                 r_local.set(0.0)
@@ -1782,7 +1815,13 @@ class SolidmechanicsProblem(problem_base):
             self.r_pporo.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(self.r_pporo, self.dbcs_poro, x0=self.pporo.x.petsc_vec, alpha=-1.0)
 
-            self.r_list[self.offs] = self.r_pporo
+            self.r_list[off] = self.r_pporo
+
+        if self.has_diffusion:
+            off+=1
+            self.pbscat.assemble_residual(t)
+            for i in range(self.pbscat.num_species):
+                self.r_list[off+i] = self.pbscat.r_c[i]
 
     def assemble_stiffness(self, t, subsolver=None):
         # assemble system matrix
@@ -1792,7 +1831,9 @@ class SolidmechanicsProblem(problem_base):
 
         self.K_list[0][0] = self.K_uu
 
+        off=0
         if self.incompressible_2field:
+            off+=1
             # assemble system matrices
             self.K_up.zeroEntries()
             fem.petsc.assemble_matrix(self.K_up, self.jac_up, self.dbcs)
@@ -1810,11 +1851,12 @@ class SolidmechanicsProblem(problem_base):
             else:
                 self.K_pp = None
 
-            self.K_list[0][1] = self.K_up
-            self.K_list[1][0] = self.K_pu
-            self.K_list[1][1] = self.K_pp
+            self.K_list[0][off] = self.K_up
+            self.K_list[off][0] = self.K_pu
+            self.K_list[off][off] = self.K_pp
 
         if self.is_poroelastic:
+            off+=1
             # assemble system matrices
             self.K_upporo.zeroEntries()
             fem.petsc.assemble_matrix(self.K_upporo, self.jac_upporo, self.dbcs)
@@ -1828,9 +1870,16 @@ class SolidmechanicsProblem(problem_base):
             fem.petsc.assemble_matrix(self.K_pporopporo, self.jac_pporopporo, self.dbcs_poro)
             self.K_pporopporo.assemble()
 
-            self.K_list[0][self.offs] = self.K_upporo
-            self.K_list[self.offs][0] = self.K_pporou
-            self.K_list[self.offs][self.offs] = self.K_pporopporo
+            self.K_list[0][off] = self.K_upporo
+            self.K_list[off][0] = self.K_pporou
+            self.K_list[off][off] = self.K_pporopporo
+
+        if self.has_diffusion:
+            off+=1
+            self.pbscat.assemble_stiffness(t)
+            for i in range(self.pbscat.num_species):
+                for j in range(self.pbscat.num_species):
+                    self.K_list[off+i][off+j] = self.pbscat.K_cc[i][j]
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         assert self.incompressible_2field  # index sets only needed for 2-field problem
@@ -1909,6 +1958,9 @@ class SolidmechanicsProblem(problem_base):
                 ].replace("*", str(N)),
             )
 
+        if self.has_diffusion:
+            self.pbscat.evaluate_pre_solve(t, N, dt)
+
     def evaluate_post_solve(self, t, N):
         # solve volume laplace (for cardiac benchmark)
         if bool(self.volume_laplace):
@@ -1924,11 +1976,17 @@ class SolidmechanicsProblem(problem_base):
         ):
             self.compute_strain_energy_power_membrane(N, t)
 
+        if self.has_diffusion:
+            self.pbscat.evaluate_post_solve(t, N)
+
     def set_output_state(self, t):
-        pass
+        if self.has_diffusion:
+            self.pbscat.set_output_state(t)
 
     def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
+        if self.has_diffusion:
+            self.pbscat.write_output(N, t, msh=msh)
 
     def update(self):
         # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
@@ -1946,27 +2004,21 @@ class SolidmechanicsProblem(problem_base):
             self.internalvars,
             self.internalvars_old,
         )
+        if self.has_diffusion:
+            self.pbscat.update()
 
     def print_to_screen(self):
-        pass
-
-    def get_nonlinear_solver_print_info(self):
-        eqs_, vrs_ = [], []
-        eqs_.append("solid momentum")
-        vrs_.append("u")
-        if self.incompressible_2field:
-            eqs_.append("solid incompressibility")
-            vrs_.append("p")
-        if self.is_poroelastic:
-            eqs_.append("solid porous flux")
-            vrs_.append("pporo")
-        return eqs_, vrs_
+        if self.has_diffusion:
+            self.pbscat.print_to_screen()
 
     def induce_state_change(self):
-        pass
+        if self.has_diffusion:
+            self.pbscat.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
         self.io.write_restart(self, N, force=force)
+        if self.has_diffusion:
+            self.pbscat.write_restart(sname, N, force=force)
 
     def check_abort(self, t):
         if self.pbase.problem_type == "solid_flow0d_multiscale_gandr" and abs(self.growth_rate) <= self.tol_stop_large:
@@ -1974,6 +2026,8 @@ class SolidmechanicsProblem(problem_base):
 
     def destroy(self):
         self.io.close_output_files(self)
+        if self.has_diffusion:
+            self.pbscat.destroy()
 
 
 class SolidmechanicsSolver(solver_base):

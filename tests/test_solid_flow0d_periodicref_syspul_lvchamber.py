@@ -41,9 +41,9 @@ def test_main():
         "results_to_write": [
             "displacement",
             "fibers",
-            "counters",
             "tau_a",
         ],
+        "write_counters": True,
         "simname": "solid_flow0d_periodicref",
     }
 

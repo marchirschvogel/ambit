@@ -111,11 +111,6 @@ class FSIProblem(problem_base):
         self.pbrom = self.pbs  # ROM problem can only be solid so far...
         self.pbrom_host = self
 
-        # modify results to write...
-        self.pbs.results_to_write = io_params["results_to_write"][0]
-        self.pbf.results_to_write = io_params["results_to_write"][1]
-        self.pba.results_to_write = io_params["results_to_write"][2]
-
         # currently no meshtags on interface mesh supported...
         self.mt_d, self.mt_b, self.mt_sb = None, None, None
 

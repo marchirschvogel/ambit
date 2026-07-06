@@ -63,11 +63,12 @@ class IO:
         self.print_enhanced_info = io_params.get("print_enhanced_info", False)
         self.report_conservation_properties = io_params.get("report_conservation_properties", False)
 
+        self.write_counters = io_params.get("write_counters", False)
         self.write_submeshes = io_params.get("write_submeshes", False)
 
         self.output_midpoint = io_params.get("output_midpoint", False)
 
-        self.results_pre = ["fibers", "counters"]
+        self.results_pre = ["fibers"]
 
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
@@ -1151,9 +1152,6 @@ class IO_solid(IO):
                     elif res == "fibers":
                         # written only once at the beginning, not after each time step (since constant in time)
                         pass
-                    elif res == "counters":
-                        # iteration counters, written by base class
-                        pass
                     else:
                         raise NameError("Unknown output to write for solid mechanics!")
 
@@ -1591,9 +1589,6 @@ class IO_fluid(IO):
                         pw_out = fem.Function(pb.V_out_scalar, name=pw.name)
                         pw_out.interpolate(pw)
                         pb.resultsfiles[res].write_function(pw_out, indicator)
-                    elif res == "counters":
-                        # iteration counters, written by base class
-                        pass
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 
@@ -1853,9 +1848,6 @@ class IO_ale(IO):
                         stress_out = fem.Function(pb.V_out_tensor, name=stress.name)
                         stress_out.interpolate(stress)
                         pb.resultsfiles[res].write_function(stress_out, indicator)
-                    elif res == "counters":
-                        # iteration counters, written by base class
-                        pass
                     else:
                         raise NameError("Unknown output to write for ALE mechanics!")
 
@@ -2030,9 +2022,6 @@ class IO_phasefield(IO):
                             mu_out = fem.Function(pb.V_out_scalar, name=pb.mu.name)
                             mu_out.interpolate(pb.mu)
                         pb.resultsfiles[res].write_function(mu_out, indicator)
-                    elif res == "counters":
-                        # iteration counters, written by base class
-                        pass
                     else:
                         raise NameError("Unknown output to write for Cahn-Hilliard problem!")
 
@@ -2197,9 +2186,6 @@ class IO_scatra(IO):
                             c_out = fem.Function(pb.V_out_scalar, name=pb.c[i].name)
                             c_out.interpolate(pb.c[i])
                             pb.resultsfiles[res].write_function(c_out, indicator)
-                    elif res == "counters":
-                        # iteration counters, written by base class
-                        pass
                     else:
                         raise NameError("Unknown output to write for scalar transport problem!")
 
@@ -2724,3 +2710,8 @@ class IO_fsi_multiphase(IO_fsi, IO_phasefield):
         IO_fsi.write_restart(self, pb.pbfsi, N, force=force)
         if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
             IO_phasefield.writecheckpoint(self, pb.pbp, N)
+
+
+class IO_0D():  # 0D "dummy" IO class, carries only one parameter so far...
+    def __init__(self, io_params):
+        self.write_counters = io_params.get("write_counters", False)

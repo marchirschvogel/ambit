@@ -33,10 +33,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-quad_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-quad_boundary.xdmf",
-        "results_to_write": [
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement", "alevelocity"],
-        ],  # first fluid, then ale results
+        "results_to_write": {"fluid": ["fluiddisplacement", "velocity", "pressure"], "ale": ["aledisplacement", "alevelocity"]},
         "simname": "frsi_artseg_prefile_partitioned_s3x3",
         "print_enhanced_info": True,
     }

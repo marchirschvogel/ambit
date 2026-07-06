@@ -27,12 +27,10 @@ def test_main():
         "mesh_domain": basepath + "/input/tank2d_domain.xdmf",
         "mesh_boundary": basepath + "/input/tank2d_boundary.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
-        "results_to_write": [
-            ["displacement"],
-            ["velocity", "pressure"],
-            ["aledisplacement"],
-        ],
-        "write_submeshes":True,
+        "results_to_write": {"solid": ["displacement"],
+                             "fluid": ["velocity", "pressure"],
+                             "ale":   ["aledisplacement"]},
+        "write_submeshes": True,
         "simname": "tank2d_flow0d_p1p1_stabr_neumanndirichlet",
     }
 

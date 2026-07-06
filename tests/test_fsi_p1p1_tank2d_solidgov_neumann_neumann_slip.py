@@ -35,11 +35,9 @@ def test_main():
         "mesh_domain": basepath + "/input/tank2d_domain.xdmf",
         "mesh_boundary": basepath + "/input/tank2d_boundary.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
-        "results_to_write": [
-            ["displacement"],
-            ["velocity", "pressure"],
-            ["aledisplacement"],
-        ],
+        "results_to_write": {"solid": ["displacement"],
+                             "fluid": ["velocity", "pressure"],
+                             "ale": ["aledisplacement"]},
         "write_submeshes":True,
         "simname": "fsi_p1p1_tank2d_solidgov_neumann_neumann_slip",
     }

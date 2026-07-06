@@ -33,13 +33,11 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
-        "results_to_write": [
-            ["displacement", "velocity"],
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement", "alevelocity"],
-        ],
+        "results_to_write": {"solid": ["displacement", "velocity"],
+                             "fluid": ["fluiddisplacement", "velocity", "pressure"],
+                             "ale": ["aledisplacement", "alevelocity"]},
         "simname": "fsi_p1p1_artseg",
-        "write_submeshes":True,
+        "write_submeshes": True,
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 5}

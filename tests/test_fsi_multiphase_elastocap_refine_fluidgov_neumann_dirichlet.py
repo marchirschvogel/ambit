@@ -57,12 +57,10 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type": "rectangle", "celltype": "triangle", "coords_a": [0.0, -50.0], "coords_b": [500.0, 500.0], "meshsize": [20,22]},
         "refine_mesh": {"region": locate_refine_region(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
-        "results_to_write": [
-            ["displacement"],
-            ["velocity", "pressure", "density"],
-            ["phase", "potential"],
-            ["aledisplacement"],
-        ],
+        "results_to_write": {"solid": ["displacement"],
+                             "fluid": ["velocity", "pressure", "density"],
+                             "phasefield": ["phase", "potential"],
+                             "ale": ["aledisplacement"]},
         "write_initial_fields": True,
         "report_conservation_properties": True,
         "simname": "fsi_multiphase_elastocap_refine_neumann_dirichlet",

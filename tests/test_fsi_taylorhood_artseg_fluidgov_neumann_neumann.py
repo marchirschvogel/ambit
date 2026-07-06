@@ -23,11 +23,9 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-hex-quad_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-hex-quad_boundary.xdmf",
-        "results_to_write": [
-            ["displacement", "velocity"],
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement", "alevelocity"],
-        ],
+        "results_to_write": {"solid": ["displacement", "velocity"],
+                             "fluid": ["fluiddisplacement", "velocity", "pressure"],
+                             "ale": ["aledisplacement", "alevelocity"]},
         "simname": "fsi_taylorhood_artseg",
     }
 

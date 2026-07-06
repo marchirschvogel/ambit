@@ -14,6 +14,7 @@ from ..solver import solver_nonlin
 from .. import ioparams
 
 from ..base import problem_base, solver_base
+from ..ioroutines import IO_0D
 
 """
 Framework of signalling network models
@@ -39,6 +40,8 @@ class SignallingNetworkProblem(problem_base):
         ioparams.check_params_io(io_params)
 
         self.problem_physics = "signet"
+
+        self.io = IO_0D(io_params)
 
         self.time_params = time_params
 

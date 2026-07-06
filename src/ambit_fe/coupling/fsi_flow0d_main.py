@@ -117,11 +117,6 @@ class FSIFlow0DProblem(problem_base):
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
 
-        # modify results to write...
-        self.pbs.results_to_write = io_params["results_to_write"][0]
-        self.pbf.results_to_write = io_params["results_to_write"][1]
-        self.pba.results_to_write = io_params["results_to_write"][2]
-
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 

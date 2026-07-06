@@ -26,7 +26,7 @@ def test_main():
         "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
         "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
-        "results_to_write": [["velocity", "pressure"],["aledisplacement"]],
+        "results_to_write": {"fluid": ["velocity", "pressure"], "ale": ["aledisplacement"]},
         "simname": "fluid_ale_flow0d_taylorhood_nozzle_rot",
     }
 

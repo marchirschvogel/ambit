@@ -26,10 +26,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-quad_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-quad_boundary.xdmf",
-        "results_to_write": [
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement"],
-        ],  # first fluid, then ale results
+        "results_to_write": {"fluid": ["fluiddisplacement", "velocity", "pressure"], "ale": ["aledisplacement"]},
         "simname": "frsi_artseg_prestress",
     }
 

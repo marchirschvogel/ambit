@@ -30,11 +30,7 @@ def test_main():
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[2.0, 1.0], "meshsize":[32,16]},
-        "results_to_write": [
-            ["velocity", "pressure", "cauchystress"],
-            ["phase", "potential"],
-            ["aledisplacement"],
-        ],
+        "results_to_write": {"fluid": ["velocity", "pressure", "cauchystress"], "phasefield": ["phase", "potential"], "ale": ["aledisplacement"]},
         "simname": "fluid_ale_multiphase_sloshing",
         "write_initial_fields": True,
         "report_conservation_properties": True,

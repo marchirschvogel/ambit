@@ -25,11 +25,9 @@ def test_main():
         "mesh_domain": basepath + "/input/artseg-fsi-hex-quad_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-hex-quad_boundary.xdmf",
         "mesh_subboundary": basepath + "/input/artseg-fsi-hex-quad_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet
-        "results_to_write": [
-            ["displacement", "velocity"],
-            ["fluiddisplacement", "velocity", "pressure"],
-            ["aledisplacement", "alevelocity"],
-        ],
+        "results_to_write": {"solid": ["displacement", "velocity"],
+                             "fluid": ["fluiddisplacement", "velocity", "pressure"],
+                             "ale": ["aledisplacement", "alevelocity"]},
         "simname": "fsi_taylorhood_artseg",
     }
 
