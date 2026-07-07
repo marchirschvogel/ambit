@@ -86,13 +86,13 @@ class constitutive:
             assert not self.mat_plastic
 
             theta_ = ivar["theta"]
-            Je_ = ufl.sqrt(ufl.det(self.C_e(C_, theta_)))
+            # elasric right Cauchy-Green tensor
+            Ce = self.C_e(C_, theta_)
+            Je = ufl.sqrt(ufl.det(Ce))
 
             # material has to be evaluated with C_e (and Cdot_v) only, however total S has
             # to be computed by differentiating w.r.t. C (and Cdot)
-            self.mat = materiallaw(
-                self.C_e(C_, theta_), self.Cdot_v(Cdot_, theta_), self.I
-            )  # TODO: Using Cdot_v might not be consistent here, but C_edot...
+            self.mat = materiallaw(Ce, self.Cdot_v(Cdot_, theta_), self.I)  # TODO: Using Cdot_v might not be consistent here, but C_edot...
 
         elif self.mat_plastic:
             assert not self.mat_growth
@@ -125,16 +125,20 @@ class constitutive:
         # if we have p (hydr. pressure) as variable in a 2-field functional
         if self.incompr_2field:
             if self.mat_growth:
-                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J^{\mathrm{e}}-1)]}{\partial \boldsymbol{C}}
-                stress += -2.0 * ufl.diff(p_ * (Je_ - 1.0), C_)
+                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J_{\mathrm{e}}-1)]}{\partial \boldsymbol{C}} = -J_{\mathrm{e}} p \boldsymbol{C}^{-1}
+                stress += -Je * p_ * ufl.inv(C_)
             else:
-                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -Jp\boldsymbol{C}^{-1}
+                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -J p \boldsymbol{C}^{-1}
                 stress += -J * p_ * ufl.inv(C_)
 
         # porosity ("fluid") pressure
         if pp is not None:
-            # TeX: S_{\mathrm{vol}} = -Jp_{\mathrm{f}}\boldsymbol{C}^{-1}
-            stress += -J * pp * ufl.inv(C_)
+            if self.mat_growth:
+                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p_{\mathrm{f}}(J_{\mathrm{e}}-1)]}{\partial \boldsymbol{C}} = -J_{\mathrm{e}} p_{\mathrm{f}} \boldsymbol{C}^{-1}
+                stress += -Je * pp * ufl.inv(C_)
+            else:
+                # TeX: S_{\mathrm{vol}} = -J p_{\mathrm{f}} \boldsymbol{C}^{-1}
+                stress += -J * pp * ufl.inv(C_)
 
         if returnquantity == "stress":
             return stress
@@ -358,7 +362,7 @@ class constitutive:
     def res_dtheta_growth(self, u_, p_, v_, pp, ivar, theta_old_, dt, thres, rquant):
         theta_ = ivar["theta"]
 
-        grfnc = growthfunction(theta_, self.I)
+        grfnc = growthfunction(self.gandrparams)
 
         thres = self.gandrparams["growth_thres"]
         omega = self.gandrparams.get("thres_tol", 0.0)
@@ -383,7 +387,7 @@ class constitutive:
             raise NameError("Unknown growth_trig!")
 
         # growth function
-        ktheta = grfnc.grfnc1(trigger, threshold, self.gandrparams)
+        ktheta = grfnc.grfnc1(theta_, trigger, threshold)
 
         # growth residual
         r_growth = theta_ - theta_old_ - ktheta * (trigger - threshold) * dt

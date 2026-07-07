@@ -10,6 +10,7 @@ import numpy as np
 from petsc4py import PETSc
 import ufl
 
+from dolfinx import fem
 from . import expression, utilities
 
 """
@@ -566,11 +567,10 @@ class timeintegration_solid(timeintegration):
             pporo_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
-        for i in range(len(internalvars_old)):
-            list(internalvars_old.values())[i].x.petsc_vec.axpby(1.0, 0.0, list(internalvars.values())[i].x.petsc_vec)
-            list(internalvars_old.values())[i].x.petsc_vec.ghostUpdate(
-                addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD
-            )
+        for key, value in internalvars_old.items():
+            if isinstance(value, fem.function.Function):  # might be a ufl form - only update if function
+                value.x.petsc_vec.axpby(1.0, 0.0, internalvars[key].x.petsc_vec)
+                value.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update old time-dependent load curves
         self.update_time_funcs_old()
@@ -794,11 +794,9 @@ class timeintegration_fluid(timeintegration):
                 )
 
         # update internal variables (e.g. active stress for reduced solid)
-        for i in range(len(internalvars_old)):
-            list(internalvars_old.values())[i].x.petsc_vec.axpby(1.0, 0.0, list(internalvars.values())[i].x.petsc_vec)
-            list(internalvars_old.values())[i].x.petsc_vec.ghostUpdate(
-                addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD
-            )
+        for key, value in internalvars_old.items():
+            value.x.petsc_vec.axpby(1.0, 0.0, internalvars[key].x.petsc_vec)
+            value.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update old time-dependent load curves
         self.update_time_funcs_old()

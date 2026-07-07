@@ -607,7 +607,7 @@ class IO_solid(IO_field):
             vecs_to_read[self.pb.p] = "p"
         if self.pb.is_poroelastic:
             vecs_to_read[self.pb.pporo] = "pporo"
-        if self.pb.have_growth:
+        if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
             vecs_to_read[self.pb.theta] = "theta"
             vecs_to_read[self.pb.theta_old] = "theta"
         if any(self.pb.mat_active_stress):
@@ -688,7 +688,7 @@ class IO_solid(IO_field):
             vecs_to_write[self.pb.p] = "p"
         if self.pb.is_poroelastic:
             vecs_to_write[self.pb.pporo] = "pporo"
-        if self.pb.have_growth:
+        if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
             vecs_to_write[self.pb.theta] = "theta"
         if any(self.pb.mat_active_stress):
             vecs_to_write[self.pb.tau_a] = "tau_a"

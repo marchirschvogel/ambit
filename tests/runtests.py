@@ -219,6 +219,25 @@ if category == "solid" or category == "all":
             "test_solid_sphere_poro.py",
         ]
     )
+    errs["test_solid_sphere_growth_scatra 2"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_solid_sphere_growth_scatra.py",
+        ]
+    )
+    errs["test_solid_sphere_growth_scatra 2 restart"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_solid_sphere_growth_scatra.py",
+            str(4),
+        ]
+    )
 
 
 if category == "fluid" or category == "all":

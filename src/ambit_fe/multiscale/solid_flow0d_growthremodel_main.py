@@ -107,8 +107,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         )
 
         # we must have a growth law in at least one material
-        assert self.pbsmall.pbs.have_growth
-        assert self.pblarge.have_growth
+        assert any(self.pbsmall.pbs.mat_growth)
+        assert any(self.pblarge.mat_growth)
 
         self.tol_small = multiscale_params["tol_small"]
         self.tol_large = multiscale_params["tol_large"]

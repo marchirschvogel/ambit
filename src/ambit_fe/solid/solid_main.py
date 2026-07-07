@@ -24,7 +24,7 @@ from .. import boundaryconditions
 from .. import ioparams, expression
 from ..solver import solver_nonlin
 from ..solver.projection import project
-from .solid_material import activestress_activation
+from .solid_material import activestress_activation, growthfunction
 
 from ..base import problem_base, solver_base
 
@@ -116,9 +116,9 @@ class SolidmechanicsProblem(problem_base):
 
         self.is_poroelastic = self.fem_params.get("poroelasticity", False)
 
-        self.has_diffusion = self.fem_params.get("diffusion", False)
+        self.have_diffusion = self.fem_params.get("diffusion", False)
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             from ..scatra.scatra_main import ScatraProblem
             io.m_id_scatra = self.io.m_id_solid  # needed for sub-problem, which has to be on the same mesh!
             self.pbscat = ScatraProblem(
@@ -136,7 +136,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.is_poroelastic:
             self.offs += 1
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.offs += self.pbscat.num_species
 
         # collect domain data
@@ -244,6 +244,9 @@ class SolidmechanicsProblem(problem_base):
         )
         self.Vd_scalar = fem.functionspace(self.mesh, (self.dg_type, self.order_disp - 1))
 
+        self.V_growth = self.Vd_scalar
+        self.V_actstr = self.Vd_scalar
+
         # for output writing - function spaces on the degree of the mesh
         self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
         self.V_out_tensor = fem.functionspace(
@@ -314,11 +317,12 @@ class SolidmechanicsProblem(problem_base):
         # a setpoint displacement for multiscale analysis
         self.u_set = fem.Function(self.V_u)
         self.p_set = fem.Function(self.V_p)
-        self.tau_a_set = fem.Function(self.Vd_scalar)
+        self.tau_a_set = fem.Function(self.V_actstr)
         # growth stretch
-        self.theta = fem.Function(self.Vd_scalar, name="theta")
-        self.theta_old = fem.Function(self.Vd_scalar)
-        self.growth_thres = fem.Function(self.Vd_scalar)
+        self.theta = fem.Function(self.V_growth, name="theta")
+        self.theta_expr = fem.Function(self.V_growth)
+        self.theta_old = fem.Function(self.V_growth)
+        self.growth_thres = fem.Function(self.V_growth)
         # plastic deformation gradient
         self.F_plast = fem.Function(self.Vd_tensor)
         self.F_plast_old = fem.Function(self.Vd_tensor)
@@ -330,11 +334,11 @@ class SolidmechanicsProblem(problem_base):
         )
         # active stress
         # self.tau_a = fem.Function(self.Vq_scalar, name="tau_a")
-        self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
-        self.tau_a_old = fem.Function(self.Vd_scalar)
+        self.tau_a = fem.Function(self.V_actstr, name="tau_a")
+        self.tau_a_old = fem.Function(self.V_actstr)
         self.amp_old, self.amp_old_set = (
-            fem.Function(self.Vd_scalar),
-            fem.Function(self.Vd_scalar),
+            fem.Function(self.V_actstr),
+            fem.Function(self.V_actstr),
         )
         (
             self.amp_old.x.petsc_vec.set(1.0),
@@ -405,8 +409,7 @@ class SolidmechanicsProblem(problem_base):
         self.timefac_m, self.timefac = self.ti.timefactors()
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
-        self.have_frank_starling, self.have_growth, self.have_plasticity = (
-            False,
+        self.have_frank_starling, self.have_plasticity = (
             False,
             False,
         )
@@ -470,7 +473,7 @@ class SolidmechanicsProblem(problem_base):
                 except:
                     pass  # default is 'ode'
                 if self.mat_active_stress_type[n] == "ode":
-                    self.act_curve.append(fem.Function(self.Vd_scalar))
+                    self.act_curve.append(fem.Function(self.V_actstr))
                     self.ti.funcs_to_update.append(
                         {
                             self.act_curve[-1]: self.ti.timecurves(
@@ -487,7 +490,7 @@ class SolidmechanicsProblem(problem_base):
                     )
                     if self.actstress[-1].frankstarling:
                         self.have_frank_starling = True
-                        self.act_curve_old.append(fem.Function(self.Vd_scalar))
+                        self.act_curve_old.append(fem.Function(self.V_actstr))
                         # we need to initialize the old activation curve here to get the correct stretch state evaluation
                         load = expression.template()
                         load.val = self.ti.timecurves(
@@ -513,7 +516,7 @@ class SolidmechanicsProblem(problem_base):
                             {None: -1}
                         )  # not needed, since tau_a_old <- tau_a at end of time step
                 if self.mat_active_stress_type[n] == "prescribed":
-                    self.act_curve.append(fem.Function(self.Vd_scalar))
+                    self.act_curve.append(fem.Function(self.V_actstr))
                     self.ti.funcs_to_update.append(
                         {
                             self.tau_a: self.ti.timecurves(
@@ -526,18 +529,9 @@ class SolidmechanicsProblem(problem_base):
                     )  # not needed, since tau_a_old <- tau_a at end of time step
                 if self.mat_active_stress_type[n] == "prescribed_from_file":
                     self.actpid = n + 1  # file acts for all active stress models in all domains!
-                (
-                    self.internalvars["tau_a"],
-                    self.internalvars_old["tau_a"],
-                    self.internalvars_mid["tau_a"],
-                ) = (
-                    self.tau_a,
-                    self.tau_a_old,
-                    self.timefac * self.tau_a + (1.0 - self.timefac) * self.tau_a_old,
-                )
 
             if "growth" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                self.mat_growth[n], self.have_growth = True, True
+                self.mat_growth[n] = True
                 self.mat_growth_dir[n] = self.constitutive_models["MAT" + str(n + 1)]["growth"]["growth_dir"]
                 self.mat_growth_trig[n] = self.constitutive_models["MAT" + str(n + 1)]["growth"]["growth_trig"]
                 # need to have fiber fields for the following growth options
@@ -548,11 +542,12 @@ class SolidmechanicsProblem(problem_base):
                 # in this case, we have a theta that is (nonlinearly) dependent on the deformation, theta = theta(C(u)),
                 # therefore we need a local Newton iteration to solve for equilibrium theta (return mapping) prior to entering
                 # the global Newton scheme - so flag localsolve to true
-                if self.mat_growth_trig[n] != "prescribed" and self.mat_growth_trig[n] != "prescribed_multiscale":
+                if self.mat_growth_trig[n] != "prescribed" and self.mat_growth_trig[n] != "prescribed_multiscale" and self.mat_growth_trig[n] != "concentration":
                     self.localsolve = True
-                    self.mat_growth_thres.append(self.constitutive_models["MAT" + str(n + 1)]["growth"]["growth_thres"])
-                else:
-                    self.mat_growth_thres.append(ufl.as_ufl(0))
+
+                # a threshold value below which no growth should occur (can be a stress, strain, concentration, ...)
+                self.mat_growth_thres.append( self.constitutive_models["MAT" + str(n + 1)]["growth"].get("growth_thres", ufl.as_ufl(0)) )
+
                 # for the case that we have a prescribed growth stretch over time, append curve to functions that need time updates
                 # if one mat has a prescribed growth model, all have to be!
                 if self.mat_growth_trig[n] == "prescribed":
@@ -572,40 +567,19 @@ class SolidmechanicsProblem(problem_base):
                     )
                 if "remodeling_mat" in self.constitutive_models["MAT" + str(n + 1)]["growth"].keys():
                     self.mat_remodel[n] = True
-                (
-                    self.internalvars["theta"],
-                    self.internalvars_old["theta"],
-                    self.internalvars_mid["theta"],
-                ) = (
-                    self.theta,
-                    self.theta_old,
-                    self.timefac * self.theta + (1.0 - self.timefac) * self.theta_old,
-                )
+
             else:
                 self.mat_growth_thres.append(ufl.as_ufl(0))
-
-            if "plastic" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                self.mat_plastic[n], self.have_plasticity = True, True
-                self.localsolve = True
-                (
-                    self.internalvars["e_plast"],
-                    self.internalvars_old["e_plast"],
-                    self.internalvars_mid["e_plast"],
-                ) = (
-                    self.F_plast,
-                    self.F_plast_old,
-                    self.timefac * self.F_plast + (1.0 - self.timefac) * self.F_plast_old,
-                )
 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
         self.lin_remod_full = self.fem_params.get("lin_remodeling_full", True)
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
-        if self.have_growth and self.localsolve:
+        if any(self.mat_growth) and self.localsolve:
             growth_thres_proj = project(
                 self.mat_growth_thres,
-                self.Vd_scalar,
+                self.V_growth,
                 self.dx,
                 domids=self.domain_ids,
                 comm=self.pbase.comm,
@@ -613,6 +587,8 @@ class SolidmechanicsProblem(problem_base):
             )
             self.growth_thres.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
+            # TODO: May prefer interpolation than projection?!
+            # self.growth_thres.interpolate(fem.Expression(self.mat_growth_thres[0], self.V_growth.element.interpolation_points))
 
         # read in fiber data
         if bool(self.io.fiber_data):
@@ -701,7 +677,7 @@ class SolidmechanicsProblem(problem_base):
             self.nfields += 1
         if self.is_poroelastic:
             self.nfields += 1
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.nfields += self.pbscat.num_species
 
         # store some info on variable and equation names (used e.g. in solver print)
@@ -712,7 +688,7 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             self.var_names.append("pporo")
             self.eq_names.append("solid porous flux")
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.var_names += self.pbscat.var_names
             self.eq_names += self.pbscat.eq_names
 
@@ -730,13 +706,6 @@ class SolidmechanicsProblem(problem_base):
         self.pbrom_host = self
         self.V_rom = self.V_u
 
-        # finally set the defotmation metrics for the diffusion problem, if present
-        if self.has_diffusion:
-            self.pbscat.alevar["Fale"] = self.ki.F(self.u)
-            self.pbscat.alevar["Fale_old"] = self.ki.F(self.u_old)
-            self.pbscat.alevar["w"] = self.vel
-            self.pbscat.alevar["w_old"] = self.v_old
-
     def get_problem_var_list(self):
         vlist_, is_ghosted = [self.u.x.petsc_vec], [1]
         if self.incompressible_2field:
@@ -745,7 +714,7 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             is_ghosted.append(1)
             vlist_.append(self.pporo.x.petsc_vec)
-        if self.has_diffusion:
+        if self.have_diffusion:
             for i in range(self.pbscat.num_species):
                 is_ghosted.append(1)
                 vlist_.append(self.pbscat.c[i].x.petsc_vec)
@@ -794,6 +763,34 @@ class SolidmechanicsProblem(problem_base):
             ufl.as_ufl(0),
             ufl.as_ufl(0),
         )
+
+        if self.have_diffusion:
+            # finally set the defotmation metrics for the diffusion problem, if present
+            self.pbscat.alevar["Fale"] = self.ki.F(self.u)
+            self.pbscat.alevar["Fale_old"] = self.ki.F(self.u_old)
+            self.pbscat.alevar["w"] = self.vel
+            self.pbscat.alevar["w_old"] = self.v_old
+            # set scatra variational forms
+            self.pbscat.set_variational_forms_residual()
+            # consider concentration-dependent growth
+            if any(self.mat_growth):
+                for n in range(self.num_domains):
+                    grfnc = growthfunction(self.constitutive_models["MAT" + str(n + 1)]["growth"])
+                    if self.mat_growth[n] and self.mat_growth_trig[n] == "concentration":
+                        self.theta = grfnc.grfnc_concentration(self.pbscat.c[0])
+                        self.theta_old = grfnc.grfnc_concentration(self.pbscat.c_old[0])
+
+        # prior to setting the internal stress state, we need to set any "internal" variables we might have
+        # growth
+        if any(self.mat_growth):
+            self.internalvars["theta"] = self.theta
+            self.internalvars_old["theta"] = self.theta_old
+            self.internalvars_mid["theta"] = self.timefac * self.theta + (1.0 - self.timefac) * self.theta_old
+        # active stress
+        if any(self.mat_active_stress):
+            self.internalvars["tau_a"] = self.tau_a
+            self.internalvars_old["tau_a"] = self.tau_a_old
+            self.internalvars_mid["tau_a"] = self.timefac * self.tau_a + (1.0 - self.timefac) * self.tau_a_old
 
         for n, M in enumerate(self.domain_ids):
             if self.timint != "static":
@@ -1092,14 +1089,15 @@ class SolidmechanicsProblem(problem_base):
             self.localdata["fnc"],
         ) = [], [], [], []
 
-        if self.have_growth:
+        if any(self.mat_growth):
             self.r_growth, self.del_theta = [], []
 
             for n in range(self.num_domains):
-                if (
+                if (  # do additional check - since some materials might have prescribed or no growth
                     self.mat_growth[n]
                     and self.mat_growth_trig[n] != "prescribed"
                     and self.mat_growth_trig[n] != "prescribed_multiscale"
+                    and self.mat_growth_trig[n] != "concentration"
                 ):
                     # growth residual and increment
                     a, b = self.ma[n].res_dtheta_growth(
@@ -1120,10 +1118,11 @@ class SolidmechanicsProblem(problem_base):
                         self.del_theta.append(ufl.as_ufl(0)),
                     )
 
-            self.localdata["var"].append([self.theta])
-            self.localdata["res"].append([self.r_growth])
-            self.localdata["inc"].append([self.del_theta])
-            self.localdata["fnc"].append([self.Vd_scalar])
+            if self.localsolve:
+                self.localdata["var"].append([self.theta])
+                self.localdata["res"].append([self.r_growth])
+                self.localdata["inc"].append([self.del_theta])
+                self.localdata["fnc"].append([self.V_growth])
 
         if self.have_plasticity:
             for n in range(self.num_domains):
@@ -1225,9 +1224,6 @@ class SolidmechanicsProblem(problem_base):
             if self.incompressible_2field:
                 self.weakform_prestress_p = self.deltaW_p
 
-        if self.has_diffusion:
-            self.pbscat.set_variational_forms_residual()
-
     ### Jacobians
     def set_variational_forms_jacobian(self):
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
@@ -1270,6 +1266,7 @@ class SolidmechanicsProblem(problem_base):
                     self.mat_growth[n]
                     and self.mat_growth_trig[n] != "prescribed"
                     and self.mat_growth_trig[n] != "prescribed_multiscale"
+                    and self.mat_growth_trig[n] != "concentration"
                 ):
                     # growth tangent operator
                     Cgrowth = self.ma[n].Cgrowth(
@@ -1393,6 +1390,7 @@ class SolidmechanicsProblem(problem_base):
                         self.mat_growth[n]
                         and self.mat_growth_trig[n] != "prescribed"
                         and self.mat_growth_trig[n] != "prescribed_multiscale"
+                        and self.mat_growth_trig[n] != "concentration"
                     ):
                         # elastic and viscous material tangent operator
                         Cmat, Cmat_v = self.ma[n].S(
@@ -1496,15 +1494,17 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
                 self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.set_variational_forms_jacobian()
+            self.weakform_lin_uc = ufl.derivative(self.deltaW_int, self.pbscat.c[0], self.pbscat.dc[0])
+            self.weakform_lin_cu = ufl.derivative(self.pbscat.weakform_c[0], self.u, self.du)
 
     # active stress projection
     def evaluate_active_stress(self):
         if self.have_frank_starling:
             amp_old_proj = project(
                 self.amp_old_,
-                self.Vd_scalar,
+                self.V_actstr,
                 self.dx,
                 domids=self.domain_ids,
                 comm=self.pbase.comm,
@@ -1516,7 +1516,7 @@ class SolidmechanicsProblem(problem_base):
         # project and interpolate to quadrature function space
         tau_a_proj = project(
             self.tau_a_,
-            self.Vd_scalar,
+            self.V_actstr,
             self.dx,
             domids=self.domain_ids,
             comm=self.pbase.comm,
@@ -1524,9 +1524,7 @@ class SolidmechanicsProblem(problem_base):
         )
         self.tau_a.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
-
         # mathutils.quad_interpolation(tau_a_[0], self.Vq_scalar, self.mesh, self.quadrature_points, self.tau_a)
-        # sys.exit()
 
     # computes and prints the growth rate of the whole solid
     def compute_solid_growth_rate(self, N, t):
@@ -1738,8 +1736,10 @@ class SolidmechanicsProblem(problem_base):
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.set_problem_residual_jacobian_forms()
+            self.jac_uc = fem.form(self.weakform_lin_uc, entity_maps=self.io.entity_maps)
+            self.jac_cu = fem.form(self.weakform_lin_cu, entity_maps=self.io.entity_maps)
 
     def set_problem_vector_matrix_structures(self):
         ts = time.time()
@@ -1776,8 +1776,12 @@ class SolidmechanicsProblem(problem_base):
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.set_problem_vector_matrix_structures()
+            self.K_uc = fem.petsc.assemble_matrix(self.jac_uc, self.dbcs)
+            self.K_uc.assemble()
+            self.K_cu = fem.petsc.assemble_matrix(self.jac_cu, self.pbscat.dbcs[0])
+            self.K_cu.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         # assemble rhs vector
@@ -1825,7 +1829,7 @@ class SolidmechanicsProblem(problem_base):
 
             self.r_list[off] = self.r_pporo
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             off+=1
             self.pbscat.assemble_residual(t)
             for i in range(self.pbscat.num_species):
@@ -1882,12 +1886,23 @@ class SolidmechanicsProblem(problem_base):
             self.K_list[off][0] = self.K_pporou
             self.K_list[off][off] = self.K_pporopporo
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             off+=1
             self.pbscat.assemble_stiffness(t)
             for i in range(self.pbscat.num_species):
                 for j in range(self.pbscat.num_species):
                     self.K_list[off+i][off+j] = self.pbscat.K_cc[i][j]
+
+            self.K_uc.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_uc, self.jac_uc, self.dbcs)
+            self.K_uc.assemble()
+
+            self.K_cu.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_cu, self.jac_cu, self.pbscat.dbcs[0])
+            self.K_cu.assemble()
+
+            self.K_list[0][off] = self.K_uc
+            self.K_list[off][0] = self.K_cu
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         assert self.incompressible_2field  # index sets only needed for 2-field problem
@@ -1920,12 +1935,17 @@ class SolidmechanicsProblem(problem_base):
         # read restart information
         if N > 0:
             self.io_field.readcheckpoint(N)
+        if self.have_diffusion:
+            self.pbscat.read_restart(sname, N)
 
     def evaluate_initial(self):
-        pass
+        if self.have_diffusion:
+            self.pbscat.evaluate_initial()
 
     def write_output_ini(self):
         self.io_field.write_output(writemesh=True)
+        if self.have_diffusion:
+            self.pbscat.write_output_ini()
 
     def write_output_pre(self):
         if "fibers" in self.results_to_write and self.io.write_results_every > 0:
@@ -1940,6 +1960,8 @@ class SolidmechanicsProblem(problem_base):
                     entity_maps=self.io.entity_maps,
                 )
                 self.io_field.write_output_pre(fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
+        if self.have_diffusion:
+            self.pbscat.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
@@ -1966,7 +1988,7 @@ class SolidmechanicsProblem(problem_base):
                 ].replace("*", str(N)),
             )
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.evaluate_pre_solve(t, N, dt)
 
     def evaluate_post_solve(self, t, N):
@@ -1975,7 +1997,7 @@ class SolidmechanicsProblem(problem_base):
             self.solve_volume_laplace(N, t)
 
         # compute the growth rate (has to be called before update_timestep)
-        if self.have_growth:
+        if any(self.mat_growth):
             self.compute_solid_growth_rate(N, t)
         if "strainenergy" in self.results_to_write or "internalpower" in self.results_to_write:
             self.compute_strain_energy_power(N, t)
@@ -1984,15 +2006,17 @@ class SolidmechanicsProblem(problem_base):
         ):
             self.compute_strain_energy_power_membrane(N, t)
 
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.evaluate_post_solve(t, N)
 
     def set_output_state(self, t):
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.set_output_state(t)
 
     def write_output(self, N, t, msh=False):
         self.io_field.write_output(N=N, t=t)
+        if self.have_diffusion:
+            self.pbscat.write_output(N, t)
 
     def update(self):
         # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
@@ -2010,19 +2034,21 @@ class SolidmechanicsProblem(problem_base):
             self.internalvars,
             self.internalvars_old,
         )
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.update()
 
     def print_to_screen(self):
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.print_to_screen()
 
     def induce_state_change(self):
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
         self.io_field.write_restart(N, force=force)
+        if self.have_diffusion:
+            self.pbscat.write_restart(sname, N, force=force)
 
     def check_abort(self, t):
         if self.pbase.problem_type == "solid_flow0d_multiscale_gandr" and abs(self.growth_rate) <= self.tol_stop_large:
@@ -2030,7 +2056,7 @@ class SolidmechanicsProblem(problem_base):
 
     def destroy(self):
         self.io_field.close_output_files()
-        if self.has_diffusion:
+        if self.have_diffusion:
             self.pbscat.destroy()
 
 

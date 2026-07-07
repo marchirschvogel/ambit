@@ -289,20 +289,26 @@ class growth:
 
 
 # volumetric growth class: growth function
-class growthfunction(growth):
-    # add possible variations / different growth functions here...
+class growthfunction():
+    def __init__(self, params):
+        self.params = params
 
-    def grfnc1(self, trigger, thres, params):
-        thetamax, thetamin = params["thetamax"], params["thetamin"]
-        tau_gr, tau_gr_rev = params["tau_gr"], params["tau_gr_rev"]
-        gamma_gr, gamma_gr_rev = params["gamma_gr"], params["gamma_gr_rev"]
+    # standard rate growth function
+    def grfnc1(self, theta, trigger, thres):
+        thetamax, thetamin = self.params["thetamax"], self.params["thetamin"]
+        tau_gr, tau_gr_rev = self.params["tau_gr"], self.params["tau_gr_rev"]
+        gamma_gr, gamma_gr_rev = self.params["gamma_gr"], self.params["gamma_gr_rev"]
 
-        k_plus = (1.0 / tau_gr) * ((thetamax - self.theta) / (thetamax - thetamin)) ** (gamma_gr)
-        k_minus = (1.0 / tau_gr_rev) * ((self.theta - thetamin) / (thetamax - thetamin)) ** (gamma_gr_rev)
+        k_plus = (1.0 / tau_gr) * ((thetamax - theta) / (thetamax - thetamin)) ** (gamma_gr)
+        k_minus = (1.0 / tau_gr_rev) * ((theta - thetamin) / (thetamax - thetamin)) ** (gamma_gr_rev)
 
-        k = ufl.conditional(ufl.ge(trigger, thres), k_plus, k_minus)
+        return ufl.conditional(ufl.ge(trigger, thres), k_plus, k_minus)
 
-        return k
+    # concentration dependent growth - returns expression for theta
+    def grfnc_concentration(self, c):
+        c0 = self.params["c0"]
+        beta = self.params["beta"]
+        return (1.0 + beta*(c - c0))**(1./3.)
 
 
 # expression for time-dependent active stress activation function
