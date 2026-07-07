@@ -320,7 +320,6 @@ class SolidmechanicsProblem(problem_base):
         self.tau_a_set = fem.Function(self.V_actstr)
         # growth stretch
         self.theta = fem.Function(self.V_growth, name="theta")
-        self.theta_expr = fem.Function(self.V_growth)
         self.theta_old = fem.Function(self.V_growth)
         self.growth_thres = fem.Function(self.V_growth)
         # plastic deformation gradient

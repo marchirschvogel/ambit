@@ -102,15 +102,16 @@ class boundary_cond:
             elif "val" in d.keys():
                 assert "curve" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 func.x.petsc_vec.set(d["val"])
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
             elif "expression" in d.keys():
                 assert "curve" not in d.keys() and "val" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 expr = d["expression"]()
                 expr.t = self.pb.ti.t_init
                 func.interpolate(expr.evaluate)
-                func.x.petsc_vec.ghostUpdate(
-                    addv=PETSc.InsertMode.INSERT,
-                    mode=PETSc.ScatterMode.FORWARD,
-                )
+                func.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 self.pb.ti.funcsexpr_to_update_vec[func] = expr
                 self.pb.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
             elif "file" in d.keys():
@@ -289,9 +290,11 @@ class boundary_cond:
                     )
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
-                    func.x.petsc_vec.set(
-                        n["val"]
-                    )  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.set(n["val"])  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -324,6 +327,10 @@ class boundary_cond:
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -367,9 +374,11 @@ class boundary_cond:
                     )
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
-                    func.x.petsc_vec.set(
-                        n["val"]
-                    )  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.set(n["val"])  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -402,6 +411,10 @@ class boundary_cond:
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -477,9 +490,11 @@ class boundary_cond:
                     )
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
-                    func.x.petsc_vec.set(
-                        n["val"]
-                    )  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.set(n["val"])  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -511,9 +526,11 @@ class boundary_cond:
                     funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
-                    func.x.petsc_vec.set(
-                        n["val"]
-                    )  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.set(n["val"])  # currently only one value for all directions - use constant load function otherwise!
+                    func.x.petsc_vec.ghostUpdate(
+                        addv=PETSc.InsertMode.INSERT,
+                        mode=PETSc.ScatterMode.FORWARD,
+                    )
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
@@ -712,6 +729,10 @@ class boundary_cond:
         elif "val" in mdict.keys():
             assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
             func.x.petsc_vec.set(mdict["val"])
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
         elif "expression" in mdict.keys():
             assert "curve" not in mdict.keys() and "val" not in mdict.keys()
             expr = mdict["expression"]()
@@ -1029,6 +1050,10 @@ class boundary_cond_phasefield(boundary_cond):
             elif "val" in n.keys():
                 assert "curve" not in n.keys() and "expression" not in n.keys()
                 func.x.petsc_vec.set(n["val"])
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
             elif "expression" in n.keys():
                 assert "curve" not in n.keys() and "val" not in n.keys()
                 expr = n["expression"]()
@@ -1106,6 +1131,10 @@ class boundary_cond_phasefield(boundary_cond):
         elif "val" in mdict.keys():
             assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
             func.x.petsc_vec.set(mdict["val"])
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
         elif "expression" in mdict.keys():
             assert "curve" not in mdict.keys() and "val" not in mdict.keys()
             expr = mdict["expression"]()
@@ -1160,6 +1189,10 @@ class boundary_cond_scatra(boundary_cond):
             elif "val" in n.keys():
                 assert "curve" not in n.keys() and "expression" not in n.keys()
                 func.x.petsc_vec.set(n["val"])
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
             elif "expression" in n.keys():
                 assert "curve" not in n.keys() and "val" not in n.keys()
                 expr = n["expression"]()

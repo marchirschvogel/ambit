@@ -1071,8 +1071,6 @@ class timeintegration_scatra(timeintegration_fluid):
             if np.isclose(self.theta_ost,1.0): # Backward-Euler
                 self.res_eval = "back"
 
-        self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
-
     def update_timestep(self, c, c_old, c_veryold, cdot, cdot_old):
         # update old fields with new quantities
         self.update_fields(c, c_old, c_veryold, cdot, cdot_old)
