@@ -182,56 +182,17 @@ class FSIProblem(problem_base):
         self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {})  # only for multiphase FSI
 
     def get_problem_var_list(self):
+        vlist_, is_ghosted = self.pbs.get_problem_var_list()
+        vlist_f, is_ghosted_f = self.pbf.get_problem_var_list()
+        vlist_ += vlist_f
+        is_ghosted += is_ghosted_f
         if self.fsi_system == "neumann_neumann":
-            if self.pbs.incompressible_2field:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 1, 2, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.lm.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-            else:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 2, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.lm.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-        else:
-            if self.pbs.incompressible_2field:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 1, 2, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-            else:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 2, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
+            vlist_.append(self.lm.x.petsc_vec)
+            is_ghosted.append(1)
+        vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
+        vlist_ += vlist_a
+        is_ghosted += is_ghosted_a
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
@@ -616,11 +577,8 @@ class FSIProblem(problem_base):
         # update of fluid residual - to be done after fluid residual!
         if self.fsi_system == "neumann_dirichlet":
             self.evaluate_residual_forces_interface()
-        # solid momentum
-        self.r_list[0] = self.pbs.r_list[0]
-        if self.pbs.incompressible_2field:
-            # solid incompressibility
-            self.r_list[1] = self.pbs.r_list[1]
+        # solid momentum (+ incompressibility)
+        self.r_list[0 : self.pbs.offs+1] = self.pbs.r_list[0 : self.pbs.offs+1]
         # fluid momentum
         self.r_list[1 + self.pbs.offs] = self.pbfa.r_list[0]
         # fluid continuity
@@ -663,9 +621,7 @@ class FSIProblem(problem_base):
         self.assemble_stiffness_coupling(t)
 
         # solid momentum
-        self.K_list[0][0] = self.pbs.K_list[0][0]  # w.r.t. solid displacement
-        if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbs.K_list[0][1]  # w.r.t. solid pressure
+        self.K_list[0][0 : self.pbs.offs+1] = self.pbs.K_list[0][0 : self.pbs.offs+1]  # w.r.t. solid displacement (+ pressure)
         if self.fsi_system == "neumann_neumann":
             self.K_list[0][3 + self.pbs.offs] = self.K_ul  # w.r.t. Lagrange multiplier
         if self.fsi_system == "neumann_dirichlet":

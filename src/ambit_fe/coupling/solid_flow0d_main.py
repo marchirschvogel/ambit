@@ -166,29 +166,14 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.Nmax_periodicref = self.coupling_params.get("Nmax_periodicref", 10)
 
     def get_problem_var_list(self):
+        vlist_, is_ghosted = self.pbs.get_problem_var_list()
         if self.coupling_type == "monolithic_lagrange":
-            if self.pbs.incompressible_2field:
-                is_ghosted = [1, 1, 0]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.LM,
-                ], is_ghosted
-            else:
-                is_ghosted = [1, 0]
-                return [self.pbs.u.x.petsc_vec, self.LM], is_ghosted
-
+            vlist_.append(self.LM)
+            is_ghosted.append(0)
         if self.coupling_type == "monolithic_direct":
-            if self.pbs.incompressible_2field:
-                is_ghosted = [1, 1, 0]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.pb0.s,
-                ], is_ghosted
-            else:
-                is_ghosted = [1, 0]
-                return [self.pbs.u.x.petsc_vec, self.pb0.s], is_ghosted
+            vlist_.append(self.pb0.s)
+            is_ghosted.append(0)
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms(self):
@@ -572,9 +557,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # solid main blocks
         self.pbs.assemble_residual(t)
 
-        self.r_list[0] = self.pbs.r_list[0]
-        if self.pbs.incompressible_2field:
-            self.r_list[1] = self.pbs.r_list[1]
+        self.r_list[0 : self.pbs.offs+1] = self.pbs.r_list[0 : self.pbs.offs+1]
 
         if self.coupling_type == "monolithic_direct":
             # 0D rhs vector
@@ -781,9 +764,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # solid main blocks
         self.pbs.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbs.K_list[0][0]
+        self.K_list[0][0 : self.pbs.offs+1] = self.pbs.K_list[0][0 : self.pbs.offs+1]  # w.r.t. solid displacement (+ pressure)
         if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbs.K_list[0][1]
             self.K_list[1][0] = self.pbs.K_list[1][0]
             self.K_list[1][1] = self.pbs.K_list[1][1]  # should be only non-zero if we have stress-mediated growth...
 

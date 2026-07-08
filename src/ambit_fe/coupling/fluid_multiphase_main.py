@@ -142,16 +142,11 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.smooth_clip = self.coupling_params.get("smooth_clip", None)
 
     def get_problem_var_list(self):
-        if self.pbf.num_dupl > 1:
-            is_ghosted = [1, 2, 1, 1]
-        else:
-            is_ghosted = [1, 1, 1, 1]
-        return [
-            self.pbf.v.x.petsc_vec,
-            self.pbf.p.x.petsc_vec,
-            self.pbp.phi.x.petsc_vec,
-            self.pbp.mu.x.petsc_vec,
-        ], is_ghosted
+        vlist_, is_ghosted = self.pbf.get_problem_var_list()
+        vlist_p, is_ghosted_p = self.pbp.get_problem_var_list()
+        vlist_ += vlist_p
+        is_ghosted += is_ghosted_p
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for fluid mechanics with multiple phases
     def set_variational_forms(self):

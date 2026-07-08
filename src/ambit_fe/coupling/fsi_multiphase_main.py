@@ -153,64 +153,20 @@ class FSIMultiphaseProblem(problem_base):
         )
 
     def get_problem_var_list(self):
+        vlist_, is_ghosted = self.pbs.get_problem_var_list()
+        vlist_f, is_ghosted_f = self.pbf.get_problem_var_list()
+        vlist_ += vlist_f
+        is_ghosted += is_ghosted_f
+        vlist_p, is_ghosted_p = self.pbp.get_problem_var_list()
+        vlist_ += vlist_p
+        is_ghosted += is_ghosted_p
         if self.pbfsi.fsi_system == "neumann_neumann":
-            if self.pbs.incompressible_2field:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 1, 2, 1, 1, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pbp.phi.x.petsc_vec,
-                    self.pbp.mu.x.petsc_vec,
-                    self.pbfsi.lm.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-            else:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 2, 1, 1, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pbp.phi.x.petsc_vec,
-                    self.pbp.mu.x.petsc_vec,
-                    self.pbfsi.lm.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-        else:
-            if self.pbs.incompressible_2field:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 1, 2, 1, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbs.p.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pbp.phi.x.petsc_vec,
-                    self.pbp.mu.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
-            else:
-                if self.pbf.num_dupl > 1:
-                    is_ghosted = [1, 1, 2, 1, 1, 1]
-                else:
-                    is_ghosted = [1, 1, 1, 1, 1, 1]
-                return [
-                    self.pbs.u.x.petsc_vec,
-                    self.pbf.v.x.petsc_vec,
-                    self.pbf.p.x.petsc_vec,
-                    self.pbp.phi.x.petsc_vec,
-                    self.pbp.mu.x.petsc_vec,
-                    self.pba.d.x.petsc_vec,
-                ], is_ghosted
+            vlist_.append(self.pbfsi.lm.x.petsc_vec)
+            is_ghosted.append(1)
+        vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
+        vlist_ += vlist_a
+        is_ghosted += is_ghosted_a
+        return vlist_, is_ghosted
 
     def set_variational_forms(self):
         self.set_variational_forms_residual()
@@ -306,9 +262,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbp.assemble_residual(t)
 
         # solid
-        self.r_list[0] = self.pbfsi.r_list[0]
-        if self.pbs.incompressible_2field:
-            self.r_list[1] = self.pbfsi.r_list[1]
+        self.r_list[0 : self.pbs.offs+1] = self.pbfsi.r_list[0 : self.pbs.offs+1]
         # fluid
         self.r_list[1 + self.pbs.offs] = self.pbfsi.r_list[1 + self.pbs.offs]
         self.r_list[2 + self.pbs.offs] = self.pbfsi.r_list[2 + self.pbs.offs]
@@ -334,9 +288,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfap.assemble_stiffness_coupling(t)
 
         # solid momentum
-        self.K_list[0][0] = self.pbfsi.K_list[0][0]                  # w.r.t. solid displacement
-        if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbfsi.K_list[0][1]              # w.r.t. solid pressure
+        self.K_list[0][0 : self.pbs.offs+1] = self.pbfsi.K_list[0][0 : self.pbs.offs+1]  # w.r.t. solid displacement (+ pressure)
         if self.pbfsi.fsi_system == "neumann_neumann":
             self.K_list[0][5 + self.pbs.offs] = self.pbfsi.K_list[0][3 + self.pbs.offs]  # w.r.t. Lagrange multiplier
         if self.pbfsi.fsi_system == "neumann_dirichlet":

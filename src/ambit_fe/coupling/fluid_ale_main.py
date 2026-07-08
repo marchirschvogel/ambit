@@ -146,15 +146,11 @@ class FluidmechanicsAleProblem(problem_base):
         self.coupling_strategy = self.coupling_params.get("coupling_strategy", "monolithic")
 
     def get_problem_var_list(self):
-        if self.pbf.num_dupl > 1:
-            is_ghosted = [1, 2, 1]
-        else:
-            is_ghosted = [1, 1, 1]
-        return [
-            self.pbf.v.x.petsc_vec,
-            self.pbf.p.x.petsc_vec,
-            self.pba.d.x.petsc_vec,
-        ], is_ghosted
+        vlist_, is_ghosted = self.pbf.get_problem_var_list()
+        vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
+        vlist_ += vlist_a
+        is_ghosted += is_ghosted_a
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
     def set_variational_forms(self):

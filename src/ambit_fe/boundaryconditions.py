@@ -111,7 +111,10 @@ class boundary_cond:
                 expr = d["expression"]()
                 expr.t = self.pb.ti.t_init
                 func.interpolate(expr.evaluate)
-                func.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
                 self.pb.ti.funcsexpr_to_update_vec[func] = expr
                 self.pb.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
             elif "file" in d.keys():

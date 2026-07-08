@@ -140,13 +140,10 @@ class FluidmechanicsConstraintProblem(problem_base):
             self.have_regularization = False
 
     def get_problem_var_list(self):
-        if self.pbf.num_dupl > 1:
-            is_ghosted = [1, 2, 0]
-        else:
-            is_ghosted = [1, 1, 0]
-        varlist = [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.LM]
-
-        return varlist, is_ghosted
+        vlist_, is_ghosted = self.pbf.get_problem_var_list()
+        vlist_.append(self.LM)
+        is_ghosted.append(0)
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for constraints and fluid mechanics
     def set_variational_forms(self):

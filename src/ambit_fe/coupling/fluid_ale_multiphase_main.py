@@ -143,17 +143,14 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         pass
 
     def get_problem_var_list(self):
-        if self.pbf.num_dupl > 1:
-            is_ghosted = [1, 2, 1, 1, 1]
-        else:
-            is_ghosted = [1, 1, 1, 1, 1]
-        return [
-            self.pbf.v.x.petsc_vec,
-            self.pbf.p.x.petsc_vec,
-            self.pbp.phi.x.petsc_vec,
-            self.pbp.mu.x.petsc_vec,
-            self.pba.d.x.petsc_vec,
-        ], is_ghosted
+        vlist_, is_ghosted = self.pbf.get_problem_var_list()
+        vlist_p, is_ghosted_p = self.pbp.get_problem_var_list()
+        vlist_ += vlist_p
+        is_ghosted += is_ghosted_p
+        vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
+        vlist_ += vlist_a
+        is_ghosted += is_ghosted_a
+        return vlist_, is_ghosted
 
     def set_variational_forms(self):
         self.set_variational_forms_residual()

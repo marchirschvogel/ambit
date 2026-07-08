@@ -154,22 +154,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # only option in fluid mechanics!
         self.coupling_type = "monolithic_lagrange"
 
-
     def get_problem_var_list(self):
+        vlist_, is_ghosted = self.pbf.get_problem_var_list()
         if not self.condense_0d:
-            if self.pbf.num_dupl > 1:
-                is_ghosted = [1, 2, 0]
-            else:
-                is_ghosted = [1, 1, 0]
-            varlist = [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.LM]
-        else:
-            if self.pbf.num_dupl > 1:
-                is_ghosted = [1, 2]
-            else:
-                is_ghosted = [1, 1]
-            varlist = [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec]
-
-        return varlist, is_ghosted
+            vlist_.append(self.LM)
+            is_ghosted.append(0)
+        return vlist_, is_ghosted
 
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms(self):
