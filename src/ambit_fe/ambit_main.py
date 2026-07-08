@@ -690,7 +690,7 @@ class Ambit:
         elif problem_type == "fluid_ale_constraint":
             from .coupling import fluid_ale_constraint_main
 
-            ce_f = [constitutive_params[0]]
+            ce_f = [constitutive_params[0][0]]
             io = ioroutines.IO(io_params, ce_f, self.entity_maps, self.comm)
             io.readin_mesh()
             bc_all = [x for xs in boundary_conditions for x in xs]

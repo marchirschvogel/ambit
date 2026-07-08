@@ -132,7 +132,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
     def get_problem_var_list(self):
         vlist_, is_ghosted = self.pbf.get_problem_var_list()
-        vlist_.append(self.LM)
+        vlist_.append(self.pbfc.LM)
         is_ghosted.append(0)
         vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
         vlist_ += vlist_a
