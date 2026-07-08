@@ -607,7 +607,7 @@ class IO_field:
             self.pb.io.output_path_pre + "/results_" + self.pb.pbase.simname + "_" + self.pb.problem_physics + "_" + name + ".xdmf",
             "w",
         )
-        outfile.write_mesh(self.pb.io.mesh)
+        outfile.write_mesh(self.pb.mesh)
         func_out = fem.Function(V_out, name=func.name)
         func_out.interpolate(func)
         outfile.write_function(func_out, t)

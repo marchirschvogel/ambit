@@ -38,6 +38,9 @@ class variationalform(variationalform_base):
     def weakform_neumann(self, c1, dboundary, F=None):
         return c1 * self.var_c * dboundary
 
+    def weakform_robin(self, k, c, c0, dboundary, F=None):
+        return (k * (c - c0) * self.var_c) * dboundary
+
 class variationalform_ale(variationalform):
     def diffusion(self, cdot, c, difflux, ddomain, v=None, w=None, F=None):
         J = ufl.det(F)

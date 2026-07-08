@@ -57,7 +57,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 10.0,
                       "dt": 0.1,
-                      # "numstep_stop": 5,
+                      "numstep_stop": 10,
                       "initial_fields": [expr1, None],
                       }
 
@@ -104,6 +104,8 @@ def test_main():
     COUPLING_PARAMS_FSI = {
         "coupling_fsi": {"interface": [locate_interf()]},
         "fsi_system": "neumann_neumann",
+        # phase-scatra coupling
+        "coupling_phase_solidscatra": True,
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
@@ -138,6 +140,12 @@ def test_main():
     E = 1.0
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
                                 "inertia": {"rho0": 1.0e-3},
+                                "growth": {
+                                    "growth_dir": "isotropic",
+                                    "growth_trig": "concentration",
+                                    "c0": 0.0,
+                                    "beta": 1e-1,
+                                },
                                 "id": locate_solid()}}
 
     MATERIALS_SC = {"MAT1": {"mat_diff": {"D": 1e-2}, "id": locate_solid()}}
@@ -170,26 +178,26 @@ def test_main():
                                                   "id": locate_fluid()}}
 
     BC_DICT_SOLID = {
-        "dirichlet": [{"id": [locate_bottom()], "dir": "all", "val": 0.0},
-                      {"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
+        "dirichlet": [{"id": [locate_left()], "dir": "all", "val": 0.0},
+                      {"id": [locate_top(),locate_bottom()], "dir": "y", "val": 0.0}],
         }
 
     BC_DICT_SC = { }
 
     BC_DICT_FLUID = {
-        "dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
+        "dirichlet": [{"id": [locate_top(),locate_bottom()], "dir": "y", "val": 0.0}],
     }
 
     BC_DICT_ALE = {
-        "dirichlet": [{"id": [locate_top()], "dir": "all", "val": 0.0},
-                      {"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
+        "dirichlet": [{"id": [locate_right()], "dir": "all", "val": 0.0},
+                      {"id": [locate_top(),locate_bottom()], "dir": "y", "val": 0.0}],
     }
 
     BC_DICT_PF = { }
 
 
     # only for neumann_neumann formulation
-    BC_DICT_LM = {"dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}]}
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_top(),locate_bottom()], "dir": "y", "val": 0.0}]}
 
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,

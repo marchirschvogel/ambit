@@ -48,7 +48,7 @@ class IO_solid(IO_field):
                             + ".xdmf",
                             "w",
                         )
-                        outfile.write_mesh(self.pb.io.mesh)
+                        outfile.write_mesh(self.pb.mesh)
                         self.pb.resultsfiles[res] = outfile
 
             return

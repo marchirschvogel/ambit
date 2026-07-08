@@ -113,6 +113,9 @@ class FSIMultiphaseProblem(problem_base):
         self.pbp = self.pbfap.pbp
         self.pbfp = self.pbfap.pbfp
 
+        self.coupling_params = coupling_params[0]
+        self.set_coupling_parameters()  # any additional ones not set by FSI (e.g. phase-scatra...)
+
         # in order to get correct contributions of the capillary stress on the (FSI) boundary, we should use this option...
         assert(self.pbfp.capillary_force_from_korteweg_stress)
 
@@ -151,6 +154,9 @@ class FSIMultiphaseProblem(problem_base):
             [[None] * self.nfields for _ in range(self.nfields)],
             [[None] * self.nfields for _ in range(self.nfields)],
         )
+
+    def set_coupling_parameters(self):
+        self.coupling_phase_solidscatra = self.coupling_params.get("coupling_phase_solidscatra", False)
 
     def get_problem_var_list(self):
         vlist_, is_ghosted = self.pbs.get_problem_var_list()
@@ -222,6 +228,20 @@ class FSIMultiphaseProblem(problem_base):
             if self.pbp.ti.res_eval == "back":
                 self.pbp.weakform_mu += wetting
 
+        # phasefield coupling to solid scalar transport
+        if self.coupling_phase_solidscatra:
+            raise RuntimeError("Phase-solid-scatra coupling not yet fully implemented!")
+            scatra_robin = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c[0], c0, dboundary, F=None)
+            scatra_robin_old = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c_old[0], c0, dboundary, F=None)
+            scatra_robin_mid = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c_mid[0], c0, dboundary, F=None)
+
+            if self.pbs.pbscat.ti.res_eval == "trap":
+                self.pbs.pbscat.weakform_c[0] += (self.pbs.pbscat.timefac * scatra_robin + (1.-self.pbs.pbscat.timefac) * scatra_robin_old)
+            if self.pbs.pbscat.ti.res_eval == "midp":
+                self.pbs.pbscat.weakform_c[0] += scatra_robin_mid
+            if self.pbs.pbscat.ti.res_eval == "back":
+                self.pbs.pbscat.weakform_c[0] += scatra_robin
+
     def set_variational_forms_jacobian_coupling(self):
         pass
 
@@ -288,16 +308,23 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfap.assemble_stiffness_coupling(t)
 
         # solid momentum
-        self.K_list[0][0 : self.pbs.offs+1] = self.pbfsi.K_list[0][0 : self.pbs.offs+1]  # w.r.t. solid displacement (+ pressure)
+        self.K_list[0][0 : self.pbs.offs+1] = self.pbfsi.K_list[0][0 : self.pbs.offs+1]  # w.r.t. solid displacement (+ pressure, ...)
         if self.pbfsi.fsi_system == "neumann_neumann":
             self.K_list[0][5 + self.pbs.offs] = self.pbfsi.K_list[0][3 + self.pbs.offs]  # w.r.t. Lagrange multiplier
         if self.pbfsi.fsi_system == "neumann_dirichlet":
             self.K_list[0][1 + self.pbs.offs] = self.pbfsi.K_list[0][1 + self.pbs.offs]  # w.r.t. fluid velcocity
 
         # solid incompressibility
+        off=0
         if self.pbs.incompressible_2field:
+            off+=1
             self.K_list[1][0] = self.pbfsi.K_list[1][0]  # w.r.t. solid displacement
             self.K_list[1][1] = self.pbfsi.K_list[1][1]  # w.r.t. solid pressure
+        if self.pbs.have_diffusion:
+            off+=1
+            self.K_list[off][0] = self.pbs.K_list[off][0]
+            self.K_list[0][off] = self.pbs.K_list[0][off]
+            self.K_list[off][off] = self.pbs.K_list[off][off]
 
         # fluid momentum
         self.K_list[1 + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[1 + self.pbs.offs][1 + self.pbs.offs]              # w.r.t. fluid velcocity

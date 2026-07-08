@@ -268,6 +268,7 @@ def check_params_coupling_fsi_fluid_ale(params):
         "coupling_ale_fluid",
         "coupling_fluid_ale",
         "coupling_fsi",
+        "coupling_phase_solidscatra",
         "coupling_strategy",
         "fsi_interface_motion",
         "fsi_kinematic_coupling",
