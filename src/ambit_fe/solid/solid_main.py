@@ -418,12 +418,14 @@ class SolidmechanicsProblem(problem_base):
             self.mat_remodel,
             self.mat_growth_dir,
             self.mat_growth_trig,
+            self.mat_growth_law_type,
             self.mat_growth_thres,
             self.mat_plastic,
         ) = (
             [False] * self.num_domains,
             [False] * self.num_domains,
             [False] * self.num_domains,
+            [None] * self.num_domains,
             [None] * self.num_domains,
             [None] * self.num_domains,
             [] * self.num_domains,
@@ -533,6 +535,7 @@ class SolidmechanicsProblem(problem_base):
                 self.mat_growth[n] = True
                 self.mat_growth_dir[n] = self.constitutive_models["MAT" + str(n + 1)]["growth"]["growth_dir"]
                 self.mat_growth_trig[n] = self.constitutive_models["MAT" + str(n + 1)]["growth"]["growth_trig"]
+                self.mat_growth_law_type[n] = self.constitutive_models["MAT" + str(n + 1)]["growth"].get("growth_law_type", "rate")
                 # need to have fiber fields for the following growth options
                 if self.mat_growth_dir[n] == "fiber" or self.mat_growth_trig[n] == "fibstretch":
                     assert bool(self.io.fiber_data)
@@ -774,10 +777,18 @@ class SolidmechanicsProblem(problem_base):
             # consider concentration-dependent growth
             if any(self.mat_growth):
                 for n in range(self.num_domains):
-                    grfnc = growthfunction(self.constitutive_models["MAT" + str(n + 1)]["growth"])
+                    grfnc = growthfunction(self.constitutive_models["MAT" + str(n + 1)]["growth"], dim=self.dim)
                     if self.mat_growth[n] and self.mat_growth_trig[n] == "concentration":
-                        self.theta = grfnc.grfnc_concentration(self.pbscat.c[0])
-                        self.theta_old = grfnc.grfnc_concentration(self.pbscat.c_old[0])
+                        if self.mat_growth_law_type[n]=="inst":  # both theta and theta_old are ufl forms!
+                            self.theta = grfnc.grfnc_concentration(self.pbscat.c[0])
+                            self.theta_old = grfnc.grfnc_concentration(self.pbscat.c_old[0])
+                        elif self.mat_growth_law_type[n]=="rate":  # theta is ufl forms, theta_old a function (needs to be updated!)
+                            tau_gr = self.constitutive_models["MAT" + str(n + 1)]["growth"]["tau_gr"]
+                            theta_c = grfnc.grfnc_concentration(self.pbscat.c[0])
+                            # Backward Euler integration of dtheta/dt = (theta(c) - theta)/tau_gr - works only if linear in theta!
+                            self.theta = ((self.pbase.dt/tau_gr) * theta_c + self.theta_old) / (1.0 + (self.pbase.dt/tau_gr))
+                        else:
+                            raise ValueError("Unknown growth_law_type!")
 
         # prior to setting the internal stress state, we need to set any "internal" variables we might have
         # growth

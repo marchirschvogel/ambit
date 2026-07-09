@@ -116,6 +116,15 @@ class FSIMultiphaseProblem(problem_base):
         self.coupling_params = coupling_params[0]
         self.set_coupling_parameters()  # any additional ones not set by FSI (e.g. phase-scatra...)
 
+        if self.coupling_phase_solidscatra:
+            self.V_lmss = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.pbscat.order_conc))
+            # Lagrange multiplier for phasefield-scatra coupling
+            self.lmss = fem.Function(self.V_lmss)
+            self.lmss_old = fem.Function(self.V_lmss)
+
+            self.dlmss = ufl.TrialFunction(self.V_lmss)  # incremental lm
+            self.var_lmss = ufl.TestFunction(self.V_lmss)  # lm test function
+
         # in order to get correct contributions of the capillary stress on the (FSI) boundary, we should use this option...
         assert(self.pbfp.capillary_force_from_korteweg_stress)
 
@@ -129,10 +138,11 @@ class FSIMultiphaseProblem(problem_base):
         self.numdof = self.pbfsi.numdof + self.pbp.numdof
 
         # number of fields involved
+        self.nfields = 6
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.nfields = 7
-        else:
-            self.nfields = 6
+            self.nfields += 1
+        if self.coupling_phase_solidscatra:
+            self.nfields += 1
 
         # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
         self.nfields += self.pbs.offs
@@ -144,6 +154,9 @@ class FSIMultiphaseProblem(problem_base):
         else:
             self.var_names = self.pbs.var_names + self.pbf.var_names + self.pbp.var_names + self.pba.var_names
             self.eq_names = self.pbs.eq_names + self.pbf.eq_names + self.pbp.eq_names + self.pba.eq_names
+        if self.coupling_phase_solidscatra:
+            self.var_names += ["lmss"]
+            self.eq_names += ["scatra-phase constr"]
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -172,6 +185,9 @@ class FSIMultiphaseProblem(problem_base):
         vlist_a, is_ghosted_a = self.pba.get_problem_var_list()
         vlist_ += vlist_a
         is_ghosted += is_ghosted_a
+        if self.coupling_phase_solidscatra:
+            vlist_.append(self.lmss.x.petsc_vec)
+            is_ghosted.append(1)
         return vlist_, is_ghosted
 
     def set_variational_forms(self):
@@ -205,7 +221,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp.set_variational_forms_jacobian_coupling()
         # ALE-phasefield
         self.pbfap.set_variational_forms_jacobian_coupling()
-        # create additional coupling forms (e.g. interface wetting conditions)
+        # create additional coupling forms
         self.set_variational_forms_jacobian_coupling()
 
     def set_variational_forms_residual_coupling(self):
@@ -230,20 +246,19 @@ class FSIMultiphaseProblem(problem_base):
 
         # phasefield coupling to solid scalar transport
         if self.coupling_phase_solidscatra:
-            raise RuntimeError("Phase-solid-scatra coupling not yet fully implemented!")
-            scatra_robin = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c[0], c0, dboundary, F=None)
-            scatra_robin_old = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c_old[0], c0, dboundary, F=None)
-            scatra_robin_mid = self.pbs.pbscat.vf[0].weakform_robin(k, self.pbs.pbscat.c_mid[0], c0, dboundary, F=None)
+            c_lo = self.coupling_params["c_lo"]
+            c_up = self.coupling_params["c_up"]
 
-            if self.pbs.pbscat.ti.res_eval == "trap":
-                self.pbs.pbscat.weakform_c[0] += (self.pbs.pbscat.timefac * scatra_robin + (1.-self.pbs.pbscat.timefac) * scatra_robin_old)
-            if self.pbs.pbscat.ti.res_eval == "midp":
-                self.pbs.pbscat.weakform_c[0] += scatra_robin_mid
-            if self.pbs.pbscat.ti.res_eval == "back":
-                self.pbs.pbscat.weakform_c[0] += scatra_robin
+            c_gamma = c_lo * (1.0 - self.pbf.phasevar["chi"]) + c_up * self.pbf.phasevar["chi"]
+            self.weakform_lmss = (self.pbs.pbscat.c[0] * self.var_lmss) * self.io.ds(self.io.interface_id_s) - (c_gamma * self.var_lmss) * self.io.ds(self.io.interface_id_f)
+
+            self.pbs.pbscat.weakform_c[0] += (self.lmss * self.pbs.pbscat.var_c[0]) * self.io.ds(self.io.interface_id_s)
 
     def set_variational_forms_jacobian_coupling(self):
-        pass
+        if self.coupling_phase_solidscatra:
+            self.weakform_lin_lmssc = ufl.derivative(self.weakform_lmss, self.pbs.pbscat.c[0], self.pbs.pbscat.dc[0])
+            self.weakform_lin_lmssphi = ufl.derivative(self.weakform_lmss, self.pbp.phi, self.pbp.dphi)
+            self.weakform_lin_clmss = ufl.derivative(self.pbs.pbscat.weakform_c[0], self.lmss, self.dlmss)
 
     def set_problem_residual_jacobian_forms(self, pre=False):
         # FSI - fluid, solid, ALE, + FSI coup
@@ -254,9 +269,15 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp.set_problem_residual_jacobian_forms_coupling()
         # ALE-phasefield
         self.pbfap.set_problem_residual_jacobian_forms_coupling()
+        # any additional coupling
+        self.set_problem_residual_jacobian_forms_coupling()
 
     def set_problem_residual_jacobian_forms_coupling(self):
-        pass
+        if self.coupling_phase_solidscatra:
+            self.res_ls = fem.form(self.weakform_lmss, entity_maps=self.io.entity_maps)
+            self.jac_lsc = fem.form(self.weakform_lin_lmssc, entity_maps=self.io.entity_maps)
+            self.jac_lsphi = fem.form(self.weakform_lin_lmssphi, entity_maps=self.io.entity_maps)
+            self.jac_cls = fem.form(self.weakform_lin_clmss, entity_maps=self.io.entity_maps)
 
     def set_problem_vector_matrix_structures(self):
         # FSI - fluid, solid, ALE, + FSI coup
@@ -267,15 +288,27 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp.set_problem_vector_matrix_structures_coupling()
         # ALE-phasefield
         self.pbfap.set_problem_vector_matrix_structures_coupling()
+        # any additional stuff
+        self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
-        pass
+        if self.coupling_phase_solidscatra:
+            self.r_ls = fem.petsc.assemble_vector(self.res_ls)
+
+            self.K_lsc = fem.petsc.assemble_matrix(self.jac_lsc, [])
+            self.K_lsc.assemble()
+            self.K_lsphi = fem.petsc.assemble_matrix(self.jac_lsphi, [])
+            self.K_lsphi.assemble()
+            self.K_cls = fem.petsc.assemble_matrix(self.jac_cls, self.pbs.pbscat.dbcs[0])
+            self.K_cls.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
             ofc = 0
+
+        self.assemble_residual_coupling(t)
 
         # FSI - fluid, solid, ALE, + FSI coup
         self.pbfsi.assemble_residual(t)
@@ -295,11 +328,31 @@ class FSIMultiphaseProblem(problem_base):
         # ALE
         self.r_list[5 + ofc + self.pbs.offs] = self.pbfsi.r_list[3 + ofc + self.pbs.offs]
 
+        if self.coupling_phase_solidscatra:
+            self.r_list[6 + ofc + self.pbs.offs] = self.r_ls
+
+    def assemble_residual_coupling(self, t):
+        if self.coupling_phase_solidscatra:
+            with self.r_ls.localForm() as r_local:
+                r_local.set(0.0)
+            fem.petsc.assemble_vector(self.r_ls, self.res_ls)
+            # fem.apply_lifting(
+            #     self.r_ls,
+            #     [self.jac_lsls],
+            #     [self.dbcs_lmss],
+            #     x0=[self.lmss.x.petsc_vec],
+            #     alpha=-1.0,
+            # )
+            self.r_ls.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            # fem.set_bc(self.r_ls, self.dbcs_lmss, x0=self.lmss.x.petsc_vec, alpha=-1.0)
+
     def assemble_stiffness(self, t, subsolver=None):
         if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
             ofc = 0
+
+        self.assemble_stiffness_coupling(t)
 
         # FSI - fluid, solid, ALE, + FSI coup
         self.pbfsi.assemble_stiffness(t)
@@ -367,6 +420,24 @@ class FSIMultiphaseProblem(problem_base):
         # ALE
         self.K_list[5 + ofc + self.pbs.offs][5 + ofc + self.pbs.offs] = self.pbfsi.K_list[3 + ofc + self.pbs.offs][3 + ofc + self.pbs.offs]  # w.r.t. ALE displacement
         self.K_list[5 + ofc + self.pbs.offs][1 + self.pbs.offs] = self.pbfsi.K_list[3 + ofc + self.pbs.offs][1 + self.pbs.offs]              # w.r.t. fluid velocity
+
+        # coupling to solid-scatra
+        if self.coupling_phase_solidscatra:
+            self.K_list[6 + ofc + self.pbs.offs][3 + self.pbs.offs] = self.K_lsphi   # w.r.t. phase
+            self.K_list[6 + ofc + self.pbs.offs][self.pbs.offs] = self.K_lsc  # w.r.t. concentration
+            self.K_list[self.pbs.offs][6 + ofc + self.pbs.offs] = self.K_cls  # w.r.t. lmss
+
+    def assemble_stiffness_coupling(self, t, subsolver=None):
+        if self.coupling_phase_solidscatra:
+            self.K_lsc.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_lsc, self.jac_lsc, [])
+            self.K_lsc.assemble()
+            self.K_lsphi.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_lsphi, self.jac_lsphi, [])
+            self.K_lsphi.assemble()
+            self.K_cls.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_cls, self.jac_cls, self.pbs.pbscat.dbcs[0])
+            self.K_cls.assemble()
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

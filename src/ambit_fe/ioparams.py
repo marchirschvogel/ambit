@@ -265,6 +265,8 @@ def check_params_time_flow0d(params):
 
 def check_params_coupling_fsi_fluid_ale(params):
     valid_params = [
+        "c_lo",
+        "c_up",
         "coupling_ale_fluid",
         "coupling_fluid_ale",
         "coupling_fsi",
@@ -274,6 +276,7 @@ def check_params_coupling_fsi_fluid_ale(params):
         "fsi_kinematic_coupling",
         "fsi_kinematic_quantity",
         "fsi_system",
+        "k_pen",
         "wetting_condition_interface",
     ]
 

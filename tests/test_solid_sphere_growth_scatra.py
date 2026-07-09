@@ -75,6 +75,7 @@ def test_main():
             "growth": {
                 "growth_dir": "isotropic",
                 "growth_trig": "concentration",
+                "growth_law_type": "inst",  # inst, rate
                 "c0": 0.0,
                 "beta": 1e-1,
             },

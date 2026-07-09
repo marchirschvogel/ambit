@@ -290,8 +290,9 @@ class growth:
 
 # volumetric growth class: growth function
 class growthfunction():
-    def __init__(self, params):
+    def __init__(self, params, dim=3):
         self.params = params
+        self.dim = dim
 
     # standard rate growth function
     def grfnc1(self, theta, trigger, thres):
@@ -308,7 +309,7 @@ class growthfunction():
     def grfnc_concentration(self, c):
         c0 = self.params["c0"]
         beta = self.params["beta"]
-        return (1.0 + beta*(c - c0))**(1./3.)
+        return (1.0 + beta*(c - c0))**(1.0/self.dim)
 
 
 # expression for time-dependent active stress activation function

@@ -127,10 +127,9 @@ class FSIFlow0DProblem(problem_base):
         self.sub_solve = True
 
         # number of fields involved
+        self.nfields = 5
         if self.pbfsi.fsi_system == "neumann_neumann":
-            self.nfields = 6
-        else:
-            self.nfields = 5
+            self.nfields += 1
 
         # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
         self.nfields += self.pbs.offs

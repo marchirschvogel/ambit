@@ -147,10 +147,9 @@ class FSIProblem(problem_base):
         self.print_subiter = False
 
         # number of fields involved
+        self.nfields = 4
         if self.fsi_system == "neumann_neumann":
-            self.nfields = 5
-        else:
-            self.nfields = 4
+            self.nfields += 1
 
         # any offsets from solid mechanics (hydrostatic pressure, pore pressure, ...)
         self.nfields += self.pbs.offs

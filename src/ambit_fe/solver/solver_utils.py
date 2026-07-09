@@ -60,18 +60,39 @@ class sol_utils:
             eqs, vrs = self.solver.pb[pi].eq_names, self.solver.pb[pi].var_names
         numres = len(eqs)
 
+        if sub:
+            assert(numres==1)
+
+        formatstringhead1 = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<7s}"
+        formatstringhead2 = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
+        for j in range(1,numres):
+            formatstringhead1 = formatstringhead1.replace("{:<3s}{:<7s}", "{:<3s}{:<25s}")
+            formatstringhead1 += "{:<3s}{:<7s}"
+            formatstringhead2 = formatstringhead2.replace("{:<10s}{:<7s}", "{:<13s}{:<12s}{:<3s}")
+            formatstringhead2 += "{:<10s}{:<7s}"
+
+        formatstringvar0 = "{:<" + str(self.solver.indlen) + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
+        for j in range(1,numres):
+            formatstringvar0 = formatstringvar0.replace("{:<4.2e}{:<2s}{:<8s}", "{:<4.4e}{:<3s}{:<10s}{:<5s}")
+            formatstringvar0 += "{:<4.2e}{:<2s}{:<8s}"
+
+        formatstringvari = "{:<" + str(self.solver.indlen) + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
+        for j in range(1,numres):
+            formatstringvari = formatstringvari.replace("{:<4.2e}{:<2s}{:<4.2e}", "{:<4.4e}{:<3s}{:<4.4e}{:<5s}")
+            formatstringvari += "{:<4.2e}{:<2s}{:<4.2e}"
+
         # using greek symbol print (Δ) is not supported everywhere... so use d instead
         if header:
             if numres == 1:
                 if not sub:
                     utilities.print_status(
-                        ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<7s}").format(
+                        (formatstringhead1).format(
                             " ", "it |", eqs[0], "| ", "timings"
                         ),
                         self.solver.comm,
                     )
                     utilities.print_status(
-                        ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}").format(
+                        (formatstringhead2).format(
                             " ",
                             "#  |",
                             "||r_" + vrs[0] + "||_2",
@@ -83,19 +104,22 @@ class sol_utils:
                         self.solver.comm,
                     )
                 else:
+                    formatstringhead1 = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}"
+                    formatstringhead2 = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
+
                     utilities.print_status(" ", self.solver.comm)
                     utilities.print_status(
                         "       ****************** 0D model solve ******************",
                         self.solver.comm,
                     )
                     utilities.print_status(
-                        ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}").format(
+                        (formatstringhead1).format(
                             " ", " ", "it |", eqs[0], "| ", "timings"
                         ),
                         self.solver.comm,
                     )
                     utilities.print_status(
-                        ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}").format(
+                        (formatstringhead2).format(
                             " ",
                             " ",
                             "#  |",
@@ -109,17 +133,13 @@ class sol_utils:
                     )
             elif numres == 2:
                 utilities.print_status(
-                    ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}").format(
+                    (formatstringhead1).format(
                         " ", "it |", eqs[0], "| ", eqs[1], "| ", "timings"
                     ),
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -135,17 +155,13 @@ class sol_utils:
                 )
             elif numres == 3:
                 utilities.print_status(
-                    ("{:<" + str(self.solver.indlen) + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}").format(
+                    (formatstringhead1).format(
                         " ", "it |", eqs[0], "| ", eqs[1], "| ", eqs[2], "| ", "timings"
                     ),
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -164,11 +180,7 @@ class sol_utils:
                 )
             elif numres == 4:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
-                    ).format(
+                    (formatstringhead1).format(
                         " ",
                         "it |",
                         eqs[0],
@@ -184,11 +196,7 @@ class sol_utils:
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -210,11 +218,7 @@ class sol_utils:
                 )
             elif numres == 5:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
-                    ).format(
+                    (formatstringhead1).format(
                         " ",
                         "it |",
                         eqs[0],
@@ -232,11 +236,7 @@ class sol_utils:
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -261,11 +261,7 @@ class sol_utils:
                 )
             elif numres == 6:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
-                    ).format(
+                    (formatstringhead1).format(
                         " ",
                         "it |",
                         eqs[0],
@@ -285,11 +281,7 @@ class sol_utils:
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -317,11 +309,7 @@ class sol_utils:
                 )
             elif numres == 7:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
-                    ).format(
+                    (formatstringhead1).format(
                         " ",
                         "it |",
                         eqs[0],
@@ -343,11 +331,7 @@ class sol_utils:
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -378,11 +362,7 @@ class sol_utils:
                 )
             elif numres == 8:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
-                    ).format(
+                    (formatstringhead1).format(
                         " ",
                         "it |",
                         eqs[0],
@@ -406,11 +386,7 @@ class sol_utils:
                     self.solver.comm,
                 )
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
-                    ).format(
+                    (formatstringhead2).format(
                         " ",
                         "#  |",
                         "||r_" + vrs[0] + "||_2",
@@ -442,6 +418,69 @@ class sol_utils:
                     ),
                     self.solver.comm,
                 )
+            elif numres == 9:
+                utilities.print_status(
+                    (formatstringhead1).format(
+                        " ",
+                        "it |",
+                        eqs[0],
+                        "| ",
+                        eqs[1],
+                        "| ",
+                        eqs[2],
+                        "| ",
+                        eqs[3],
+                        "| ",
+                        eqs[4],
+                        "| ",
+                        eqs[5],
+                        "| ",
+                        eqs[6],
+                        "| ",
+                        eqs[7],
+                        "| ",
+                        eqs[8],
+                        "| ",
+                        "timings",
+                    ),
+                    self.solver.comm,
+                )
+                utilities.print_status(
+                    (formatstringhead2).format(
+                        " ",
+                        "#  |",
+                        "||r_" + vrs[0] + "||_2",
+                        "||d" + vrs[0] + "||_2",
+                        "| ",
+                        "||r_" + vrs[1] + "||_2",
+                        "||d" + vrs[1] + "||_2",
+                        "| ",
+                        "||r_" + vrs[2] + "||_2",
+                        "||d" + vrs[2] + "||_2",
+                        "| ",
+                        "||r_" + vrs[3] + "||_2",
+                        "||d" + vrs[3] + "||_2",
+                        "| ",
+                        "||r_" + vrs[4] + "||_2",
+                        "||d" + vrs[4] + "||_2",
+                        "| ",
+                        "||r_" + vrs[5] + "||_2",
+                        "||d" + vrs[5] + "||_2",
+                        "| ",
+                        "||r_" + vrs[6] + "||_2",
+                        "||d" + vrs[6] + "||_2",
+                        "| ",
+                        "||r_" + vrs[7] + "||_2",
+                        "||d" + vrs[7] + "||_2",
+                        "| ",
+                        "||r_" + vrs[8] + "||_2",
+                        "||d" + vrs[8] + "||_2",
+                        "| ",
+                        "te",
+                        "ts",
+                    ),
+                    self.solver.comm,
+                )
             else:
                 raise RuntimeError("Error. You should not be here!")
 
@@ -451,11 +490,7 @@ class sol_utils:
             if numres == 1:
                 if not sub:
                     utilities.print_status(
-                        (
-                            "{:<"
-                            + str(self.solver.indlen)
-                            + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                        ).format(
+                        (formatstringvar0).format(
                             " ",
                             it,
                             "| ",
@@ -470,12 +505,9 @@ class sol_utils:
                         self.solver.comm,
                     )
                 else:
+                    formatstringvar0 = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
                     utilities.print_status(
-                        (
-                            "{:<"
-                            + str(self.solver.indlen)
-                            + "s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                        ).format(
+                        (formatstringvar0).format(
                             " ",
                             " ",
                             it,
@@ -492,11 +524,7 @@ class sol_utils:
                     )
             elif numres == 2:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -516,11 +544,7 @@ class sol_utils:
                 )
             elif numres == 3:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -544,11 +568,7 @@ class sol_utils:
                 )
             elif numres == 4:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -576,11 +596,7 @@ class sol_utils:
                 )
             elif numres == 5:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -612,11 +628,7 @@ class sol_utils:
                 )
             elif numres == 6:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -652,11 +664,7 @@ class sol_utils:
                 )
             elif numres == 7:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -696,11 +704,7 @@ class sol_utils:
                 )
             elif numres == 8:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
-                    ).format(
+                    (formatstringvar0).format(
                         " ",
                         it,
                         "| ",
@@ -742,6 +746,54 @@ class sol_utils:
                     ),
                     self.solver.comm,
                 )
+            elif numres == 9:
+                utilities.print_status(
+                    (formatstringvar0).format(
+                        " ",
+                        it,
+                        "| ",
+                        resnorms["res1"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res2"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res3"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res4"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res5"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res6"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res7"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res8"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res9"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        te,
+                        " ",
+                        " ",
+                    ),
+                    self.solver.comm,
+                )
             else:
                 raise RuntimeError("Number of residual norms inconsistent.")
 
@@ -749,11 +801,7 @@ class sol_utils:
             if numres == 1:
                 if not sub:
                     utilities.print_status(
-                        (
-                            "{:<"
-                            + str(self.solver.indlen)
-                            + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                        ).format(
+                        (formatstringvari).format(
                             " ",
                             it,
                             "| ",
@@ -768,12 +816,9 @@ class sol_utils:
                         self.solver.comm,
                     )
                 else:
+                    formatstringvari = "{:<" + str(self.solver.indlen) + "s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
                     utilities.print_status(
-                        (
-                            "{:<"
-                            + str(self.solver.indlen)
-                            + "s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                        ).format(
+                        (formatstringvari).format(
                             " ",
                             " ",
                             it,
@@ -790,11 +835,7 @@ class sol_utils:
                     )
             elif numres == 2:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -814,11 +855,7 @@ class sol_utils:
                 )
             elif numres == 3:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -842,11 +879,7 @@ class sol_utils:
                 )
             elif numres == 4:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -874,11 +907,7 @@ class sol_utils:
                 )
             elif numres == 5:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -910,11 +939,7 @@ class sol_utils:
                 )
             elif numres == 6:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -950,11 +975,7 @@ class sol_utils:
                 )
             elif numres == 7:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -994,11 +1015,7 @@ class sol_utils:
                 )
             elif numres == 8:
                 utilities.print_status(
-                    (
-                        "{:<"
-                        + str(self.solver.indlen)
-                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
-                    ).format(
+                    (formatstringvari).format(
                         " ",
                         it,
                         "| ",
@@ -1033,6 +1050,54 @@ class sol_utils:
                         resnorms["res8"],
                         " ",
                         incnorms["inc8"],
+                        "  |  ",
+                        te,
+                        " ",
+                        ts,
+                    ),
+                    self.solver.comm,
+                )
+            elif numres == 9:
+                utilities.print_status(
+                    (formatstringvari).format(
+                        " ",
+                        it,
+                        "| ",
+                        resnorms["res1"],
+                        " ",
+                        incnorms["inc1"],
+                        "  |  ",
+                        resnorms["res2"],
+                        " ",
+                        incnorms["inc2"],
+                        "  |  ",
+                        resnorms["res3"],
+                        " ",
+                        incnorms["inc3"],
+                        "  |  ",
+                        resnorms["res4"],
+                        " ",
+                        incnorms["inc4"],
+                        "  |  ",
+                        resnorms["res5"],
+                        " ",
+                        incnorms["inc5"],
+                        "  |  ",
+                        resnorms["res6"],
+                        " ",
+                        incnorms["inc6"],
+                        "  |  ",
+                        resnorms["res7"],
+                        " ",
+                        incnorms["inc7"],
+                        "  |  ",
+                        resnorms["res8"],
+                        " ",
+                        incnorms["inc8"],
+                        "  |  ",
+                        resnorms["res9"],
+                        " ",
+                        incnorms["inc9"],
                         "  |  ",
                         te,
                         " ",
@@ -1151,6 +1216,10 @@ class sol_utils:
             seplen = 221
         elif len(self.solver.tolerances[0]) == 16:
             seplen = 240
+        elif len(self.solver.tolerances[0]) == 18:
+            seplen = 260
+        elif len(self.solver.tolerances[0]) == 20:
+            seplen = 280
         else:
             raise ValueError("Unknown size of tolerances!")
 

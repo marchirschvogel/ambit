@@ -55,17 +55,17 @@ def test_main():
                 np.full(x.shape[1], val),
             )
 
-    CONTROL_PARAMS = {"maxtime": 10.0,
-                      "dt": 0.1,
-                      "numstep_stop": 10,
+    CONTROL_PARAMS = {"maxtime": 10., # ms
+                      "dt": 1e-3, # ms
+                      "numstep_stop": 100,
                       "initial_fields": [expr1, None],
                       }
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",   # superlu_dist, mumps
-        "tol_res": 1e-8,
-        "tol_inc": 1e-8,
+        "tol_res": 1e-4,
+        "tol_inc": 1e-4,
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
@@ -103,9 +103,11 @@ def test_main():
 
     COUPLING_PARAMS_FSI = {
         "coupling_fsi": {"interface": [locate_interf()]},
-        "fsi_system": "neumann_neumann",
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
         # phase-scatra coupling
         "coupling_phase_solidscatra": True,
+        "c_lo": 0.0,
+        "c_up": 1.5,
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
@@ -137,18 +139,21 @@ def test_main():
             return np.isclose(x[1], 0.0)
 
 
-    E = 1.0
-    MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
-                                "inertia": {"rho0": 1.0e-3},
+    mu, nu = 20.0e6, 0.45
+    MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": mu},
+                                "ogden_vol": {"kappa": mu/(1.-2.*nu)},
+                                "inertia": {"rho0": 2.0},
                                 "growth": {
                                     "growth_dir": "isotropic",
                                     "growth_trig": "concentration",
+                                    "growth_law_type": "rate",  # inst, rate
                                     "c0": 0.0,
-                                    "beta": 1e-1,
+                                    "beta": 1e0,
+                                    "tau_gr": 1.0,
                                 },
                                 "id": locate_solid()}}
 
-    MATERIALS_SC = {"MAT1": {"mat_diff": {"D": 1e-2}, "id": locate_solid()}}
+    MATERIALS_SC = {"MAT1": {"mat_diff": {"D": 1e0}, "id": locate_solid()}}
 
     # fluid1 is oxygen, fluid2 is water
     rho1 = 1e0
@@ -168,18 +173,23 @@ def test_main():
 
     MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}, "id": locate_fluid()}}
 
-    m = 1e-8 # mobility should be rather low if capillary stress is rather high
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
-                                                  "M0": m*eps**2.0,  # Mobility [length^5/(pressure time)]
+                                                  "M0": M0,  # Mobility [length^5/(pressure time)]
                                                   "D": sigtilde/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
                                                   "kappa": sigtilde*eps},  # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}
 
+    class time_curves:
+        def tc1(self, t):
+            return -1.0 * t / CONTROL_PARAMS["maxtime"]
+
     BC_DICT_SOLID = {
-        "dirichlet": [{"id": [locate_left()], "dir": "all", "val": 0.0},
+        "dirichlet": [
+                      {"id": [locate_left()], "dir": "all", "val": 0.0},
                       {"id": [locate_top(),locate_bottom()], "dir": "y", "val": 0.0}],
+        # "neumann": [{"id": [locate_left()], "dir": "normal_ref", "curve": 1}]
         }
 
     BC_DICT_SC = { }
@@ -208,6 +218,7 @@ def test_main():
         [[MATERIALS_SOLID, MATERIALS_SC], [MATERIALS_FLUID], [MATERIALS_PF], [MATERIALS_ALE]],
         [[BC_DICT_SOLID, BC_DICT_SC], [BC_DICT_FLUID], [BC_DICT_PF], [BC_DICT_ALE], [BC_DICT_LM]],
         coupling_params=[COUPLING_PARAMS_FSI, COUPLING_PARAMS_MULTIPHASE],
+        time_curves=time_curves(),
     )
 
     # problem solve

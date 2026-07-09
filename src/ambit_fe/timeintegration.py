@@ -569,7 +569,10 @@ class timeintegration_solid(timeintegration):
         # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
         for key, value in internalvars_old.items():
             if isinstance(value, fem.function.Function):  # might be a ufl form - only update if function
-                value.x.petsc_vec.axpby(1.0, 0.0, internalvars[key].x.petsc_vec)
+                if isinstance(internalvars[key], fem.function.Function):
+                    value.x.petsc_vec.axpby(1.0, 0.0, internalvars[key].x.petsc_vec)
+                else:  # update old state from an expression
+                    value.interpolate(fem.Expression(internalvars[key], value.function_space.element.interpolation_points))
                 value.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update old time-dependent load curves
