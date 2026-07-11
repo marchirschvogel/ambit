@@ -6,9 +6,9 @@ Ambit is an open-source multi-physics finite element solver written in Python, s
 It is tailored towards solving problems in cardiac mechanics, but may also be used for more general nonlinear finite element analysis. It uses the finite element backend FEniCSx and
 linear algebra library PETSc.
 
-https://github.com/marchirschvogel/ambit/assets/52761273/a438ff55-9b37-4572-a1c5-499dd3cfba73
+https://github.com/user-attachments/assets/6a8a1f96-066d-4c68-a71e-b65ecf12d4da
 
-**Heart cycle simulation of a generic bi-ventricular heart model coupled to a closed-loop circulation model.**
+**Fully coupled fluid-structure interaction simulation in a patient-specific 4-chamber heart coupled to a closed-loop circulation model.**
 
 https://github.com/marchirschvogel/ambit/assets/52761273/8e681cb6-7a4f-4d1f-b34a-cefb642f44b7
 
