@@ -8,7 +8,7 @@ linear algebra library PETSc.
 
 https://github.com/user-attachments/assets/6a8a1f96-066d-4c68-a71e-b65ecf12d4da
 
-**Fully coupled fluid-structure interaction simulation in a patient-specific 4-chamber heart coupled to a closed-loop circulation model.**
+**Fully coupled 3D fluid-structure interaction simulation (~3M dofs) in a patient-specific 4-chamber heart coupled to a closed-loop circulation model.**
 
 https://github.com/marchirschvogel/ambit/assets/52761273/8e681cb6-7a4f-4d1f-b34a-cefb642f44b7
 
