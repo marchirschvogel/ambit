@@ -210,13 +210,13 @@ if category == "solid" or category == "all":
             "test_solid_constraint_volume_chamber.py",
         ]
     )
-    errs["test_solid_sphere_poro 2"] = subprocess.call(
+    errs["test_solid_sphere_poro_darcy 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_solid_sphere_poro.py",
+            "test_solid_sphere_poro_darcy.py",
         ]
     )
     errs["test_solid_sphere_growth_scatra 2"] = subprocess.call(

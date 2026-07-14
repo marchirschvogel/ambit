@@ -31,7 +31,7 @@ def test_main():
         "write_restart_every": 4,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": {"solid": ["displacement", "porepressure"], "scatra": ["concentration"]},
+        "results_to_write": {"solid": ["displacement"], "scatra": ["concentration"]},
         "simname": "solid_sphere_growth_scatra",
     }
 
@@ -56,7 +56,6 @@ def test_main():
 
     FEM_PARAMS = {
         "order_disp": 2,
-        "order_pporo": 1,
         "order_pres": 1,
         "quad_degree": 5,
         "incompressibility": "no",
@@ -76,7 +75,7 @@ def test_main():
                 "growth_dir": "isotropic",
                 "growth_trig": "concentration",
                 "growth_law_type": "inst",  # inst, rate
-                "c0": 0.0,
+                "c0": 0.1,
                 "beta": 1e-1,
             },
         }
@@ -132,11 +131,11 @@ def test_main():
     u_corr, c_corr = np.zeros(3 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    u_corr[0] = 4.1815668210804314E-03  # x
-    u_corr[1] = 4.1815668105427946E-03  # y
-    u_corr[2] = 4.1215357256873591E-03  # z
+    u_corr[0] = 3.4681923558718048E-03  # x
+    u_corr[1] = 3.4681923463234757E-03  # y
+    u_corr[2] = 3.4196362165880055E-03  # z
 
-    c_corr[0] = 1.2389024499513343E-03
+    c_corr[0] = 1.2355157863733316E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.u,

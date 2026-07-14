@@ -80,7 +80,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.order_disp = self.fem_params["order_disp"]
         self.order_pres = self.fem_params.get("order_pres", 1)
-        self.order_pporo = self.fem_params.get("order_pporo", 1)
+        self.order_pphyd = self.fem_params.get("order_pphyd", 1)
         self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
@@ -114,7 +114,19 @@ class SolidmechanicsProblem(problem_base):
         if self.incompressible_2field:
             self.offs += 1
 
-        self.is_poroelastic = self.fem_params.get("poroelasticity", False)
+        self.poroelasticity = self.fem_params.get("poroelasticity", "no")
+
+        if self.poroelasticity == "no":
+            self.is_poroelastic = False
+        elif self.poroelasticity == "darcy":
+            self.is_poroelastic = True
+            self.offs += 1
+        elif self.poroelasticity == "darcy_schloegl":
+            raise ValueError("Poro-model 'darcy_schloegl' not yet implemented!.")
+            self.is_poroelastic = True
+            self.offs += 2  # TODO: How many new vars do we need?!
+        else:
+            raise ValueError("Unknown setting for 'poroelasticity'. Choose 'no', 'darcy', or 'darcy_schloegl'.")
 
         self.have_diffusion = self.fem_params.get("diffusion", False)
 
@@ -134,8 +146,6 @@ class SolidmechanicsProblem(problem_base):
                 is_ale=True,
             )
 
-        if self.is_poroelastic:
-            self.offs += 1
         if self.have_diffusion:
             self.offs += self.pbscat.num_species
 
@@ -216,7 +226,7 @@ class SolidmechanicsProblem(problem_base):
             ("Lagrange", self.order_disp, (self.mesh.geometry.dim,)),
         )
         self.V_p = fem.functionspace(self.mesh, ("Lagrange", self.order_pres))
-        self.V_pporo = fem.functionspace(self.mesh, ("Lagrange", self.order_pporo))
+        self.V_pphyd = fem.functionspace(self.mesh, ("Lagrange", self.order_pphyd))
 
         # continuous tensor and scalar function spaces of order order_disp
         self.V_tensor = fem.functionspace(
@@ -290,14 +300,15 @@ class SolidmechanicsProblem(problem_base):
             self.p = None
             self.dp = None
             self.var_p = None
+
         if self.is_poroelastic:
-            self.pporo = fem.Function(self.V_pporo, name="PorePressure")
-            self.dpporo = ufl.TrialFunction(self.V_pporo)  # Incremental pore pressure
-            self.var_pporo = ufl.TestFunction(self.V_pporo)  # Test function
+            self.pphyd = fem.Function(self.V_pphyd, name="PoreHydraulicPressure")
+            self.dpphyd = ufl.TrialFunction(self.V_pphyd)  # Incremental pore hydraulic pressure
+            self.var_pphyd = ufl.TestFunction(self.V_pphyd)  # Test function
         else:
-            self.pporo = None
-            self.dpporo = None
-            self.var_pporo = None
+            self.pphyd = None
+            self.dpphyd = None
+            self.var_pphyd = None
 
         # auxiliary velocity and acceleration vectors
         self.v = fem.Function(self.V_u, name="Velocity")
@@ -311,9 +322,9 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.p_old = None
         if self.is_poroelastic:
-            self.pporo_old = fem.Function(self.V_p)
+            self.pphyd_old = fem.Function(self.V_p)
         else:
-            self.pporo_old = None
+            self.pphyd_old = None
         # a setpoint displacement for multiscale analysis
         self.u_set = fem.Function(self.V_u)
         self.p_set = fem.Function(self.V_p)
@@ -376,12 +387,9 @@ class SolidmechanicsProblem(problem_base):
 
         self.volume_laplace = io_params.get("volume_laplace", [])
 
-        # dictionaries of internal variables
-        self.internalvars, self.internalvars_old, self.internalvars_mid = (
-            {},
-            {},
-            {},
-        )
+        # dictionaries of pressures (hydrostatic, pore hydraulic, pore osmotic) and internal variables
+        self.pressures, self.pressures_old, self.pressures_mid = {}, {}, {}
+        self.internalvars, self.internalvars_old, self.internalvars_mid = {}, {}, {}
 
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.mesh)
@@ -652,7 +660,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(
-            tstfncs=[self.var_u, self.var_p, self.var_pporo],
+            tstfncs=[self.var_u, self.var_p, self.var_pphyd],
             trlfncs=[self.du, self.dp],
             n0=self.io.n0,
             x_ref=self.x_ref,
@@ -671,7 +679,7 @@ class SolidmechanicsProblem(problem_base):
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
         if "dirichlet_poro" in self.bc_dict.keys(): # for pore pressure
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet_poro"], self.dbcs_poro, V_dbc=self.V_pporo)
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet_poro"], self.dbcs_poro, V_dbc=self.V_pphyd)
 
         # number of fields involved
         self.nfields = 1
@@ -688,8 +696,8 @@ class SolidmechanicsProblem(problem_base):
             self.var_names.append("p")
             self.eq_names.append("solid incompressibility")
         if self.is_poroelastic:
-            self.var_names.append("pporo")
-            self.eq_names.append("solid porous flux")
+            self.var_names.append("pphyd")
+            self.eq_names.append("solid Darcy")
         if self.have_diffusion:
             self.var_names += self.pbscat.var_names
             self.eq_names += self.pbscat.eq_names
@@ -715,7 +723,7 @@ class SolidmechanicsProblem(problem_base):
             vlist_.append(self.p.x.petsc_vec)
         if self.is_poroelastic:
             is_ghosted.append(1)
-            vlist_.append(self.pporo.x.petsc_vec)
+            vlist_.append(self.pphyd.x.petsc_vec)
         if self.have_diffusion:
             for i in range(self.pbscat.num_species):
                 is_ghosted.append(1)
@@ -740,9 +748,17 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.ps_mid = None
         if self.is_poroelastic:
-            self.pporo_mid = self.timefac * self.pporo + (1.0 - self.timefac) * self.pporo_old
+            self.pphyd_mid = self.timefac * self.pphyd + (1.0 - self.timefac) * self.pphyd_old
         else:
-            self.pporo_mid = None
+            self.pphyd_mid = None
+
+        self.pressures["p"] = self.p
+        self.pressures_old["p"] = self.p_old
+        self.pressures_mid["p"] = self.ps_mid
+
+        self.pressures["pphyd"] = self.pphyd
+        self.pressures_old["pphyd"] = self.pphyd_old
+        self.pressures_mid["pphyd"] = self.pphyd_mid
 
         # kinetic, internal, and pressure virtual work
         self.deltaW_kin, self.deltaW_kin_old, self.deltaW_kin_mid = (
@@ -812,16 +828,15 @@ class SolidmechanicsProblem(problem_base):
             # internal virtual work
             if not self.inverse_mechanics:
                 self.deltaW_int += self.vf.deltaW_int(
-                    self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                    self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                     self.ki.F(self.u),
                     self.dx(M),
                 )
                 self.deltaW_int_old += self.vf.deltaW_int(
                     self.ma[n].S(
                         self.u_old,
-                        self.p_old,
                         self.v_old,
-                        pp=self.pporo_old,
+                        pp=self.pressures_old,
                         ivar=self.internalvars_old,
                     ),
                     self.ki.F(self.u_old),
@@ -830,9 +845,8 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_int_mid += self.vf.deltaW_int(
                     self.ma[n].S(
                         self.us_mid,
-                        self.ps_mid,
                         self.vel_mid,
-                        pp=self.pporo_mid,
+                        pp=self.pressures_mid,
                         ivar=self.internalvars_mid,
                     ),
                     self.ki.F(self.us_mid),
@@ -841,7 +855,7 @@ class SolidmechanicsProblem(problem_base):
             else:
                 # For inverse mechanics, we want a spatial virtual work expression
                 self.deltaW_int += self.vf.deltaW_int_spatial(
-                    self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                    self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                     self.ki.F(self.u),
                     self.dx(M),
                 )
@@ -872,9 +886,9 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_p_old += self.vf.deltaW_int_pres_nearly(J_old, self.p_old, self.bulkmod, self.dx(M))
                 self.deltaW_p_mid += self.vf.deltaW_int_pres_nearly(J_mid, self.ps_mid, self.bulkmod, self.dx(M))
             if self.is_poroelastic:
-                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma[n].Q(self.u, self.pporo), self.dx(M))
-                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma[n].Q(self.u_old, self.pporo_old), self.dx(M))
-                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma[n].Q(self.us_mid, self.pporo_mid), self.dx(M))
+                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma[n].Q(self.u, self.pphyd), self.dx(M))
+                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma[n].Q(self.u_old, self.pphyd_old), self.dx(M))
+                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma[n].Q(self.us_mid, self.pphyd_mid), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = (
@@ -985,7 +999,7 @@ class SolidmechanicsProblem(problem_base):
             # internal virtual work
             for n, M in enumerate(self.domain_ids):
                 self.deltaW_prestr_int += self.vf.deltaW_int(
-                    self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                    self.ma_prestr[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                     self.ki.F(self.u),
                     self.dx(M),
                 )
@@ -1084,11 +1098,11 @@ class SolidmechanicsProblem(problem_base):
         # Darcy poro weak form
         if self.is_poroelastic:
             if self.ti.res_eval == "trap":
-                self.weakform_pporo = self.timefac * self.deltaW_poro + (1.0 - self.timefac) * self.deltaW_poro_old
+                self.weakform_pphyd = self.timefac * self.deltaW_poro + (1.0 - self.timefac) * self.deltaW_poro_old
             if self.ti.res_eval == "midp":
-                self.weakform_pporo = self.deltaW_poro_mid
+                self.weakform_pphyd = self.deltaW_poro_mid
             if self.ti.res_eval == "back":  # or in case of static time integration
-                self.weakform_pporo = self.deltaW_poro
+                self.weakform_pphyd = self.deltaW_poro
 
         ### local weak forms at Gauss points for inelastic materials
         self.localdata = {}
@@ -1112,9 +1126,8 @@ class SolidmechanicsProblem(problem_base):
                     # growth residual and increment
                     a, b = self.ma[n].res_dtheta_growth(
                         self.u,
-                        self.p,
                         self.vel,
-                        self.pporo,
+                        self.pressures,
                         self.internalvars,
                         self.theta_old,
                         self.pbase.dt,
@@ -1256,18 +1269,16 @@ class SolidmechanicsProblem(problem_base):
                 if self.ti.res_eval == "trap" or self.ti.res_eval == "back":
                     Cmat, Cmat_v = self.ma[n].S(
                         self.u,
-                        self.p,
                         self.vel,
-                        pp=self.pporo,
+                        pp=self.pressures,
                         ivar=self.internalvars,
                         returnquantity="tangent",
                     )
                 if self.ti.res_eval == "midp":
                     Cmat, Cmat_v = self.ma[n].S(
                         self.us_mid,
-                        self.ps_mid,
                         self.vel_mid,
-                        pp=self.pporo_mid,
+                        pp=self.pressures_mid,
                         ivar=self.internalvars_mid,
                         returnquantity="tangent",
                     )
@@ -1281,9 +1292,8 @@ class SolidmechanicsProblem(problem_base):
                     # growth tangent operator
                     Cgrowth = self.ma[n].Cgrowth(
                         self.u,
-                        self.p,
                         self.vel,
-                        self.pporo,
+                        self.pressures,
                         self.internalvars,
                         self.theta_old,
                         self.pbase.dt,
@@ -1293,9 +1303,8 @@ class SolidmechanicsProblem(problem_base):
                         # remodeling tangent operator
                         Cremod = self.ma[n].Cremod(
                             self.u,
-                            self.p,
                             self.vel,
-                            self.pporo,
+                            self.pressures,
                             self.internalvars,
                             self.theta_old,
                             self.pbase.dt,
@@ -1309,7 +1318,7 @@ class SolidmechanicsProblem(problem_base):
 
                 if self.ti.res_eval == "trap":
                     self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(
-                        self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                        self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                         self.ki.F(self.u),
                         self.ki.Fdot(self.vel),
                         self.u,
@@ -1321,9 +1330,8 @@ class SolidmechanicsProblem(problem_base):
                     self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
                         self.ma[n].S(
                             self.us_mid,
-                            self.ps_mid,
                             self.vel_mid,
-                            pp=self.pporo_mid,
+                            pp=self.pressures_mid,
                             ivar=self.internalvars_mid,
                         ),
                         self.ki.F(self.us_mid),
@@ -1335,7 +1343,7 @@ class SolidmechanicsProblem(problem_base):
                     )
                 if self.ti.res_eval == "back":
                     self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
-                        self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                        self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                         self.ki.F(self.u),
                         self.ki.Fdot(self.vel),
                         self.u,
@@ -1381,16 +1389,15 @@ class SolidmechanicsProblem(problem_base):
 
                     if self.ti.res_eval == "trap" or self.ti.res_eval == "back":
                         Cmat_p = ufl.diff(
-                            self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                            self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                             self.p,
                         )
                     if self.ti.res_eval == "midp":
                         Cmat_p = ufl.diff(
                             self.ma[n].S(
                                 self.us_mid,
-                                self.ps_mid,
                                 self.vel_mid,
-                                pp=self.pporo_mid,
+                                pp=self.pressures_mid,
                                 ivar=self.internalvars_mid,
                             ),
                             self.p,
@@ -1405,9 +1412,8 @@ class SolidmechanicsProblem(problem_base):
                         # elastic and viscous material tangent operator
                         Cmat, Cmat_v = self.ma[n].S(
                             self.u,
-                            self.p,
                             self.vel,
-                            pp=self.pporo,
+                            pp=self.pressures,
                             ivar=self.internalvars,
                             returnquantity="tangent",
                         )
@@ -1415,9 +1421,8 @@ class SolidmechanicsProblem(problem_base):
                         # for stress-mediated growth, we get a contribution to the pressure material tangent operator
                         Cgrowth_p = self.ma[n].Cgrowth_p(
                             self.u,
-                            self.p,
                             self.vel,
-                            self.pporo,
+                            self.pressures,
                             self.internalvars,
                             self.theta_old,
                             self.pbase.dt,
@@ -1427,9 +1432,8 @@ class SolidmechanicsProblem(problem_base):
                             # remodeling tangent operator
                             Cremod_p = self.ma[n].Cremod_p(
                                 self.u,
-                                self.p,
                                 self.vel,
-                                self.pporo,
+                                self.pressures,
                                 self.internalvars,
                                 self.theta_old,
                                 self.pbase.dt,
@@ -1441,9 +1445,8 @@ class SolidmechanicsProblem(problem_base):
                         # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
                         Jgrowth = ufl.diff(J, self.theta) * self.ma[n].dtheta_dC(
                             self.u,
-                            self.p,
                             self.vel,
-                            self.pporo,
+                            self.pressures,
                             self.internalvars,
                             self.theta_old,
                             self.pbase.dt,
@@ -1456,9 +1459,8 @@ class SolidmechanicsProblem(problem_base):
                         # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                         dthetadp = self.ma[n].dtheta_dp(
                             self.u,
-                            self.p,
                             self.vel,
-                            self.pporo,
+                            self.pressures,
                             self.internalvars,
                             self.theta_old,
                             self.pbase.dt,
@@ -1491,9 +1493,9 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_up = ufl.derivative(self.weakform_u, self.p, self.dp)
 
         if self.is_poroelastic:
-            self.weakform_lin_pporopporo = ufl.derivative(self.weakform_pporo, self.pporo, self.dpporo)
-            self.weakform_lin_pporou = ufl.derivative(self.weakform_pporo, self.u, self.du)
-            self.weakform_lin_upporo = ufl.derivative(self.weakform_u, self.pporo, self.dpporo)
+            self.weakform_lin_pphydpphyd = ufl.derivative(self.weakform_pphyd, self.pphyd, self.dpphyd)
+            self.weakform_lin_pphydu = ufl.derivative(self.weakform_pphyd, self.u, self.du)
+            self.weakform_lin_upphyd = ufl.derivative(self.weakform_u, self.pphyd, self.dpphyd)
 
         if self.prestress_initial or self.prestress_initial_only:
             assert(not self.is_poroelastic)
@@ -1565,14 +1567,13 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             se_all += self.ma[n].S(
                 self.u,
-                self.p,
                 self.vel,
-                pp=self.pporo,
+                pp=self.pressures,
                 ivar=self.internalvars,
                 returnquantity="strainenergy",
             ) * self.dx(M)
             ip_all += ufl.inner(
-                self.ma[n].S(self.u, self.p, self.vel, pp=self.pporo, ivar=self.internalvars),
+                self.ma[n].S(self.u, self.vel, pp=self.pressures, ivar=self.internalvars),
                 self.ki.Edot(self.u, self.vel),
             ) * self.dx(M)
 
@@ -1720,10 +1721,10 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     self.jac_pp = None
             if self.is_poroelastic:
-                self.res_pporo = fem.form(self.weakform_pporo, entity_maps=self.io.entity_maps)
-                self.jac_upporo = fem.form(self.weakform_lin_upporo, entity_maps=self.io.entity_maps)
-                self.jac_pporou = fem.form(self.weakform_lin_pporou, entity_maps=self.io.entity_maps)
-                self.jac_pporopporo = fem.form(self.weakform_lin_pporopporo, entity_maps=self.io.entity_maps)
+                self.res_pphyd = fem.form(self.weakform_pphyd, entity_maps=self.io.entity_maps)
+                self.jac_upphyd = fem.form(self.weakform_lin_upphyd, entity_maps=self.io.entity_maps)
+                self.jac_pphydu = fem.form(self.weakform_lin_pphydu, entity_maps=self.io.entity_maps)
+                self.jac_pphydpphyd = fem.form(self.weakform_lin_pphydpphyd, entity_maps=self.io.entity_maps)
         else:
             assert(not self.is_poroelastic)
             self.res_u = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
@@ -1774,14 +1775,14 @@ class SolidmechanicsProblem(problem_base):
                 self.K_pp = None
 
         if self.is_poroelastic:
-            self.r_pporo = fem.petsc.assemble_vector(self.res_pporo)
+            self.r_pphyd = fem.petsc.assemble_vector(self.res_pphyd)
 
-            self.K_upporo = fem.petsc.assemble_matrix(self.jac_upporo, self.dbcs)
-            self.K_upporo.assemble()
-            self.K_pporou = fem.petsc.assemble_matrix(self.jac_pporou, self.dbcs_poro)
-            self.K_pporou.assemble()
-            self.K_pporopporo = fem.petsc.assemble_matrix(self.jac_pporopporo, self.dbcs_poro)
-            self.K_pporopporo.assemble()
+            self.K_upphyd = fem.petsc.assemble_matrix(self.jac_upphyd, self.dbcs)
+            self.K_upphyd.assemble()
+            self.K_pphydu = fem.petsc.assemble_matrix(self.jac_pphydu, self.dbcs_poro)
+            self.K_pphydu.assemble()
+            self.K_pphydpphyd = fem.petsc.assemble_matrix(self.jac_pphydpphyd, self.dbcs_poro)
+            self.K_pphydpphyd.assemble()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
@@ -1824,20 +1825,20 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             off+=1
             # assemble pressure rhs vector
-            with self.r_pporo.localForm() as r_local:
+            with self.r_pphyd.localForm() as r_local:
                 r_local.set(0.0)
-            fem.petsc.assemble_vector(self.r_pporo, self.res_pporo)
+            fem.petsc.assemble_vector(self.r_pphyd, self.res_pphyd)
             fem.apply_lifting(
-                self.r_pporo,
-                [self.jac_pporopporo],
+                self.r_pphyd,
+                [self.jac_pphydpphyd],
                 [self.dbcs_poro],
-                x0=[self.pporo.x.petsc_vec],
+                x0=[self.pphyd.x.petsc_vec],
                 alpha=-1.0,
             )
-            self.r_pporo.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(self.r_pporo, self.dbcs_poro, x0=self.pporo.x.petsc_vec, alpha=-1.0)
+            self.r_pphyd.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(self.r_pphyd, self.dbcs_poro, x0=self.pphyd.x.petsc_vec, alpha=-1.0)
 
-            self.r_list[off] = self.r_pporo
+            self.r_list[off] = self.r_pphyd
 
         if self.have_diffusion:
             off+=1
@@ -1880,21 +1881,21 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             off+=1
             # assemble system matrices
-            self.K_upporo.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_upporo, self.jac_upporo, self.dbcs)
-            self.K_upporo.assemble()
+            self.K_upphyd.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_upphyd, self.jac_upphyd, self.dbcs)
+            self.K_upphyd.assemble()
 
-            self.K_pporou.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pporou, self.jac_pporou, self.dbcs_poro)
-            self.K_pporou.assemble()
+            self.K_pphydu.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_pphydu, self.jac_pphydu, self.dbcs_poro)
+            self.K_pphydu.assemble()
 
-            self.K_pporopporo.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pporopporo, self.jac_pporopporo, self.dbcs_poro)
-            self.K_pporopporo.assemble()
+            self.K_pphydpphyd.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_pphydpphyd, self.jac_pphydpphyd, self.dbcs_poro)
+            self.K_pphydpphyd.assemble()
 
-            self.K_list[0][off] = self.K_upporo
-            self.K_list[off][0] = self.K_pporou
-            self.K_list[off][off] = self.K_pporopporo
+            self.K_list[0][off] = self.K_upphyd
+            self.K_list[off][0] = self.K_pphydu
+            self.K_list[off][off] = self.K_pphydpphyd
 
         if self.have_diffusion:
             off+=1
@@ -2039,8 +2040,8 @@ class SolidmechanicsProblem(problem_base):
             self.a_old,
             self.p,
             self.p_old,
-            self.pporo,
-            self.pporo_old,
+            self.pphyd,
+            self.pphyd_old,
             self.internalvars,
             self.internalvars_old,
         )

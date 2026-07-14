@@ -89,22 +89,22 @@ class IO_solid(IO_field):
                             else:
                                 p_out.interpolate(self.pb.p)
                             self.pb.resultsfiles[res].write_function(p_out, indicator)
-                    elif res == "porepressure":
-                        if self.pb.pporo is not None:
-                            pp_out = fem.Function(self.pb.V_out_scalar, name=self.pb.pporo.name)
+                    elif res == "porehydpressure":
+                        if self.pb.pphyd is not None:
+                            pp_out = fem.Function(self.pb.V_out_scalar, name=self.pb.pphyd.name)
                             if self.pb.io.output_midpoint:
-                                pp_out.interpolate(fem.Expression(self.pb.pporo_mid, self.pb.V_out_scalar.element.interpolation_points))
+                                pp_out.interpolate(fem.Expression(self.pb.pphyd_mid, self.pb.V_out_scalar.element.interpolation_points))
                             else:
-                                pp_out.interpolate(self.pb.pporo)
+                                pp_out.interpolate(self.pb.pphyd)
                             self.pb.resultsfiles[res].write_function(pp_out, indicator)
                     elif res == "cauchystress":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
-                            stressfuncs.append(self.pb.ma[n].sigma(u, p, v, ivar=ivars))
+                            stressfuncs.append(self.pb.ma[n].sigma(u, v, pp=pp, ivar=ivars))
                         cauchystress = project(
                             stressfuncs,
                             self.pb.Vd_tensor,
@@ -119,12 +119,12 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(cauchystress_out, indicator)
                     elif res == "cauchystress_nodal":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
-                            stressfuncs.append(self.pb.ma[n].sigma(u, p, v, ivar=ivars))
+                            stressfuncs.append(self.pb.ma[n].sigma(u, v, pp=pp, ivar=ivars))
                         cauchystress_nodal = project(
                             stressfuncs,
                             self.pb.V_tensor,
@@ -139,13 +139,13 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(cauchystress_nodal_out, indicator)
                     elif res == "cauchystress_principal":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs_eval = []
                         for n in range(self.pb.num_domains):
                             evals, _, _ = spectral_decomposition_3x3(
-                                self.pb.ma[n].sigma(u, p, v, ivar=ivars)
+                                self.pb.ma[n].sigma(u, v, pp=pp, ivar=ivars)
                             )
                             stressfuncs_eval.append(ufl.as_vector(evals))  # written as vector
                         cauchystress_principal = project(
@@ -230,17 +230,17 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
                     elif res == "trmandelstress":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
                             stressfuncs.append(
                                 ufl.tr(
                                     self.pb.ma[n].M(
                                         u,
-                                        p,
                                         v,
+                                        pp=pp,
                                         ivar=ivars,
                                     )
                                 )
@@ -259,9 +259,9 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(trmandelstress_out, indicator)
                     elif res == "trmandelstress_e":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
                             if self.pb.mat_growth[n]:
@@ -269,9 +269,9 @@ class IO_solid(IO_field):
                                     ufl.tr(
                                         self.pb.ma[n].M_e(
                                             u,
-                                            p,
                                             v,
                                             self.pb.ki.C(u),
+                                            pp=pp,
                                             ivar=ivars,
                                         )
                                     )
@@ -292,12 +292,12 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(trmandelstress_e_out, indicator)
                     elif res == "vonmises_cauchystress":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
-                            stressfuncs.append(self.pb.ma[n].sigma_vonmises(u, p, v, ivar=ivars))
+                            stressfuncs.append(self.pb.ma[n].sigma_vonmises(u, v, pp=pp, ivar=ivars))
                         vonmises_cauchystress = project(
                             stressfuncs,
                             self.pb.Vd_scalar,
@@ -312,12 +312,12 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(vonmises_cauchystress_out, indicator)
                     elif res == "pk1stress":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
-                            stressfuncs.append(self.pb.ma[n].P(u, p, v, ivar=ivars))
+                            stressfuncs.append(self.pb.ma[n].P(u, v, pp=pp, ivar=ivars))
                         pk1stress = project(
                             stressfuncs,
                             self.pb.Vd_tensor,
@@ -332,12 +332,12 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(pk1stress_out, indicator)
                     elif res == "pk2stress":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         stressfuncs = []
                         for n in range(self.pb.num_domains):
-                            stressfuncs.append(self.pb.ma[n].S(u, p, v, ivar=ivars))
+                            stressfuncs.append(self.pb.ma[n].S(u, v, pp=pp, ivar=ivars))
                         pk2stress = project(
                             stressfuncs,
                             self.pb.Vd_tensor,
@@ -441,16 +441,16 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(eastrain_principal_out, indicator)
                     elif res == "strainenergy":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         sefuncs = []
                         for n in range(self.pb.num_domains):
                             sefuncs.append(
                                 self.pb.ma[n].S(
                                     u,
-                                    p,
                                     v,
+                                    pp=pp,
                                     ivar=ivars,
                                     returnquantity="strainenergy",
                                 )
@@ -469,17 +469,17 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(se_out, indicator)
                     elif res == "internalpower":
                         if self.pb.io.output_midpoint:
-                            u, p, v, ivars = self.pb.us_mid, self.pb.ps_mid, self.pb.vel_mid, self.pb.internalvars_mid
+                            u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
-                            u, p, v, ivars = self.pb.u, self.pb.p, self.pb.vel, self.pb.internalvars
+                            u, v, pp, ivars = self.pb.u, self.pb.vel, self.pb.pressures, self.pb.internalvars
                         pwfuncs = []
                         for n in range(self.pb.num_domains):
                             pwfuncs.append(
                                 ufl.inner(
                                     self.pb.ma[n].S(
                                         u,
-                                        p,
                                         v,
+                                        pp=pp,
                                         ivar=ivars,
                                     ),
                                     self.pb.ki.Edot(u, v),
@@ -606,7 +606,7 @@ class IO_solid(IO_field):
         if self.pb.incompressible_2field:
             vecs_to_read[self.pb.p] = "p"
         if self.pb.is_poroelastic:
-            vecs_to_read[self.pb.pporo] = "pporo"
+            vecs_to_read[self.pb.pphyd] = "pphyd"
         if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
             vecs_to_read[self.pb.theta] = "theta"
             vecs_to_read[self.pb.theta_old] = "theta"
@@ -625,7 +625,7 @@ class IO_solid(IO_field):
             if self.pb.incompressible_2field:
                 vecs_to_read[self.pb.p_old] = "p"
             if self.pb.is_poroelastic:
-                vecs_to_read[self.pb.pporo_old] = "pporo"
+                vecs_to_read[self.pb.pphyd_old] = "pphyd"
 
         if self.pb.pbase.problem_type == "solid_flow0d_multiscale_gandr":
             vecs_to_read[self.pb.u_set] = "u_set"
@@ -687,7 +687,7 @@ class IO_solid(IO_field):
         if self.pb.incompressible_2field:
             vecs_to_write[self.pb.p] = "p"
         if self.pb.is_poroelastic:
-            vecs_to_write[self.pb.pporo] = "pporo"
+            vecs_to_write[self.pb.pphyd] = "pphyd"
         if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
             vecs_to_write[self.pb.theta] = "theta"
         if any(self.pb.mat_active_stress):

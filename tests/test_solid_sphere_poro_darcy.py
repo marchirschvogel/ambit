@@ -31,7 +31,7 @@ def test_main():
         "write_restart_every": 4,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["displacement", "porepressure"],
+        "results_to_write": ["displacement", "porehydpressure"],
         "simname": "solid_sphere_poro",
     }
 
@@ -51,11 +51,11 @@ def test_main():
 
     FEM_PARAMS = {
         "order_disp": 2,
-        "order_pporo": 1,
+        "order_pphyd": 1,
         "order_pres": 1,
         "quad_degree": 5,
         "incompressibility": "no",
-        "poroelasticity": True,
+        "poroelasticity": "darcy",
     }
 
     MATERIALS = {
@@ -133,10 +133,10 @@ def test_main():
         nm="u",
     )
     check2 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pporo,
+        problem.mp.pphyd,
         check_node2,
         p_corr,
-        problem.mp.V_pporo,
+        problem.mp.V_pphyd,
         problem.mp.comm,
         tol=tol,
         nm="p",

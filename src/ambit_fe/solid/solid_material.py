@@ -309,7 +309,9 @@ class growthfunction():
     def grfnc_concentration(self, c):
         c0 = self.params["c0"]
         beta = self.params["beta"]
-        return (1.0 + beta*(c - c0))**(1.0/self.dim)
+
+        theta_c = (1.0 + beta*(c - c0))**(1.0/self.dim)
+        return ufl.conditional(ufl.ge(c, c0), theta_c, 1.0)
 
 
 # expression for time-dependent active stress activation function
