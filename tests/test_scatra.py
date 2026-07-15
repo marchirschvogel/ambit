@@ -41,7 +41,7 @@ def test_main():
         "tol_inc": 1.0e-0,
     }  # linear problem, so only one solve needed...
 
-    TIME_PARAMS = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}
+    TIME_PARAMS = [{"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}]
 
     FEM_PARAMS = {"order_conc": 1, "quad_degree": 2}
 
@@ -49,7 +49,7 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
-    MATERIALS = {"MAT1": {"mat_diff": {"D": 1.0}, "id": locate_all()}}
+    MATERIALS = [{"MAT1": {"mat_diff": {"D": 1.0}, "id": locate_all()}}]
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -65,8 +65,8 @@ def test_main():
             return np.isclose(x[0], 1.0)
 
     BC_DICT = {
-        "dirichlet": [{"id": [locate_left()], "val": 0.0}],
-        "neumann": [{"id": [locate_right()], "curve": 1}],
+        "dirichlet_c1": [{"id": [locate_left()], "val": 0.0}],
+        "neumann_c1": [{"id": [locate_right()], "curve": 1}],
     }
 
     # problem setup
@@ -96,7 +96,7 @@ def test_main():
     c_corr[0] = 6.9274409953522031E-01
 
     check1 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.c[0],
+        problem.mp.c["c1"],
         check_node,
         c_corr,
         problem.mp.V_c,

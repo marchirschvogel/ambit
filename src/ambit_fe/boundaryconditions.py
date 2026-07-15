@@ -23,12 +23,14 @@ class boundary_cond:
     def __init__(
         self,
         pb,
+        ti=None,
         dim=None,
         V_field=None,
         Vdisc_scalar=None,
     ):
 
         self.pb = pb
+        self.ti = ti  # is also part of pb, but may be a separately passed object (e.g. in case of multiple ti's per problem)
 
         if dim is None:
             self.dim = V_field.mesh.topology.dim
@@ -80,25 +82,25 @@ class boundary_cond:
                         d["curve"],
                     )
                 load.val_x, load.val_y, load.val_z = (
-                    self.pb.ti.timecurves(curve_x)(self.pb.ti.t_init),
-                    self.pb.ti.timecurves(curve_y)(self.pb.ti.t_init),
-                    self.pb.ti.timecurves(curve_z)(self.pb.ti.t_init),
+                    self.ti.timecurves(curve_x)(self.ti.t_init),
+                    self.ti.timecurves(curve_y)(self.ti.t_init),
+                    self.ti.timecurves(curve_z)(self.ti.t_init),
                 )
                 func.interpolate(load.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                self.pb.ti.funcs_to_update_vec.append(
+                self.ti.funcs_to_update_vec.append(
                     {
                         func: [
-                            self.pb.ti.timecurves(curve_x),
-                            self.pb.ti.timecurves(curve_y),
-                            self.pb.ti.timecurves(curve_z),
+                            self.ti.timecurves(curve_x),
+                            self.ti.timecurves(curve_y),
+                            self.ti.timecurves(curve_z),
                         ]
                     }
                 )
-                self.pb.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
+                self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
             elif "val" in d.keys():
                 assert "curve" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 func.x.petsc_vec.set(d["val"])
@@ -109,14 +111,14 @@ class boundary_cond:
             elif "expression" in d.keys():
                 assert "curve" not in d.keys() and "val" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 expr = d["expression"]()
-                expr.t = self.pb.ti.t_init
+                expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                self.pb.ti.funcsexpr_to_update_vec[func] = expr
-                self.pb.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
+                self.ti.funcsexpr_to_update_vec[func] = expr
+                self.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
             elif "file" in d.keys():
                 assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "fileseries" not in d.keys()
                 fle = d["file"]  # a single file
@@ -133,26 +135,26 @@ class boundary_cond:
                     # now store ramp curve into function
                     load_ = expression.template_vector(dim=self.dim)
                     load_.val_x, load_.val_y, load_.val_z = (
-                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
+                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
+                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
+                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
                     )
                     func_ramp.interpolate(load_.evaluate)
                     func_ramp.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    self.pb.ti.funcs_to_update_vec.append(
+                    self.ti.funcs_to_update_vec.append(
                         {
                             func_ramp: [
-                                self.pb.ti.timecurves(d["ramp_curve"]),
-                                self.pb.ti.timecurves(d["ramp_curve"]),
-                                self.pb.ti.timecurves(d["ramp_curve"]),
+                                self.ti.timecurves(d["ramp_curve"]),
+                                self.ti.timecurves(d["ramp_curve"]),
+                                self.ti.timecurves(d["ramp_curve"]),
                             ],
                             "funcs_mult": [func_file, func],
                         }
                     )
-                    self.pb.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
+                    self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
                     # now multiply
                     func.x.petsc_vec.pointwiseMult(func_ramp.x.petsc_vec, func_file.x.petsc_vec)
                     func.x.petsc_vec.ghostUpdate(
@@ -165,7 +167,7 @@ class boundary_cond:
             elif "fileseries" in d.keys():  # file series, where we'd have one file per time step
                 assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys()
                 scale = d.get("scale", 1.0)
-                self.pb.ti.funcs_data.append({func: d["fileseries"], "scale": scale})
+                self.ti.funcs_data.append({func: d["fileseries"], "scale": scale})
                 self.have_dirichlet_fileseries = True
             else:
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', 'file', or 'fileseries' specified!")
@@ -273,9 +275,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
+                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -285,9 +287,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.pb.ti.timecurves(n["curve"][0]),
-                                self.pb.ti.timecurves(n["curve"][1]),
-                                self.pb.ti.timecurves(n["curve"][2]),
+                                self.ti.timecurves(n["curve"][0]),
+                                self.ti.timecurves(n["curve"][1]),
+                                self.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -301,7 +303,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -320,13 +322,13 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
@@ -337,7 +339,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -357,9 +359,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
+                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -369,9 +371,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.pb.ti.timecurves(n["curve"][0]),
-                                self.pb.ti.timecurves(n["curve"][1]),
-                                self.pb.ti.timecurves(n["curve"][2]),
+                                self.ti.timecurves(n["curve"][0]),
+                                self.ti.timecurves(n["curve"][1]),
+                                self.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -385,7 +387,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -404,13 +406,13 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
@@ -421,7 +423,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -473,9 +475,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
-                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
+                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
+                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -485,9 +487,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.pb.ti.timecurves(n["curve"][0]),
-                                self.pb.ti.timecurves(n["curve"][1]),
-                                self.pb.ti.timecurves(n["curve"][2]),
+                                self.ti.timecurves(n["curve"][0]),
+                                self.ti.timecurves(n["curve"][1]),
+                                self.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -501,7 +503,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -520,13 +522,13 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])  # currently only one value for all directions - use constant load function otherwise!
@@ -537,7 +539,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.pb.ti.t_init
+                    expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -722,13 +724,13 @@ class boundary_cond:
         if "curve" in mdict.keys():
             assert "val" not in mdict.keys() and "expression" not in mdict.keys()
             load = expression.template()
-            load.val = self.pb.ti.timecurves(mdict["curve"])(self.pb.ti.t_init)
+            load.val = self.ti.timecurves(mdict["curve"])(self.ti.t_init)
             func.interpolate(load.evaluate)
             func.x.petsc_vec.ghostUpdate(
                 addv=PETSc.InsertMode.INSERT,
                 mode=PETSc.ScatterMode.FORWARD,
             )
-            funcs_to_update.append({func: self.pb.ti.timecurves(mdict["curve"])})
+            funcs_to_update.append({func: self.ti.timecurves(mdict["curve"])})
         elif "val" in mdict.keys():
             assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
             func.x.petsc_vec.set(mdict["val"])
@@ -739,7 +741,7 @@ class boundary_cond:
         elif "expression" in mdict.keys():
             assert "curve" not in mdict.keys() and "val" not in mdict.keys()
             expr = mdict["expression"]()
-            expr.t = self.pb.ti.t_init
+            expr.t = self.ti.t_init
             func.interpolate(expr.evaluate)
             func.x.petsc_vec.ghostUpdate(
                 addv=PETSc.InsertMode.INSERT,
@@ -1043,13 +1045,13 @@ class boundary_cond_phasefield(boundary_cond):
             if "curve" in n.keys():
                 assert "val" not in n.keys() and "expression" not in n.keys()
                 load = expression.template()
-                load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
                 func.interpolate(load.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+                funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
             elif "val" in n.keys():
                 assert "curve" not in n.keys() and "expression" not in n.keys()
                 func.x.petsc_vec.set(n["val"])
@@ -1060,7 +1062,7 @@ class boundary_cond_phasefield(boundary_cond):
             elif "expression" in n.keys():
                 assert "curve" not in n.keys() and "val" not in n.keys()
                 expr = n["expression"]()
-                expr.t = self.pb.ti.t_init
+                expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
@@ -1124,13 +1126,13 @@ class boundary_cond_phasefield(boundary_cond):
         if "curve" in mdict.keys():
             assert "val" not in mdict.keys() and "expression" not in mdict.keys()
             load = expression.template()
-            load.val = self.pb.ti.timecurves(mdict["curve"])(self.pb.ti.t_init)
+            load.val = self.ti.timecurves(mdict["curve"])(self.ti.t_init)
             func.interpolate(load.evaluate)
             func.x.petsc_vec.ghostUpdate(
                 addv=PETSc.InsertMode.INSERT,
                 mode=PETSc.ScatterMode.FORWARD,
             )
-            funcs_to_update.append({func: self.pb.ti.timecurves(mdict["curve"])})
+            funcs_to_update.append({func: self.ti.timecurves(mdict["curve"])})
         elif "val" in mdict.keys():
             assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
             func.x.petsc_vec.set(mdict["val"])
@@ -1141,7 +1143,7 @@ class boundary_cond_phasefield(boundary_cond):
         elif "expression" in mdict.keys():
             assert "curve" not in mdict.keys() and "val" not in mdict.keys()
             expr = mdict["expression"]()
-            expr.t = self.pb.ti.t_init
+            expr.t = self.ti.t_init
             func.interpolate(expr.evaluate)
             func.x.petsc_vec.ghostUpdate(
                 addv=PETSc.InsertMode.INSERT,
@@ -1182,13 +1184,13 @@ class boundary_cond_scatra(boundary_cond):
             if "curve" in n.keys():
                 assert "val" not in n.keys() and "expression" not in n.keys()
                 load = expression.template()
-                load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
                 func.interpolate(load.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+                funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
             elif "val" in n.keys():
                 assert "curve" not in n.keys() and "expression" not in n.keys()
                 func.x.petsc_vec.set(n["val"])
@@ -1199,7 +1201,7 @@ class boundary_cond_scatra(boundary_cond):
             elif "expression" in n.keys():
                 assert "curve" not in n.keys() and "val" not in n.keys()
                 expr = n["expression"]()
-                expr.t = self.pb.ti.t_init
+                expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,

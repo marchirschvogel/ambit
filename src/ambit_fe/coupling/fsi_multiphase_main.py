@@ -250,13 +250,13 @@ class FSIMultiphaseProblem(problem_base):
             c_up = self.coupling_params["c_up"]
 
             c_gamma = c_lo * (1.0 - self.pbf.phasevar["chi"]) + c_up * self.pbf.phasevar["chi"]
-            self.weakform_lmss = (self.pbs.pbscat.c[0] * self.var_lmss) * self.io.ds(self.io.interface_id_s) - (c_gamma * self.var_lmss) * self.io.ds(self.io.interface_id_f)
+            self.weakform_lmss = (self.pbs.pbscat.c["c" + str(1)] * self.var_lmss) * self.io.ds(self.io.interface_id_s) - (c_gamma * self.var_lmss) * self.io.ds(self.io.interface_id_f)
 
             self.pbs.pbscat.weakform_c[0] += (self.lmss * self.pbs.pbscat.var_c[0]) * self.io.ds(self.io.interface_id_s)
 
     def set_variational_forms_jacobian_coupling(self):
         if self.coupling_phase_solidscatra:
-            self.weakform_lin_lmssc = ufl.derivative(self.weakform_lmss, self.pbs.pbscat.c[0], self.pbs.pbscat.dc[0])
+            self.weakform_lin_lmssc = ufl.derivative(self.weakform_lmss, self.pbs.pbscat.c["c" + str(1)], self.pbs.pbscat.dc[0])
             self.weakform_lin_lmssphi = ufl.derivative(self.weakform_lmss, self.pbp.phi, self.pbp.dphi)
             self.weakform_lin_clmss = ufl.derivative(self.pbs.pbscat.weakform_c[0], self.lmss, self.dlmss)
 

@@ -24,17 +24,19 @@ class constitutive:
         self.mat_void = ["id", "source"]
 
     # diffusive flux
-    def diffusive_flux(self, c_, cdot_, F=None):
+    def diffusive_flux(self, c_, c_coup=None, F=None):
         dim = len(ufl.grad(c_)) # dimension of space
 
         difflux = ufl.constantvalue.zero(dim)
 
-        mat_flux = materiallaw(c_, cdot_)
+        mat_flux = materiallaw(c_, c_coup)
 
         for key, value in self.materials.items():
             if key not in self.mat_void:
                 if key == "mat_diff":
                     difflux += mat_flux.mat_diff(value, F=F)
+                elif key == "mat_diff_coup":
+                    difflux += mat_flux.mat_diff_coup(value, F=F)
                 else:
                     raise NameError("Unknown scalar transport material law '%s'!" % (key))
 

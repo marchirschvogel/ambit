@@ -837,6 +837,8 @@ class timeintegration_fluid(timeintegration):
             return self.update_dvar_newmark_1st(var, var_old, dvar_old, dt, dvarout=dvarout, uflform=uflform)
         elif self.timint == "bdf2":
             return self.update_dvar_bdf2(var, var_old, var_veryold, dt, dvarout=dvarout, uflform=uflform)
+        elif self.timint == "static":
+            pass
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
@@ -1073,6 +1075,8 @@ class timeintegration_scatra(timeintegration_fluid):
             self.theta_ost = time_params["theta_ost"]
             if np.isclose(self.theta_ost,1.0): # Backward-Euler
                 self.res_eval = "back"
+        if self.timint == "static":
+            self.res_eval = "back"
 
     def update_timestep(self, c, c_old, c_veryold, cdot, cdot_old):
         # update old fields with new quantities
@@ -1081,7 +1085,11 @@ class timeintegration_scatra(timeintegration_fluid):
         self.update_time_funcs_old()
 
     def set_cdot(self, c, c_old, c_veryold, cdot_old):
-        return self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold, uflform=True)
+        if self.timint == "static":
+            cdot = ufl.as_ufl(0)
+        else:
+            cdot = self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold, uflform=True)
+        return cdot
 
     def update_fields(self, c, c_old, c_veryold, cdot, cdot_old):
         # use update functions using vector arguments
@@ -1113,7 +1121,7 @@ class timeintegration_scatra(timeintegration_fluid):
     def timefactors(self):
         if self.timint == "ost":
             timefac_m, timefac = self.theta_ost, self.theta_ost
-        elif self.timint == "bdf2":
+        elif self.timint == "static":
             timefac_m, timefac = 1.0, 1.0
         else:
             raise NameError("Unknown time-integration scheme.")

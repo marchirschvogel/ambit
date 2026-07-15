@@ -10,14 +10,32 @@ import ufl
 
 
 class materiallaw:
-    def __init__(self, c, cdot):
+    def __init__(self, c, c_coup):
         self.c = c
-        self.cdot = cdot
+        self.c_coup = c_coup
 
     def mat_diff(self, params, F=None):
         D = params["D"]
 
         if F is not None:
-            return D * ufl.inv(F).T*ufl.grad(self.c)
+            grad_c = ufl.inv(F).T*ufl.grad(self.c)
         else:
-            return D * ufl.grad(self.c)
+            grad_c = ufl.grad(self.c)
+
+        return D * grad_c
+
+
+    def mat_diff_coup(self, params, F=None):
+        D, Dc = params["D"], params["Dc"]
+        cc = params["cc"]
+
+        # c_eff = ufl.max_value(self.c, 1e-8)
+
+        if F is not None:
+            grad_c = ufl.inv(F).T*ufl.grad(self.c)
+            grad_cc = ufl.inv(F).T*ufl.grad(self.c_coup[cc])
+        else:
+            grad_c = ufl.grad(self.c)
+            grad_cc = ufl.grad(self.c_coup[cc])
+
+        return D * (grad_c + Dc * grad_cc)

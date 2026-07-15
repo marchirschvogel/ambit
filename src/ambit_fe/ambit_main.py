@@ -758,7 +758,7 @@ class Ambit:
             from .scatra import scatra_main
 
             ce_sc = [constitutive_params[0]]
-            io = ioroutines.IO(io_params, ce_sc, self.entity_maps, self.comm)
+            io = ioroutines.IO(io_params, ce_sc[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)

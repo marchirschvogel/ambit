@@ -220,6 +220,7 @@ class AleProblem(problem_base):
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
             self,
+            self.ti,
             V_field=self.V_d,
             Vdisc_scalar=self.Vd_scalar,
         )

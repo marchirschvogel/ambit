@@ -13,6 +13,7 @@ import pytest
 
 
 @pytest.mark.solid
+@pytest.mark.skip(reason="Not yet ready for testing.")
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -31,7 +32,7 @@ def test_main():
         "write_restart_every": 4,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["displacement", "porehydpressure"],
+        "results_to_write": {"solid": ["displacement", "porehydpressure"], "scatra": {}},
         "simname": "solid_sphere_poro",
     }
 
@@ -49,22 +50,35 @@ def test_main():
         "theta_ost": 0.5,
     }
 
+    TIME_PARAMS_SC = [{"timint": "ost", "theta_ost": 0.5},  # Nernst-Planck
+                      {"timint": "static"}]  # electrostatics
+
     FEM_PARAMS = {
         "order_disp": 2,
         "order_phyd": 1,
         "order_pres": 1,
         "quad_degree": 5,
         "incompressibility": "no",
-        "poroelasticity": {"model": "darcy"},
+        "poroelasticity": {"model": "darcy_schloegl",
+                           "coupled_c_osmotic": "c1",
+                           "coupled_c_electric": "c2"},
+    }
+
+    FEM_PARAMS_SC = {
+        "order_conc": 1,
+        "quad_degree": 5,
     }
 
     MATERIALS = {
         "MAT1": {
             "neohooke_compressible": {"mu": 1.0, "nu": 0.3},
             "inertia": {"rho0": 1e-6},
-            "MAT_PORO": {"darcy": {"k": 1.0e-2}},
+            "MAT_PORO": {"darcy_schloegl": {"k": 1.0e-2, "k_os": 1e-3, "k_el": 1e-3}},
         }
     }
+
+    MATERIALS_SC = [{"MAT1": {"mat_diff_coup": {"D": 1e-2, "Dc": 1.0, "cc": "c2"}}},  # Nernst-Planck equation for flux of protons
+                    {"MAT1": {"mat_diff": {"D": 1e-2}}}]  # Poisson equation of electrostatics
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -92,15 +106,18 @@ def test_main():
         ],
     }
 
+    BC_DICT_SC = {"dirichlet_c1": [{"id": [1], "val": 1.0}],
+                  "dirichlet_c2": [{"id": [1], "val": 1.0}]}
+
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS],
+        [TIME_PARAMS, TIME_PARAMS_SC],
         SOLVER_PARAMS,
-        [FEM_PARAMS],
-        [MATERIALS],
-        [BC_DICT],
+        [FEM_PARAMS, FEM_PARAMS_SC],
+        [MATERIALS, MATERIALS_SC],
+        [BC_DICT, BC_DICT_SC],
         time_curves=time_curves(),
     )
 

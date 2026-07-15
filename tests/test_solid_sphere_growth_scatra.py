@@ -49,10 +49,10 @@ def test_main():
         "theta_ost": 0.5,
     }
 
-    TIME_PARAMS_SC = {
+    TIME_PARAMS_SC = [{
         "timint": "ost",
         "theta_ost": 0.5,
-    }
+    }]
 
     FEM_PARAMS = {
         "order_disp": 2,
@@ -81,7 +81,7 @@ def test_main():
         }
     }
 
-    MATERIALS_SC = {"MAT1": {"mat_diff": {"D": 1e-2}}}
+    MATERIALS_SC = [{"MAT1": {"mat_diff": {"D": 1e-2}}}]
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -104,7 +104,7 @@ def test_main():
                       {"id": [locate_zsym()], "dir": "z", "val": 0.0}],
     }
 
-    BC_DICT_SC = {"dirichlet": [{"id": [1], "val": 1.0}]}  # prescribed concentration at outer surface
+    BC_DICT_SC = {"dirichlet_c1": [{"id": [1], "val": 1.0}]}  # prescribed concentration at outer surface
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
@@ -147,7 +147,7 @@ def test_main():
         nm="u",
     )
     check2 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pbscat.c[0],
+        problem.mp.pbscat.c["c1"],
         check_node2,
         c_corr,
         problem.mp.pbscat.V_c,

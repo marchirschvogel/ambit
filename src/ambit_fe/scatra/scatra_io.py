@@ -72,8 +72,8 @@ class IO_scatra(IO_field):
                         #     c_out.interpolate(phi_proj)
                         # else:
                         for i in range(self.pb.num_species):
-                            c_out = fem.Function(self.pb.V_out_scalar, name=self.pb.c[i].name)
-                            c_out.interpolate(self.pb.c[i])
+                            c_out = fem.Function(self.pb.V_out_scalar, name=self.pb.c["c" + str(i+1)].name)
+                            c_out.interpolate(self.pb.c["c" + str(i+1)])
                             self.pb.resultsfiles[res].write_function(c_out, indicator)
                     else:
                         raise NameError("Unknown output to write for scalar transport problem!")
@@ -81,8 +81,8 @@ class IO_scatra(IO_field):
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
         for i in range(self.pb.num_species):
-            vecs_to_read[self.pb.c[i]] = "c" + str(i+1)
-            vecs_to_read[self.pb.c_old[i]] = "c_old" + str(i+1)
+            vecs_to_read[self.pb.c["c" + str(i+1)]] = "c" + str(i+1)
+            vecs_to_read[self.pb.c_old["c" + str(i+1)]] = "c_old" + str(i+1)
             vecs_to_read[self.pb.c_veryold[i]] = "c_veryold" + str(i+1)  # for BDF2 scheme
             vecs_to_read[self.pb.cdot_old[i]] = "cdot_old" + str(i+1)
 
@@ -133,8 +133,8 @@ class IO_scatra(IO_field):
     def writecheckpoint(self, N):
         vecs_to_write = {}
         for i in range(self.pb.num_species):
-            vecs_to_write[self.pb.c[i]] = "c" + str(i+1)
-            vecs_to_write[self.pb.c_old[i]] = "c_old" + str(i+1)
+            vecs_to_write[self.pb.c["c" + str(i+1)]] = "c" + str(i+1)
+            vecs_to_write[self.pb.c_old["c" + str(i+1)]] = "c_old" + str(i+1)
             vecs_to_write[self.pb.c_veryold[i]] = "c_veryold" + str(i+1)
             vecs_to_write[self.pb.cdot_old[i]] = "cdot_old" + str(i+1)
 

@@ -80,7 +80,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.order_disp = self.fem_params["order_disp"]
         self.order_pres = self.fem_params.get("order_pres", 1)
-        self.order_pphyd = self.fem_params.get("order_pphyd", 1)
+        self.order_phyd = self.fem_params.get("order_phyd", 1)
         self.quad_degree = self.fem_params["quad_degree"]
 
         # collect relevant domain data and mesh
@@ -100,7 +100,6 @@ class SolidmechanicsProblem(problem_base):
         self.offs = 0
 
         self.incompressibility = self.fem_params.get("incompressibility", "no")
-
         if self.incompressibility == "no":
             self.incompressible_2field = False
         elif self.incompressibility == "full":
@@ -114,21 +113,22 @@ class SolidmechanicsProblem(problem_base):
         if self.incompressible_2field:
             self.offs += 1
 
-        self.poroelasticity = self.fem_params.get("poroelasticity", "no")
-
-        if self.poroelasticity == "no":
-            self.is_poroelastic = False
-        elif self.poroelasticity == "darcy":
-            self.is_poroelastic = True
-            self.offs += 1
-        elif self.poroelasticity == "darcy_schloegl":
-            raise ValueError("Poro-model 'darcy_schloegl' not yet implemented!.")
-            self.is_poroelastic = True
-            self.offs += 2  # TODO: How many new vars do we need?!
-        else:
-            raise ValueError("Unknown setting for 'poroelasticity'. Choose 'no', 'darcy', or 'darcy_schloegl'.")
-
         self.have_diffusion = self.fem_params.get("diffusion", False)
+        self.num_spec_scatra = 1
+
+        self.poroelasticity = self.fem_params.get("poroelasticity", {})
+        if not bool(self.poroelasticity):
+            self.is_poroelastic = False
+        else:
+            self.is_poroelastic = True
+            if self.poroelasticity["model"] == "darcy":
+                self.offs += 1
+            elif self.poroelasticity["model"] == "darcy_schloegl":
+                self.have_diffusion = True
+                self.offs += 1  # further variables offset by diffusion model
+                self.num_spec_scatra = 2
+            else:
+                raise ValueError("Unknown model for 'poroelasticity'. Choose 'darcy' or 'darcy_schloegl'.")
 
         if self.have_diffusion:
             from ..scatra.scatra_main import ScatraProblem
@@ -144,6 +144,7 @@ class SolidmechanicsProblem(problem_base):
                 io,
                 mor_params=mor_params,
                 is_ale=True,
+                num_species=self.num_spec_scatra,
             )
 
         if self.have_diffusion:
@@ -226,7 +227,7 @@ class SolidmechanicsProblem(problem_base):
             ("Lagrange", self.order_disp, (self.mesh.geometry.dim,)),
         )
         self.V_p = fem.functionspace(self.mesh, ("Lagrange", self.order_pres))
-        self.V_pphyd = fem.functionspace(self.mesh, ("Lagrange", self.order_pphyd))
+        self.V_phyd = fem.functionspace(self.mesh, ("Lagrange", self.order_phyd))
 
         # continuous tensor and scalar function spaces of order order_disp
         self.V_tensor = fem.functionspace(
@@ -302,13 +303,13 @@ class SolidmechanicsProblem(problem_base):
             self.var_p = None
 
         if self.is_poroelastic:
-            self.pphyd = fem.Function(self.V_pphyd, name="PoreHydraulicPressure")
-            self.dpphyd = ufl.TrialFunction(self.V_pphyd)  # Incremental pore hydraulic pressure
-            self.var_pphyd = ufl.TestFunction(self.V_pphyd)  # Test function
+            self.phyd = fem.Function(self.V_phyd, name="PoreHydraulicPressure")
+            self.dphyd = ufl.TrialFunction(self.V_phyd)  # Incremental pore hydraulic pressure
+            self.var_phyd = ufl.TestFunction(self.V_phyd)  # Test function
         else:
-            self.pphyd = None
-            self.dpphyd = None
-            self.var_pphyd = None
+            self.phyd = None
+            self.dphyd = None
+            self.var_phyd = None
 
         # auxiliary velocity and acceleration vectors
         self.v = fem.Function(self.V_u, name="Velocity")
@@ -322,9 +323,9 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.p_old = None
         if self.is_poroelastic:
-            self.pphyd_old = fem.Function(self.V_p)
+            self.phyd_old = fem.Function(self.V_p)
         else:
-            self.pphyd_old = None
+            self.phyd_old = None
         # a setpoint displacement for multiscale analysis
         self.u_set = fem.Function(self.V_u)
         self.p_set = fem.Function(self.V_p)
@@ -670,7 +671,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(
-            tstfncs=[self.var_u, self.var_p, self.var_pphyd],
+            tstfncs=[self.var_u, self.var_p, self.var_phyd],
             trlfncs=[self.du, self.dp],
             n0=self.io.n0,
             x_ref=self.x_ref,
@@ -679,6 +680,7 @@ class SolidmechanicsProblem(problem_base):
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
             self,
+            self.ti,
             V_field=self.V_u,
             Vdisc_scalar=self.Vd_scalar,
         )
@@ -689,7 +691,7 @@ class SolidmechanicsProblem(problem_base):
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
         if "dirichlet_poro" in self.bc_dict.keys(): # for pore pressure
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet_poro"], self.dbcs_poro, V_dbc=self.V_pphyd)
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet_poro"], self.dbcs_poro, V_dbc=self.V_phyd)
 
         # number of fields involved
         self.nfields = 1
@@ -706,7 +708,7 @@ class SolidmechanicsProblem(problem_base):
             self.var_names.append("p")
             self.eq_names.append("solid incompressibility")
         if self.is_poroelastic:
-            self.var_names.append("pphyd")
+            self.var_names.append("phyd")
             self.eq_names.append("solid Darcy")
         if self.have_diffusion:
             self.var_names += self.pbscat.var_names
@@ -733,11 +735,11 @@ class SolidmechanicsProblem(problem_base):
             vlist_.append(self.p.x.petsc_vec)
         if self.is_poroelastic:
             is_ghosted.append(1)
-            vlist_.append(self.pphyd.x.petsc_vec)
+            vlist_.append(self.phyd.x.petsc_vec)
         if self.have_diffusion:
             for i in range(self.pbscat.num_species):
                 is_ghosted.append(1)
-                vlist_.append(self.pbscat.c[i].x.petsc_vec)
+                vlist_.append(self.pbscat.c["c" + str(i+1)].x.petsc_vec)
         return vlist_, is_ghosted
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
@@ -758,17 +760,24 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.ps_mid = None
         if self.is_poroelastic:
-            self.pphyd_mid = self.timefac * self.pphyd + (1.0 - self.timefac) * self.pphyd_old
+            self.phyd_mid = self.timefac * self.phyd + (1.0 - self.timefac) * self.phyd_old
         else:
-            self.pphyd_mid = None
+            self.phyd_mid = None
 
         self.pressures["p"] = self.p
         self.pressures_old["p"] = self.p_old
         self.pressures_mid["p"] = self.ps_mid
 
-        self.pressures["pphyd"] = self.pphyd
-        self.pressures_old["pphyd"] = self.pphyd_old
-        self.pressures_mid["pphyd"] = self.pphyd_mid
+        self.pressures["phyd"] = self.phyd
+        self.pressures_old["phyd"] = self.phyd_old
+        self.pressures_mid["phyd"] = self.phyd_mid
+
+        self.pressures["posm"], self.pressures_old["posm"], self.pressures_mid["posm"] = None, None, None
+        if self.is_poroelastic:
+            if self.poroelasticity["model"] == "darcy_schloegl":
+                self.pressures["posm"] = self.pbscat.c[self.poroelasticity["coupled_c_osmotic"]]
+                self.pressures_old["posm"] = self.pbscat.c_old[self.poroelasticity["coupled_c_osmotic"]]
+                self.pressures_mid["posm"] = self.pbscat.c_mid[self.poroelasticity["coupled_c_osmotic"]]
 
         # kinetic, internal, and pressure virtual work
         self.deltaW_kin, self.deltaW_kin_old, self.deltaW_kin_mid = (
@@ -806,11 +815,11 @@ class SolidmechanicsProblem(problem_base):
                     grfnc = growthfunction(self.constitutive_models["MAT" + str(n + 1)]["growth"], dim=self.dim)
                     if self.mat_growth[n] and self.mat_growth_trig[n] == "concentration":
                         if self.mat_growth_law_type[n]=="inst":  # both theta and theta_old are ufl forms!
-                            self.theta = grfnc.grfnc_concentration(self.pbscat.c[0])
-                            self.theta_old = grfnc.grfnc_concentration(self.pbscat.c_old[0])
+                            self.theta = grfnc.grfnc_concentration(self.pbscat.c["c" + str(1)])
+                            self.theta_old = grfnc.grfnc_concentration(self.pbscat.c_old["c" + str(1)])
                         elif self.mat_growth_law_type[n]=="rate":  # theta is ufl forms, theta_old a function (needs to be updated!)
                             tau_gr = self.constitutive_models["MAT" + str(n + 1)]["growth"]["tau_gr"]
-                            theta_c = grfnc.grfnc_concentration(self.pbscat.c[0])
+                            theta_c = grfnc.grfnc_concentration(self.pbscat.c["c" + str(1)])
                             # Backward Euler integration of dtheta/dt = (theta(c) - theta)/tau_gr - works only if linear in theta!
                             self.theta = ((self.pbase.dt/tau_gr) * theta_c + self.theta_old) / (1.0 + (self.pbase.dt/tau_gr))
                         else:
@@ -829,7 +838,7 @@ class SolidmechanicsProblem(problem_base):
             self.internalvars_mid["tau_a"] = self.timefac * self.tau_a + (1.0 - self.timefac) * self.tau_a_old
 
         for n, M in enumerate(self.domain_ids):
-            if self.timint != "static":
+            if self.ti.timint != "static":
                 # kinetic virtual work
                 self.deltaW_kin += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(M))
                 self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx(M))
@@ -896,9 +905,15 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_p_old += self.vf.deltaW_int_pres_nearly(J_old, self.p_old, self.bulkmod, self.dx(M))
                 self.deltaW_p_mid += self.vf.deltaW_int_pres_nearly(J_mid, self.ps_mid, self.bulkmod, self.dx(M))
             if self.is_poroelastic:
-                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma_poro[n].Q(self.u, self.pphyd), self.dx(M))
-                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma_poro[n].Q(self.u_old, self.pphyd_old), self.dx(M))
-                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma_poro[n].Q(self.us_mid, self.pphyd_mid), self.dx(M))
+                if self.poroelasticity["model"] == "darcy_schloegl":
+                    cce = self.pbscat.c[self.poroelasticity["coupled_c_electric"]]
+                    cce_old = self.pbscat.c_old[self.poroelasticity["coupled_c_electric"]]
+                    cce_mid = self.pbscat.c_mid[self.poroelasticity["coupled_c_electric"]]
+                else:
+                    cce, cce_old, cce_mid = None, None, None
+                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma_poro[n].Q(self.u, self.pressures, cc=[cce]), self.dx(M))
+                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma_poro[n].Q(self.u_old, self.pressures_old, cc=[cce_old]), self.dx(M))
+                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma_poro[n].Q(self.us_mid, self.pressures_mid, cc=[cce_mid]), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = (
@@ -1022,6 +1037,7 @@ class SolidmechanicsProblem(problem_base):
                         r["visc"] = 0.0
             bc_prestr = boundaryconditions.boundary_cond(
                 self,
+                self.ti,
                 V_field=self.V_u,
                 Vdisc_scalar=self.Vd_scalar,
             )
@@ -1078,7 +1094,7 @@ class SolidmechanicsProblem(problem_base):
         ### full weakforms
 
         # quasi-static weak form: internal minus external virtual work
-        if self.timint == "static":
+        if self.ti.timint == "static":
             self.weakform_u = self.deltaW_int - self.deltaW_ext
 
         # full dynamic weak form: kinetic plus internal minus external virtual work
@@ -1108,11 +1124,11 @@ class SolidmechanicsProblem(problem_base):
         # Darcy poro weak form
         if self.is_poroelastic:
             if self.ti.res_eval == "trap":
-                self.weakform_pphyd = self.timefac * self.deltaW_poro + (1.0 - self.timefac) * self.deltaW_poro_old
+                self.weakform_phyd = self.timefac * self.deltaW_poro + (1.0 - self.timefac) * self.deltaW_poro_old
             if self.ti.res_eval == "midp":
-                self.weakform_pphyd = self.deltaW_poro_mid
+                self.weakform_phyd = self.deltaW_poro_mid
             if self.ti.res_eval == "back":  # or in case of static time integration
-                self.weakform_pphyd = self.deltaW_poro
+                self.weakform_phyd = self.deltaW_poro
 
         ### local weak forms at Gauss points for inelastic materials
         self.localdata = {}
@@ -1503,9 +1519,9 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_up = ufl.derivative(self.weakform_u, self.p, self.dp)
 
         if self.is_poroelastic:
-            self.weakform_lin_pphydpphyd = ufl.derivative(self.weakform_pphyd, self.pphyd, self.dpphyd)
-            self.weakform_lin_pphydu = ufl.derivative(self.weakform_pphyd, self.u, self.du)
-            self.weakform_lin_upphyd = ufl.derivative(self.weakform_u, self.pphyd, self.dpphyd)
+            self.weakform_lin_phydphyd = ufl.derivative(self.weakform_phyd, self.phyd, self.dphyd)
+            self.weakform_lin_phydu = ufl.derivative(self.weakform_phyd, self.u, self.du)
+            self.weakform_lin_uphyd = ufl.derivative(self.weakform_u, self.phyd, self.dphyd)
 
         if self.prestress_initial or self.prestress_initial_only:
             assert(not self.is_poroelastic)
@@ -1518,8 +1534,16 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_diffusion:
             self.pbscat.set_variational_forms_jacobian()
-            self.weakform_lin_uc = ufl.derivative(self.deltaW_int, self.pbscat.c[0], self.pbscat.dc[0])
-            self.weakform_lin_cu = ufl.derivative(self.pbscat.weakform_c[0], self.u, self.du)
+            self.weakform_lin_uc, self.weakform_lin_cu = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+            for i in range(self.pbscat.num_species):
+                self.weakform_lin_uc[i] = self.timefac * ufl.derivative(self.deltaW_int, self.pbscat.c["c" + str(i+1)], self.pbscat.dc[i])
+                self.weakform_lin_cu[i] = ufl.derivative(self.pbscat.weakform_c[i], self.u, self.du)
+            if self.is_poroelastic:
+                if self.poroelasticity["model"] == "darcy_schloegl":
+                    self.weakform_lin_phydc, self.weakform_lin_cphyd = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+                    for i in range(self.pbscat.num_species):
+                        self.weakform_lin_phydc[i] = self.timefac * ufl.derivative(self.deltaW_poro, self.pbscat.c["c" + str(i+1)], self.pbscat.dc[i])
+                        self.weakform_lin_cphyd[i] = ufl.derivative(self.pbscat.weakform_c[i], self.phyd, self.dphyd)
 
     # active stress projection
     def evaluate_active_stress(self):
@@ -1731,10 +1755,10 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     self.jac_pp = None
             if self.is_poroelastic:
-                self.res_pphyd = fem.form(self.weakform_pphyd, entity_maps=self.io.entity_maps)
-                self.jac_upphyd = fem.form(self.weakform_lin_upphyd, entity_maps=self.io.entity_maps)
-                self.jac_pphydu = fem.form(self.weakform_lin_pphydu, entity_maps=self.io.entity_maps)
-                self.jac_pphydpphyd = fem.form(self.weakform_lin_pphydpphyd, entity_maps=self.io.entity_maps)
+                self.res_phyd = fem.form(self.weakform_phyd, entity_maps=self.io.entity_maps)
+                self.jac_uphyd = fem.form(self.weakform_lin_uphyd, entity_maps=self.io.entity_maps)
+                self.jac_phydu = fem.form(self.weakform_lin_phydu, entity_maps=self.io.entity_maps)
+                self.jac_phydphyd = fem.form(self.weakform_lin_phydphyd, entity_maps=self.io.entity_maps)
         else:
             assert(not self.is_poroelastic)
             self.res_u = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
@@ -1759,8 +1783,16 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_diffusion:
             self.pbscat.set_problem_residual_jacobian_forms()
-            self.jac_uc = fem.form(self.weakform_lin_uc, entity_maps=self.io.entity_maps)
-            self.jac_cu = fem.form(self.weakform_lin_cu, entity_maps=self.io.entity_maps)
+            self.jac_uc, self.jac_cu = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+            for i in range(self.pbscat.num_species):
+                self.jac_uc[i] = fem.form(self.weakform_lin_uc[i], entity_maps=self.io.entity_maps)
+                self.jac_cu[i] = fem.form(self.weakform_lin_cu[i], entity_maps=self.io.entity_maps)
+            if self.is_poroelastic:
+                if self.poroelasticity["model"] == "darcy_schloegl":
+                    self.jac_phydc, self.jac_cphyd = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+                    for i in range(self.pbscat.num_species):
+                        self.jac_phydc[i] = fem.form(self.weakform_lin_phydc[i], entity_maps=self.io.entity_maps)
+                        self.jac_cphyd[i] = fem.form(self.weakform_lin_cphyd[i], entity_maps=self.io.entity_maps)
 
     def set_problem_vector_matrix_structures(self):
         ts = time.time()
@@ -1785,24 +1817,34 @@ class SolidmechanicsProblem(problem_base):
                 self.K_pp = None
 
         if self.is_poroelastic:
-            self.r_pphyd = fem.petsc.assemble_vector(self.res_pphyd)
+            self.r_phyd = fem.petsc.assemble_vector(self.res_phyd)
 
-            self.K_upphyd = fem.petsc.assemble_matrix(self.jac_upphyd, self.dbcs)
-            self.K_upphyd.assemble()
-            self.K_pphydu = fem.petsc.assemble_matrix(self.jac_pphydu, self.dbcs_poro)
-            self.K_pphydu.assemble()
-            self.K_pphydpphyd = fem.petsc.assemble_matrix(self.jac_pphydpphyd, self.dbcs_poro)
-            self.K_pphydpphyd.assemble()
+            self.K_uphyd = fem.petsc.assemble_matrix(self.jac_uphyd, self.dbcs)
+            self.K_uphyd.assemble()
+            self.K_phydu = fem.petsc.assemble_matrix(self.jac_phydu, self.dbcs_poro)
+            self.K_phydu.assemble()
+            self.K_phydphyd = fem.petsc.assemble_matrix(self.jac_phydphyd, self.dbcs_poro)
+            self.K_phydphyd.assemble()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
         if self.have_diffusion:
             self.pbscat.set_problem_vector_matrix_structures()
-            self.K_uc = fem.petsc.assemble_matrix(self.jac_uc, self.dbcs)
-            self.K_uc.assemble()
-            self.K_cu = fem.petsc.assemble_matrix(self.jac_cu, self.pbscat.dbcs[0])
-            self.K_cu.assemble()
+            self.K_uc, self.K_cu = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+            for i in range(self.pbscat.num_species):
+                self.K_uc[i] = fem.petsc.assemble_matrix(self.jac_uc[i], self.dbcs)
+                self.K_uc[i].assemble()
+                self.K_cu[i] = fem.petsc.assemble_matrix(self.jac_cu[i], self.pbscat.dbcs[i])
+                self.K_cu[i].assemble()
+            if self.is_poroelastic:
+                if self.poroelasticity["model"] == "darcy_schloegl":
+                    self.K_phydc, self.K_cphyd = [None] * self.pbscat.num_species, [None] * self.pbscat.num_species
+                    for i in range(self.pbscat.num_species):
+                        self.K_phydc[i] = fem.petsc.assemble_matrix(self.jac_phydc[i], self.dbcs_poro)
+                        self.K_phydc[i].assemble()
+                        self.K_cphyd[i] = fem.petsc.assemble_matrix(self.jac_cphyd[i], self.pbscat.dbcs[i])
+                        self.K_cphyd[i].assemble()
 
     def assemble_residual(self, t, subsolver=None):
         # assemble rhs vector
@@ -1835,20 +1877,20 @@ class SolidmechanicsProblem(problem_base):
         if self.is_poroelastic:
             off+=1
             # assemble pressure rhs vector
-            with self.r_pphyd.localForm() as r_local:
+            with self.r_phyd.localForm() as r_local:
                 r_local.set(0.0)
-            fem.petsc.assemble_vector(self.r_pphyd, self.res_pphyd)
+            fem.petsc.assemble_vector(self.r_phyd, self.res_phyd)
             fem.apply_lifting(
-                self.r_pphyd,
-                [self.jac_pphydpphyd],
+                self.r_phyd,
+                [self.jac_phydphyd],
                 [self.dbcs_poro],
-                x0=[self.pphyd.x.petsc_vec],
+                x0=[self.phyd.x.petsc_vec],
                 alpha=-1.0,
             )
-            self.r_pphyd.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(self.r_pphyd, self.dbcs_poro, x0=self.pphyd.x.petsc_vec, alpha=-1.0)
+            self.r_phyd.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(self.r_phyd, self.dbcs_poro, x0=self.phyd.x.petsc_vec, alpha=-1.0)
 
-            self.r_list[off] = self.r_pphyd
+            self.r_list[off] = self.r_phyd
 
         if self.have_diffusion:
             off+=1
@@ -1864,9 +1906,9 @@ class SolidmechanicsProblem(problem_base):
 
         self.K_list[0][0] = self.K_uu
 
-        off=0
+        off_p=0
         if self.incompressible_2field:
-            off+=1
+            off_p+=1
             # assemble system matrices
             self.K_up.zeroEntries()
             fem.petsc.assemble_matrix(self.K_up, self.jac_up, self.dbcs)
@@ -1884,46 +1926,64 @@ class SolidmechanicsProblem(problem_base):
             else:
                 self.K_pp = None
 
-            self.K_list[0][off] = self.K_up
-            self.K_list[off][0] = self.K_pu
-            self.K_list[off][off] = self.K_pp
+            self.K_list[0][off_p] = self.K_up
+            self.K_list[off_p][0] = self.K_pu
+            self.K_list[off_p][off_p] = self.K_pp
 
+        off_po = off_p
         if self.is_poroelastic:
-            off+=1
+            off_po+=1
             # assemble system matrices
-            self.K_upphyd.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_upphyd, self.jac_upphyd, self.dbcs)
-            self.K_upphyd.assemble()
+            self.K_uphyd.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_uphyd, self.jac_uphyd, self.dbcs)
+            self.K_uphyd.assemble()
 
-            self.K_pphydu.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pphydu, self.jac_pphydu, self.dbcs_poro)
-            self.K_pphydu.assemble()
+            self.K_phydu.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_phydu, self.jac_phydu, self.dbcs_poro)
+            self.K_phydu.assemble()
 
-            self.K_pphydpphyd.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_pphydpphyd, self.jac_pphydpphyd, self.dbcs_poro)
-            self.K_pphydpphyd.assemble()
+            self.K_phydphyd.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_phydphyd, self.jac_phydphyd, self.dbcs_poro)
+            self.K_phydphyd.assemble()
 
-            self.K_list[0][off] = self.K_upphyd
-            self.K_list[off][0] = self.K_pphydu
-            self.K_list[off][off] = self.K_pphydpphyd
+            self.K_list[0][off_po] = self.K_uphyd
+            self.K_list[off_po][0] = self.K_phydu
+            self.K_list[off_po][off_po] = self.K_phydphyd
 
+        off_d = off_po
         if self.have_diffusion:
-            off+=1
+            off_d+=1
             self.pbscat.assemble_stiffness(t)
             for i in range(self.pbscat.num_species):
                 for j in range(self.pbscat.num_species):
-                    self.K_list[off+i][off+j] = self.pbscat.K_cc[i][j]
+                    self.K_list[off_d+i][off_d+j] = self.pbscat.K_cc[i][j]
 
-            self.K_uc.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_uc, self.jac_uc, self.dbcs)
-            self.K_uc.assemble()
+            for i in range(self.pbscat.num_species):
+                self.K_uc[i].zeroEntries()
+                fem.petsc.assemble_matrix(self.K_uc[i], self.jac_uc[i], self.dbcs)
+                self.K_uc[i].assemble()
 
-            self.K_cu.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_cu, self.jac_cu, self.pbscat.dbcs[0])
-            self.K_cu.assemble()
+                self.K_cu[i].zeroEntries()
+                fem.petsc.assemble_matrix(self.K_cu[i], self.jac_cu[i], self.pbscat.dbcs[i])
+                self.K_cu[i].assemble()
 
-            self.K_list[0][off] = self.K_uc
-            self.K_list[off][0] = self.K_cu
+                self.K_list[0][off_d+i] = self.K_uc[i]
+                self.K_list[off_d+i][0] = self.K_cu[i]
+
+            if self.is_poroelastic:
+                if self.poroelasticity["model"] == "darcy_schloegl":
+                    for i in range(self.pbscat.num_species):
+                        self.K_phydc[i].zeroEntries()
+                        fem.petsc.assemble_matrix(self.K_phydc[i], self.jac_phydc[i], self.dbcs_poro)
+                        self.K_phydc[i].assemble()
+
+                        self.K_cphyd[i].zeroEntries()
+                        fem.petsc.assemble_matrix(self.K_cphyd[i], self.jac_cphyd[i], self.pbscat.dbcs[i])
+                        self.K_cphyd[i].assemble()
+
+                        self.K_list[off_po][off_d+i] = self.K_phydc[i]
+                        self.K_list[off_d+i][off_po] = self.K_cphyd[i]
+
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         assert self.incompressible_2field  # index sets only needed for 2-field problem
@@ -2050,8 +2110,8 @@ class SolidmechanicsProblem(problem_base):
             self.a_old,
             self.p,
             self.p_old,
-            self.pphyd,
-            self.pphyd_old,
+            self.phyd,
+            self.phyd_old,
             self.internalvars,
             self.internalvars_old,
         )

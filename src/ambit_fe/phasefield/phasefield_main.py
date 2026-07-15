@@ -208,6 +208,7 @@ class PhasefieldProblem(problem_base):
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_phasefield(
             self,
+            self.ti,
             V_field=self.V_phi,
             Vdisc_scalar=self.Vd_phi_scalar,
         )

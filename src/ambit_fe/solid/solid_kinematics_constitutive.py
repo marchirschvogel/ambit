@@ -116,13 +116,22 @@ class constitutive:
                 stress += -J * pp["p"] * ufl.inv(C_)
 
         # porosity ("fluid") pressure
-        if pp["pphyd"] is not None:
+        if pp["phyd"] is not None:
             if self.mat_growth:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p_{\mathrm{f}}(J_{\mathrm{e}}-1)]}{\partial \boldsymbol{C}} = -J_{\mathrm{e}} p_{\mathrm{f}} \boldsymbol{C}^{-1}
-                stress += -Je * pp["pphyd"] * ufl.inv(C_)
+                stress += -Je * pp["phyd"] * ufl.inv(C_)
             else:
                 # TeX: S_{\mathrm{vol}} = -J p_{\mathrm{f}} \boldsymbol{C}^{-1}
-                stress += -J * pp["pphyd"] * ufl.inv(C_)
+                stress += -J * pp["phyd"] * ufl.inv(C_)
+
+        # osmotic ("fluid") pressure
+        if pp["posm"] is not None:
+            if self.mat_growth:
+                # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p_{\mathrm{osm}}(J_{\mathrm{e}}-1)]}{\partial \boldsymbol{C}} = -J_{\mathrm{e}} p_{\mathrm{f}} \boldsymbol{C}^{-1}
+                stress += -Je * pp["posm"] * ufl.inv(C_)
+            else:
+                # TeX: S_{\mathrm{vol}} = -J p_{\mathrm{osm}} \boldsymbol{C}^{-1}
+                stress += -J * pp["posm"] * ufl.inv(C_)
 
         if returnquantity == "stress":
             return stress
@@ -583,16 +592,18 @@ class constitutive_poro:
         self.materials = materials
 
     # Piola-Kirchhoff flux (for poroelastic model)
-    def Q(self, u_, pp):
+    def Q(self, u_, pp, cc=None):
         F = self.kin.F(u_)
         J = ufl.det(F)
 
         Q_ = ufl.constantvalue.zero(self.kin.dim)
 
-        mat_poro = materiallaw_poro(pp)
+        mat_poro = materiallaw_poro(pp, cc)
         for key, value in self.materials.items():
             if key == "darcy":
                 Q_ += mat_poro.darcy(value, F=F)
+            elif key == "darcy_schloegl":
+                Q_ += mat_poro.darcy_schloegl(value, F=F)
             else:
                 raise NameError("Unknown porous material law '%s'!" % (key))
 

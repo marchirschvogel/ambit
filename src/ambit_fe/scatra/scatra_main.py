@@ -42,18 +42,23 @@ class ScatraProblem(problem_base):
         mor_params={},
         is_advected=False,
         is_ale=False,
+        num_species=1,
     ):
         self.pbase = pbase
 
         # pointer to communicator
         self.comm = self.pbase.comm
 
+        # number of species that are transported
+        self.num_species = num_species
+
         self.time_params = time_params[0]
         self.fem_params = fem_params[0]
         self.bc_dict = bc_dict[0]
 
         ioparams.check_params_fem_scatra(self.fem_params)
-        ioparams.check_params_time_fluid(self.time_params)
+        for i in range(self.num_species):
+            ioparams.check_params_time_fluid(self.time_params[i])
 
         self.problem_physics = "scatra"
 
@@ -84,7 +89,9 @@ class ScatraProblem(problem_base):
         # results files dictionary for I/O
         self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models[0], self.mesh)
+        self.constitutive_models = []
+        for i in range(self.num_species):
+            self.constitutive_models.append(utilities.mat_params_to_dolfinx_constant(constitutive_models[0][i], self.mesh))
 
         self.localsolve = False
         self.prestress_initial = False
@@ -94,9 +101,6 @@ class ScatraProblem(problem_base):
         self.print_subiter = False
 
         self.dim = self.mesh.geometry.dim
-
-        # number of species that are transported - currently hard-wired to 1 - TODO: Make general, also for norms in solver!!
-        self.num_species = 1
 
         # type of discontinuous function spaces
         if (
@@ -152,14 +156,6 @@ class ScatraProblem(problem_base):
 
         # for output writing - function spaces on the degree of the mesh
         self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
-        self.V_out_tensor = fem.functionspace(
-            self.mesh,
-            (
-                "Lagrange",
-                self.mesh_degree,
-                (self.mesh.geometry.dim, self.mesh.geometry.dim),
-            ),
-        )
         self.V_out_vector = fem.functionspace(
             self.mesh,
             ("Lagrange", self.mesh_degree, (self.mesh.geometry.dim,)),
@@ -170,14 +166,15 @@ class ScatraProblem(problem_base):
         self.Vcoord = fem.functionspace(self.mesh, self.Vex)
 
         # functions
-        self.dc, self.var_c, self.c, self.cdot, self.c_old, self.c_veryold, self.cdot_old = [], [], [], [], [], [], []
+        self.dc, self.var_c, self.cdot, self.c_veryold, self.cdot_old = [], [], [], [], []
+        self.c, self.c_old = {}, {}  # use dict for easier cross-field access
         for i in range(self.num_species):
             self.dc.append(ufl.TrialFunction(self.V_c))  # Incremental concentrations
             self.var_c.append(ufl.TestFunction(self.V_c))  # Test function
-            self.c.append(fem.Function(self.V_c, name="Concentration"+str(i+1)))
+            self.c["c" + str(i+1)] = fem.Function(self.V_c, name="Concentration"+str(i+1))
             self.cdot.append(fem.Function(self.V_c))
             # values of previous time step(s)
-            self.c_old.append(fem.Function(self.V_c))
+            self.c_old["c" + str(i+1)] = fem.Function(self.V_c)
             self.c_veryold.append(fem.Function(self.V_c))
             self.cdot_old.append(fem.Function(self.V_c))
 
@@ -186,27 +183,33 @@ class ScatraProblem(problem_base):
 
         self.numdof = 0
         for i in range(self.num_species):
-            self.numdof += self.c[i].x.petsc_vec.getSize()
+            self.numdof += self.c["c" + str(i+1)].x.petsc_vec.getSize()
 
         # initialize scatra time-integration class
-        self.ti = timeintegration.timeintegration_scatra(
-            self.time_params,
-            self.pbase.dt,
-            self.pbase.numstep,
-            time_curves=time_curves,
-            t_init=self.pbase.t_init,
-            dim=self.dim,
-            comm=self.comm,
-        )
+        self.ti = []
+        for i in range(self.num_species):
+            self.ti.append(timeintegration.timeintegration_scatra(
+                self.time_params[i],
+                self.pbase.dt,
+                self.pbase.numstep,
+                time_curves=time_curves,
+                t_init=self.pbase.t_init,
+                dim=self.dim,
+                comm=self.comm,
+            ))
 
-        self.timefac_m, self.timefac = self.ti.timefactors()
+        self.timefac_m, self.timefac = [], []
+        for i in range(self.num_species):
+            timefac_m, timefac = self.ti[i].timefactors()
+            self.timefac_m.append(timefac_m)
+            self.timefac.append(timefac)
 
-        # initialize material/constitutive classes (one per domain)
-        self.ma = [[]] * self.num_species
+        # initialize material/constitutive classes (one per domain and transported species)
+        self.ma = [[] for _ in range(self.num_species)]
         for i in range(self.num_species):
             for n in range(self.num_domains):
                 self.ma[i].append(
-                    scatra_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)])
+                    scatra_constitutive.constitutive(self.constitutive_models[i]["MAT" + str(n + 1)])
                 )
 
         # initialize scatra variational form classes
@@ -220,39 +223,38 @@ class ScatraProblem(problem_base):
         # set form for cdot
         self.cdot_expr = []
         for i in range(self.num_species):
-            self.cdot_expr.append(self.ti.set_cdot(self.c[i], self.c_old[i], self.c_veryold[i], self.cdot_old[i]))
+            self.cdot_expr.append(self.ti[i].set_cdot(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i]))
 
         # set mid-point representations
-        self.c_mid, self.cdot_mid = [], []
+        self.c_mid, self.cdot_mid = {}, []
         for i in range(self.num_species):
-            self.c_mid.append(self.timefac * self.c[i] + (1.0 - self.timefac) * self.c_old[i])
-            self.cdot_mid.append(self.timefac * self.cdot_expr[i] + (1.0 - self.timefac) * self.cdot_old[i])
+            self.c_mid["c" + str(i+1)] = self.timefac[i] * self.c["c" + str(i+1)] + (1.0 - self.timefac[i]) * self.c_old["c" + str(i+1)]
+            self.cdot_mid.append(self.timefac[i] * self.cdot_expr[i] + (1.0 - self.timefac[i]) * self.cdot_old[i])
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_scatra(
-            self,
-            V_field=self.V_c,
-            Vdisc_scalar=self.Vd_scalar,
-        )
+        self.bc = []
+        for i in range(self.num_species):
+            self.bc.append(boundaryconditions.boundary_cond_scatra(
+                self,
+                self.ti[i],
+                V_field=self.V_c,
+                Vdisc_scalar=self.Vd_scalar,
+            ))
 
-        self.dbcs = [[]] * self.num_species
+        self.dbcs = [[] for _ in range(self.num_species)]
         # Dirichlet boundary conditions
-        if "dirichlet" in self.bc_dict.keys():
-            for i in range(self.num_species):  # TODO: For now, same for all - but may vary per c-field!
-                self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs[i])
+        for i in range(self.num_species):
+            if "dirichlet_c" + str(i+1) in self.bc_dict.keys():
+                self.bc[i].dirichlet_bcs(self.bc_dict["dirichlet_c" + str(i+1)], self.dbcs[i])
 
         # number of fields involved
         self.nfields = 1 * self.num_species
 
-        self.var_names = []
-        for i in range(self.num_species):
-            self.var_names.append("c" + str(i+1))
-
         # store some info on variable and equation names (used e.g. in solver print)
-        self.var_names = []
+        self.var_names, self.eq_names = [], []
         for i in range(self.num_species):
             self.var_names.append("c" + str(i+1))
-        self.eq_names = ["concentration"]
+            self.eq_names.append("diff_c" + str(i+1))
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -268,7 +270,7 @@ class ScatraProblem(problem_base):
         is_ghosted = [1] * self.num_species
         vlist_ = []
         for i in range(self.num_species):
-            vlist_.append(self.c[i].x.petsc_vec)
+            vlist_.append(self.c["c" + str(i+1)].x.petsc_vec)
         return vlist_, is_ghosted
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
@@ -279,10 +281,10 @@ class ScatraProblem(problem_base):
     def set_variational_forms_residual(self):
         if self.is_ale:
             # mid-point representation of ALE velocity
-            self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
+            self.alevar["w_mid"] = self.timefac[0] * self.alevar["w"] + (1.0 - self.timefac[0]) * self.alevar["w_old"]
             # mid-point representation of ALE deformation gradient - linear in displacement, hence we can combine it like this
             self.alevar["Fale_mid"] = (
-                self.timefac * self.alevar["Fale"] + (1.0 - self.timefac) * self.alevar["Fale_old"]
+                self.timefac[0] * self.alevar["Fale"] + (1.0 - self.timefac[0]) * self.alevar["Fale_old"]
             )
         else:
             self.alevar["Fale"] = None
@@ -298,51 +300,58 @@ class ScatraProblem(problem_base):
 
         for i in range(self.num_species):
             for n, M in enumerate(self.domain_ids):
-                self.variational_form[i] += self.vf[i].diffusion(self.cdot_expr[i], self.c[i], self.ma[i][n].diffusive_flux(self.c[i], self.cdot_expr[i]), self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
-                self.variational_form_old[i] += self.vf[i].diffusion(self.cdot_old[i], self.c_old[i], self.ma[i][n].diffusive_flux(self.c_old[i], self.cdot_old[i]), self.dx(M), v=None, w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-                self.variational_form_mid[i] += self.vf[i].diffusion(self.cdot_mid[i], self.c_mid[i], self.ma[i][n].diffusive_flux(self.c_mid[i], self.cdot_mid[i]), self.dx(M), v=None, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                if self.ti[i].timint != "static":
+                    self.variational_form[i] += self.vf[i].diffusion_rate(self.cdot_expr[i], self.c["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
+                    self.variational_form_old[i] += self.vf[i].diffusion_rate(self.cdot_old[i], self.c_old["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                    self.variational_form_mid[i] += self.vf[i].diffusion_rate(self.cdot_mid[i], self.c_mid["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
 
-        w_neumann, w_neumann_old, w_neumann_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+                # NOTE: Pass full list of c's to flux law, since we may have coupled processes at work...
+                self.variational_form[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c["c" + str(i+1)], c_coup=self.c), self.dx(M), F=self.alevar["Fale"])
+                self.variational_form_old[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_old["c" + str(i+1)], c_coup=self.c_old), self.dx(M), F=self.alevar["Fale_old"])
+                self.variational_form_mid[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_mid["c" + str(i+1)], c_coup=self.c_mid), self.dx(M), F=self.alevar["Fale_mid"])
 
-        if "neumann" in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(
-                self.bc_dict["neumann"],
-                self.bmeasures,
-                funcs_to_update=self.ti.funcs_to_update,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update,
-            )
-            w_neumann_old = self.bc.neumann_bcs(
-                self.bc_dict["neumann"],
-                self.bmeasures,
-                funcs_to_update=self.ti.funcs_to_update_old,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-            )
-            w_neumann_mid = self.bc.neumann_bcs(
-                self.bc_dict["neumann"],
-                self.bmeasures,
-                funcs_to_update=self.ti.funcs_to_update_mid,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-            )
+        w_neumann, w_neumann_old, w_neumann_mid = [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species
 
         for i in range(self.num_species):
-            self.variational_form[i] += -w_neumann
-            self.variational_form_old[i] += -w_neumann_old
-            self.variational_form_mid[i] += -w_neumann_mid
+            if "neumann_c" + str(i+1) in self.bc_dict.keys():
+                w_neumann[i] = self.bc[i].neumann_bcs(
+                    self.bc_dict["neumann_c" + str(i+1)],
+                    self.bmeasures,
+                    funcs_to_update=self.ti[i].funcs_to_update,
+                    funcsexpr_to_update=self.ti[i].funcsexpr_to_update,
+                )
+                w_neumann_old[i] = self.bc[i].neumann_bcs(
+                    self.bc_dict["neumann_c" + str(i+1)],
+                    self.bmeasures,
+                    funcs_to_update=self.ti[i].funcs_to_update_old,
+                    funcsexpr_to_update=self.ti[i].funcsexpr_to_update_old,
+                )
+                w_neumann_mid[i] = self.bc[i].neumann_bcs(
+                    self.bc_dict["neumann_c" + str(i+1)],
+                    self.bmeasures,
+                    funcs_to_update=self.ti[i].funcs_to_update_mid,
+                    funcsexpr_to_update=self.ti[i].funcsexpr_to_update_mid,
+                )
+
+        for i in range(self.num_species):
+            self.variational_form[i] += -w_neumann[i]
+            self.variational_form_old[i] += -w_neumann_old[i]
+            self.variational_form_mid[i] += -w_neumann_mid[i]
 
         self.weakform_c = [None] * self.num_species
         for i in range(self.num_species):
-            if self.ti.res_eval == "trap":
-                self.weakform_c[i] = self.timefac * self.variational_form[i] + (1.-self.timefac) * self.variational_form_old[i]
-            if self.ti.res_eval == "midp":
+            if self.ti[i].res_eval == "trap":
+                self.weakform_c[i] = self.timefac[i] * self.variational_form[i] + (1.-self.timefac[i]) * self.variational_form_old[i]
+            if self.ti[i].res_eval == "midp":
                 self.weakform_c[i] = self.variational_form_mid[i]
-            if self.ti.res_eval == "back":
+            if self.ti[i].res_eval == "back":
                 self.weakform_c[i] = self.variational_form[i]
 
     def set_variational_forms_jacobian(self):
         self.weakform_lin_cc = [[None] * self.num_species for _ in range(self.num_species)]
         for i in range(self.num_species):
             for j in range(self.num_species):
-                self.weakform_lin_cc[i][j] = ufl.derivative(self.weakform_c[i], self.c[j], self.dc[j])
+                self.weakform_lin_cc[i][j] = ufl.derivative(self.weakform_c[i], self.c["c" + str(j+1)], self.dc[j])
 
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
@@ -386,11 +395,11 @@ class ScatraProblem(problem_base):
                 self.r_c[i],
                 [self.jac_cc[i][i]],
                 [self.dbcs[i]],
-                x0=[self.c[i].x.petsc_vec],
+                x0=[self.c["c" + str(i+1)].x.petsc_vec],
                 alpha=-1.0,
             )
             self.r_c[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(self.r_c[i], self.dbcs[i], x0=self.c[i].x.petsc_vec, alpha=-1.0)
+            fem.set_bc(self.r_c[i], self.dbcs[i], x0=self.c["c" + str(i+1)].x.petsc_vec, alpha=-1.0)
 
             self.r_list[i] = self.r_c[i]
 
@@ -422,11 +431,12 @@ class ScatraProblem(problem_base):
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt)
+        for i in range(self.num_species):
+            self.ti[i].set_time_funcs(t, dt)
 
-        # DBC from files
-        if self.bc.have_dirichlet_fileseries:
-            for m in self.ti.funcs_data:
+        # DBC from files - TODO for multiple species...
+        if self.bc[0].have_dirichlet_fileseries:
+            for m in self.ti[0].funcs_data:
                 file = list(m.values())[0].replace("*", str(N))
                 func = list(m.keys())[0]
                 self.io.readfunction(func, file)
@@ -445,7 +455,7 @@ class ScatraProblem(problem_base):
 
     def update(self):
         for i in range(self.num_species):
-            self.ti.update_timestep(self.c[i], self.c_old[i], self.c_veryold[i], self.cdot[i], self.cdot_old[i])
+            self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot[i], self.cdot_old[i])
 
     def print_to_screen(self):
         pass
@@ -481,4 +491,4 @@ class ScatraSolver(solver_base):
 
     def print_timestep_info(self, N, t, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti[0].print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)

@@ -43,7 +43,7 @@ class solver_nonlinear:
 
         self.solver_params = solver_params
 
-        self.x, self.is_ghosted = [[]] * self.nprob, [[]] * self.nprob
+        self.x, self.is_ghosted = [[] for _ in range(self.nprob)], [[] for _ in range(self.nprob)]
         self.nfields, self.ptype = [], []
 
         # problem variables list
@@ -89,8 +89,8 @@ class solver_nonlinear:
         if self.nprob > 1:
             self.indlen_[1] = self.indp2
 
-        self.r_list_sol = [[]] * self.nprob
-        self.K_list_sol = [[]] * self.nprob
+        self.r_list_sol = [[] for _ in range(self.nprob)]
+        self.K_list_sol = [[] for _ in range(self.nprob)]
 
         for npr in range(self.nprob):
             if self.pb[npr].rom:
@@ -113,7 +113,7 @@ class solver_nonlinear:
         self.subsol = subsolver
 
         # offset array for multi-field systems
-        self.offsetarr = [[]] * self.nprob
+        self.offsetarr = [[] for _ in range(self.nprob)]
         for npr in range(self.nprob):
             self.offsetarr[npr] = [0]
             off = 0
@@ -129,13 +129,13 @@ class solver_nonlinear:
                 self.offsetarr[npr].append(off)
 
         self.del_x, self.del_x_rom, self.x_start = [], [], []
-        self.del_x_sol, self.del_x_sol_prev = [[]] * self.nprob, []
+        self.del_x_sol, self.del_x_sol_prev = [[] for _ in range(self.nprob)], []
 
         for npr in range(self.nprob):
-            self.del_x.append([[]] * self.nfields[npr])
-            self.x_start.append([[]] * self.nfields[npr])
-            self.del_x_rom.append([[]] * self.nfields[npr])
-            self.del_x_sol_prev.append([[]] * self.nfields[npr])
+            self.del_x.append([[] for _ in range(self.nfields[npr])])
+            self.x_start.append([[] for _ in range(self.nfields[npr])])
+            self.del_x_rom.append([[] for _ in range(self.nfields[npr])])
+            self.del_x_sol_prev.append([[] for _ in range(self.nfields[npr])])
 
         for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
@@ -193,7 +193,7 @@ class solver_nonlinear:
 
         precond_fields = solver_params.get("precond_fields", [[]])
 
-        self.precond_fields = [[]] * self.nprob
+        self.precond_fields = [[] for _ in range(self.nprob)]
         for npr in range(self.nprob):
             if isinstance(precond_fields[npr], list):
                 self.precond_fields[npr] = precond_fields[npr]
@@ -203,7 +203,7 @@ class solver_nonlinear:
         self.fieldsplit_type = solver_params.get("fieldsplit_type", "jacobi")
         block_precond = solver_params.get("block_precond", "fieldsplit")
 
-        self.block_precond = [[]] * self.nprob
+        self.block_precond = [[] for _ in range(self.nprob)]
         for npr in range(self.nprob):
             if isinstance(block_precond, list):
                 self.block_precond[npr] = block_precond[npr]
@@ -212,7 +212,7 @@ class solver_nonlinear:
 
         petsc_options_ksp = solver_params.get("petsc_options_ksp", None)
 
-        self.petsc_options_ksp = [[]] * self.nprob
+        self.petsc_options_ksp = [[] for _ in range(self.nprob)]
         for npr in range(self.nprob):
             if isinstance(petsc_options_ksp, list):
                 self.petsc_options_ksp[npr] = petsc_options_ksp[npr]
@@ -246,14 +246,14 @@ class solver_nonlinear:
         else:
             self.merge_prec_mat = False
 
-        self.iset, self.iset_blocked = [[]] * self.nprob, [[]] * self.nprob
+        self.iset, self.iset_blocked = [[] for _ in range(self.nprob)], [[] for _ in range(self.nprob)]
 
         self.print_local_iter = solver_params.get("print_local_iter", False)
         self.rebuild_prec_every_it = solver_params.get("rebuild_prec_every_it", 1)
         self.tol_res_local = solver_params.get("tol_res_local", 1e-10)
         self.tol_inc_local = solver_params.get("tol_inc_local", 1e-10)
 
-        self.solvetype = [[]] * self.nprob
+        self.solvetype = [[] for _ in range(self.nprob)]
         for npr in range(self.nprob):
             if isinstance(solver_params["solve_type"], list):
                 self.solvetype[npr] = solver_params["solve_type"][npr]
@@ -264,7 +264,7 @@ class solver_nonlinear:
         self.tolinc = solver_params["tol_inc"]
 
     def initialize_petsc_solver(self):
-        self.ksp = [[]] * self.nprob
+        self.ksp = [[] for _ in range(self.nprob)]
 
         for npr in range(self.nprob):
             # perform initial matrix and residual reduction to set the correct arrays

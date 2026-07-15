@@ -457,6 +457,7 @@ class FluidmechanicsProblem(problem_base):
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_fluid(
             self,
+            self.ti,
             V_field=self.V_v,
             Vdisc_scalar=self.Vd_scalar,
         )
