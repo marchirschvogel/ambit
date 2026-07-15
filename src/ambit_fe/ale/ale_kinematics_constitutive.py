@@ -17,17 +17,10 @@ ALE kinematics and constitutive class
 class constitutive:
     def __init__(self, kin, materials):
         self.kin = kin
-
-        self.matmodels = []
-        for i in range(len(materials.keys())):
-            self.matmodels.append(list(materials.keys())[i])
-
-        self.matparams = []
-        for i in range(len(materials.values())):
-            self.matparams.append(list(materials.values())[i])
+        self.materials = materials
 
         # list entries of mats which do not return a stress
-        self.mat_nostress = ["inertia", "id"]
+        self.mat_void = ["inertia", "id"]
 
     def stress(self, d_, w_):
         F_ = ufl.variable(self.kin.F(d_))
@@ -38,34 +31,31 @@ class constitutive:
 
         mat = materiallaw(d_, w_, F_, self.kin.elem_metrics)
 
-        for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_nostress:
-                # extract associated material parameters
-                matparams_m = self.matparams[m]
+        for key, value in self.materials.items():
+            if key not in self.mat_void:
+                if key == "diffusion":
+                    stress += mat.diffusion(value)
 
-                if matlaw == "diffusion":
-                    stress += mat.diffusion(matparams_m)
+                elif key == "diffusion_rate":
+                    stress += mat.diffusion_rate(value)
 
-                elif matlaw == "diffusion_rate":
-                    stress += mat.diffusion_rate(matparams_m)
+                elif key == "diffusion_sym":
+                    stress += mat.diffusion_sym(value)
 
-                elif matlaw == "diffusion_sym":
-                    stress += mat.diffusion_sym(matparams_m)
+                elif key == "diffusion_rate_sym":
+                    stress += mat.diffusion_rate_sym(value)
 
-                elif matlaw == "diffusion_rate_sym":
-                    stress += mat.diffusion_rate_sym(matparams_m)
+                elif key == "linelast":
+                    stress += mat.linelast(value)
 
-                elif matlaw == "linelast":
-                    stress += mat.linelast(matparams_m)
+                elif key == "neohooke":
+                    stress += mat.neohooke(value)
 
-                elif matlaw == "neohooke":
-                    stress += mat.neohooke(matparams_m)
-
-                elif matlaw == "exponential":
-                    stress += mat.exponential(matparams_m)
+                elif key == "exponential":
+                    stress += mat.exponential(value)
 
                 else:
-                    raise NameError("Unknown ALE material law!")
+                    raise NameError("Unknown ALE material law '%s'!" % (key))
 
         return stress
 

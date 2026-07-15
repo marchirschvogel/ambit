@@ -637,6 +637,16 @@ class SolidmechanicsProblem(problem_base):
                 )
             )
 
+        if self.is_poroelastic:
+            self.ma_poro = []
+            for n in range(self.num_domains):
+                self.ma_poro.append(
+                    solid_kinematics_constitutive.constitutive_poro(
+                        self.ki,
+                        self.constitutive_models["MAT" + str(n + 1)]["MAT_PORO"],
+                    )
+                )
+
         # for prestress, we don't have any inelastic or rate-dependent stuff
         if self.prestress_initial or self.prestress_initial_only:
             self.ma_prestr = []
@@ -886,9 +896,9 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_p_old += self.vf.deltaW_int_pres_nearly(J_old, self.p_old, self.bulkmod, self.dx(M))
                 self.deltaW_p_mid += self.vf.deltaW_int_pres_nearly(J_mid, self.ps_mid, self.bulkmod, self.dx(M))
             if self.is_poroelastic:
-                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma[n].Q(self.u, self.pphyd), self.dx(M))
-                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma[n].Q(self.u_old, self.pphyd_old), self.dx(M))
-                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma[n].Q(self.us_mid, self.pphyd_mid), self.dx(M))
+                self.deltaW_poro += self.vf.deltaW_int_poro(self.ki.F(self.u), self.ki.Fdot(self.vel), self.ma_poro[n].Q(self.u, self.pphyd), self.dx(M))
+                self.deltaW_poro_old += self.vf.deltaW_int_poro(self.ki.F(self.u_old), self.ki.Fdot(self.v_old), self.ma_poro[n].Q(self.u_old, self.pphyd_old), self.dx(M))
+                self.deltaW_poro_mid += self.vf.deltaW_int_poro(self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.ma_poro[n].Q(self.us_mid, self.pphyd_mid), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = (

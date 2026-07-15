@@ -18,13 +18,7 @@ Phase field/Cahn-Hilliard constitutive class
 
 class constitutive:
     def __init__(self, materials, phi_range=[0.0, 1.0]):
-        self.matmodels = []
-        for i in range(len(materials.keys())):
-            self.matmodels.append(list(materials.keys())[i])
-
-        self.matparams = []
-        for i in range(len(materials.values())):
-            self.matparams.append(list(materials.values())[i])
+        self.materials = materials
 
         # list entries of mats which do not return a flux/driving force
         self.mat_void = ["id", "source"]
@@ -39,15 +33,12 @@ class constitutive:
 
         mat_flux = materiallaw_flux(mu_, phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_void:
-                # extract associated material parameters
-                matparams_m = self.matparams[m]
-
-                if matlaw == "mat_cahnhilliard":
-                    Jflux += mat_flux.mat_cahnhilliard_flux(matparams_m, p=p, F=F, alpha=alpha)
+        for key, value in self.materials.items():
+            if key not in self.mat_void:
+                if key == "mat_cahnhilliard":
+                    Jflux += mat_flux.mat_cahnhilliard_flux(value, p=p, F=F, alpha=alpha)
                 else:
-                    raise NameError("Unknown Cahn-Hilliard material law!")
+                    raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
 
         return Jflux
 
@@ -59,17 +50,14 @@ class constitutive:
 
         mat = materiallaw(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_void:
-                # extract associated material parameters
-                matparams_m = self.matparams[m]
-
-                if matlaw == "mat_cahnhilliard":
-                    dpsi_dphi_, psi_ = mat.mat_cahnhilliard(matparams_m)
+        for key, value in self.materials.items():
+            if key not in self.mat_void:
+                if key == "mat_cahnhilliard":
+                    dpsi_dphi_, psi_ = mat.mat_cahnhilliard(value)
                     dpsi_dphi += dpsi_dphi_
                     psi += psi_
                 else:
-                    raise NameError("Unknown Cahn-Hilliard material law!")
+                    raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
 
         if returnquantity=="deriv":
             return dpsi_dphi

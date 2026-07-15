@@ -428,5 +428,10 @@ class activestress_activation:
 
 
 class materiallaw_poro:
-    def __init__(self):
-        pass
+    def __init__(self, pp):
+        self.pp = pp
+
+    def darcy(self, params, F=None):
+        k = params["k"]
+        J = ufl.det(F)
+        return -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(self.pp)

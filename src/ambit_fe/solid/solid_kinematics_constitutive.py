@@ -9,7 +9,7 @@
 import ufl
 from petsc4py import PETSc
 
-from .solid_material import materiallaw, growth, growthfunction
+from .solid_material import materiallaw, materiallaw_poro, growth, growthfunction
 
 """
 Nonlinear finite strain kinematics and constitutive class
@@ -27,16 +27,6 @@ class constitutive:
         mat_plastic=None,
     ):
         self.kin = kin
-
-        # TODO: Revamp this...
-        self.matmodels = []
-        for i in range(len(materials.keys())):
-            self.matmodels.append(list(materials.keys())[i])
-
-        self.matparams = []
-        for i in range(len(materials.values())):
-            self.matparams.append(list(materials.values())[i])
-
         self.materials = materials
 
         self.mat_growth = mat_growth
@@ -45,7 +35,7 @@ class constitutive:
         self.incompr_2field = incompr_2field
 
         # list entries of mats which do not return a stress
-        self.mat_void = ["inertia", "growth", "plastic", "mat_poro", "bodyforce", "id"]
+        self.mat_void = ["inertia", "growth", "plastic", "MAT_PORO", "bodyforce", "id"]
 
         if self.mat_growth:
             # growth & remodeling parameters
@@ -54,13 +44,7 @@ class constitutive:
             self.growth_trig = self.gandrparams["growth_trig"]
 
             if self.mat_remodel:
-                self.matmodels_remod = []
-                for i in range(len(self.gandrparams["remodeling_mat"].keys())):
-                    self.matmodels_remod.append(list(self.gandrparams["remodeling_mat"].keys())[i])
-
-                self.matparams_remod = []
-                for i in range(len(self.gandrparams["remodeling_mat"].values())):
-                    self.matparams_remod.append(list(self.gandrparams["remodeling_mat"].values())[i])
+                self.materials_remod = self.gandrparams["remodeling_mat"]
 
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
@@ -102,9 +86,9 @@ class constitutive:
         else:
             self.mat = materiallaw(C_, Cdot_, self.I)
 
-        for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_void:
-                s_, se_ = self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
+        for key, value in self.materials.items():
+            if key not in self.mat_void:
+                s_, se_ = self.add_stress_mat(key, value, ivar, C_, Cdot_)
                 stress += s_
                 if se_ is not None:
                     strainenergy += se_
@@ -115,8 +99,8 @@ class constitutive:
 
             self.stress_remod = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
 
-            for m, matlaw in enumerate(self.matmodels_remod):
-                s_, _ = self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, Cdot_)
+            for key, value in self.materials_remod.items():
+                s_, _ = self.add_stress_mat(key, value, ivar, C_, Cdot_)
                 self.stress_remod += s_
 
             # update the stress expression: S = (1-phi(theta)) * S_base + phi(theta) * S_remod
@@ -214,7 +198,7 @@ class constitutive:
             return self.mat.active_iso(tau_a_)
 
         else:
-            raise NameError("Unknown solid material law!")
+            raise NameError("Unknown solid material law '%s'!" % (key))
 
     # Cauchy stress tensor: sigma = (1/J) * F*S*F^T
     def sigma(self, u_, v_, pp=None, ivar=None):
@@ -592,6 +576,12 @@ class constitutive:
 
         return Cremod_p
 
+
+class constitutive_poro:
+    def __init__(self, kin, materials):
+        self.kin = kin
+        self.materials = materials
+
     # Piola-Kirchhoff flux (for poroelastic model)
     def Q(self, u_, pp):
         F = self.kin.F(u_)
@@ -599,13 +589,14 @@ class constitutive:
 
         Q_ = ufl.constantvalue.zero(self.kin.dim)
 
-        material = self.materials["mat_poro"]
-        k = material["k"]
-
-        Q_ += -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(pp)
+        mat_poro = materiallaw_poro(pp)
+        for key, value in self.materials.items():
+            if key == "darcy":
+                Q_ += mat_poro.darcy(value, F=F)
+            else:
+                raise NameError("Unknown porous material law '%s'!" % (key))
 
         return Q_
-
 
 
 class kinematics:

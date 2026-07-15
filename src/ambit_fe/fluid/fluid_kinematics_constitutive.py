@@ -19,14 +19,7 @@ Fluid kinematics and constitutive class
 class constitutive:
     def __init__(self, kin, materials):
         self.kin = kin
-
-        self.matmodels = []
-        for i in range(len(materials.keys())):
-            self.matmodels.append(list(materials.keys())[i])
-
-        self.matparams = []
-        for i in range(len(materials.values())):
-            self.matparams.append(list(materials.values())[i])
+        self.materials = materials
 
         # list entries of mats which do not return a stress
         self.mat_void = ["inertia", "bodyforce", "id"]
@@ -46,15 +39,12 @@ class constitutive:
 
         mat = materiallaw(shearrate_, volstrainrate_, self.kin.use_gen_strainrate, self.I)
 
-        for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_void:
-                # extract associated material parameters
-                matparams_m = self.matparams[m]
-
-                if matlaw == "newtonian":
-                    stress += mat.newtonian(matparams_m, chi=chi)
+        for key, value in self.materials.items():
+            if key not in self.mat_void:
+                if key == "newtonian":
+                    stress += mat.newtonian(value, chi=chi)
                 else:
-                    raise NameError("Unknown fluid material law!")
+                    raise NameError("Unknown fluid material law '%s'!" % (key))
 
         # TeX: \sigma_{\mathrm{vol}} = -p\boldsymbol{I}
         stress += -p_ * self.I

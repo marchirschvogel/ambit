@@ -175,7 +175,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
         for n, M in enumerate(self.pbf.domain_ids):
             if self.capillary_force_from_korteweg_stress:
-                kappa = self.pbp.ma[n].matparams[0]["kappa"]
+                kappa = self.pbp.ma[n].materials["mat_cahnhilliard"]["kappa"]
                 self.capillary_force -= self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
                 self.capillary_force_old -= self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
                 self.capillary_force_mid -= self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])

@@ -62,7 +62,7 @@ def test_main():
         "MAT1": {
             "neohooke_compressible": {"mu": 1.0, "nu": 0.3},
             "inertia": {"rho0": 1e-6},
-            "mat_poro": {"k": 1.0e-2},
+            "MAT_PORO": {"darcy": {"k": 1.0e-2}},
         }
     }
 
