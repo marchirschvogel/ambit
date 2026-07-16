@@ -131,11 +131,11 @@ def test_main():
     u_corr, c_corr = np.zeros(3 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    u_corr[0] = 3.4681923558718048E-03  # x
-    u_corr[1] = 3.4681923463234757E-03  # y
-    u_corr[2] = 3.4196362165880055E-03  # z
+    u_corr[0] = 3.4339693775761316E-03  # x
+    u_corr[1] = 3.4339693680007430E-03  # y
+    u_corr[2] = 3.3864588306629483E-03  # z
 
-    c_corr[0] = 1.2355157863733316E-03
+    c_corr[0] = 1.2238618668645510E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.u,

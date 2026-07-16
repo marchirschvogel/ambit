@@ -35,20 +35,21 @@ class IO_scatra(IO_field):
             if self.pb.io.write_results_every > 0:
                 for res in self.pb.results_to_write:
                     if res not in self.results_pre:
-                        outfile = io.XDMFFile(
-                            self.pb.comm,
-                            self.pb.io.output_path
-                            + "/results_"
-                            + self.pb.pbase.simname
-                            + "_"
-                            + self.pb.problem_physics
-                            + "_"
-                            + res
-                            + ".xdmf",
-                            "w",
-                        )
-                        outfile.write_mesh(self.pb.mesh)
-                        self.pb.resultsfiles[res] = outfile
+                        for i in range(self.pb.num_species):
+                            outfile = io.XDMFFile(
+                                self.pb.comm,
+                                self.pb.io.output_path
+                                + "/results_"
+                                + self.pb.pbase.simname
+                                + "_"
+                                + self.pb.problem_physics
+                                + "_"
+                                + res + "_c" + str(i+1)
+                                + ".xdmf",
+                                "w",
+                            )
+                            outfile.write_mesh(self.pb.mesh)
+                            self.pb.resultsfiles[res + "_c" + str(i+1)] = outfile
 
             return
 
@@ -57,26 +58,13 @@ class IO_scatra(IO_field):
             if self.pb.io.write_results_every > 0 and N % self.pb.io.write_results_every == 0:
                 # save solution to XDMF format
                 for res in self.pb.results_to_write:
-                    if res == "concentration":
-                        # if self.output_midpoint:
-                        #     c_proj = project(
-                        #         self.pb.phi_mid,
-                        #         self.pb.V_phi,
-                        #         self.pb.dx,
-                        #         domids=self.pb.domain_ids,
-                        #         nm="PhaseField",
-                        #         comm=self.pb.comm,
-                        #         entity_maps=self.entity_maps,
-                        #     )
-                        #     c_out = fem.Function(self.pb.V_out_scalar, name=phi_proj.name)
-                        #     c_out.interpolate(phi_proj)
-                        # else:
-                        for i in range(self.pb.num_species):
+                    for i in range(self.pb.num_species):
+                        if res == "concentration":
                             c_out = fem.Function(self.pb.V_out_scalar, name=self.pb.c["c" + str(i+1)].name)
                             c_out.interpolate(self.pb.c["c" + str(i+1)])
-                            self.pb.resultsfiles[res].write_function(c_out, indicator)
-                    else:
-                        raise NameError("Unknown output to write for scalar transport problem!")
+                            self.pb.resultsfiles[res + "_c" + str(i+1)].write_function(c_out, indicator)
+                        else:
+                            raise NameError("Unknown output to write for scalar transport problem!")
 
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
@@ -176,3 +164,10 @@ class IO_scatra(IO_field):
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")
+
+    def close_output_files(self):
+        if self.pb.io.write_results_every > 0:
+            for res in self.pb.results_to_write:
+                if res not in self.results_pre:
+                    for i in range(self.pb.num_species):
+                        self.pb.resultsfiles[res + "_c" + str(i+1)].close()

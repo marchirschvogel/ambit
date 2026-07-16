@@ -601,9 +601,9 @@ class constitutive_poro:
         mat_poro = materiallaw_poro(pp, cc)
         for key, value in self.materials.items():
             if key == "darcy":
-                Q_ += mat_poro.darcy(value, F=F)
+                Q_ += mat_poro.darcy(value, F)
             elif key == "darcy_schloegl":
-                Q_ += mat_poro.darcy_schloegl(value, F=F)
+                Q_ += mat_poro.darcy_schloegl(value, F)
             else:
                 raise NameError("Unknown porous material law '%s'!" % (key))
 

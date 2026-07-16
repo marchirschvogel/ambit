@@ -306,9 +306,9 @@ class ScatraProblem(problem_base):
                     self.variational_form_mid[i] += self.vf[i].diffusion_rate(self.cdot_mid[i], self.c_mid["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
 
                 # NOTE: Pass full list of c's to flux law, since we may have coupled processes at work...
-                self.variational_form[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c["c" + str(i+1)], c_coup=self.c), self.dx(M), F=self.alevar["Fale"])
-                self.variational_form_old[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_old["c" + str(i+1)], c_coup=self.c_old), self.dx(M), F=self.alevar["Fale_old"])
-                self.variational_form_mid[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_mid["c" + str(i+1)], c_coup=self.c_mid), self.dx(M), F=self.alevar["Fale_mid"])
+                self.variational_form[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c["c" + str(i+1)], c_coup=self.c, F=self.alevar["Fale"]), self.dx(M), F=self.alevar["Fale"])
+                self.variational_form_old[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_old["c" + str(i+1)], c_coup=self.c_old, F=self.alevar["Fale_old"]), self.dx(M), F=self.alevar["Fale_old"])
+                self.variational_form_mid[i] += self.vf[i].diffusion_flux(self.ma[i][n].diffusive_flux(self.c_mid["c" + str(i+1)], c_coup=self.c_mid, F=self.alevar["Fale_mid"]), self.dx(M), F=self.alevar["Fale_mid"])
 
         w_neumann, w_neumann_old, w_neumann_mid = [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species
 

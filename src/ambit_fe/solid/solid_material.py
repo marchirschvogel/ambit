@@ -432,12 +432,12 @@ class materiallaw_poro:
         self.pp = pp
         self.cc = cc
 
-    def darcy(self, params, F=None):
+    def darcy(self, params, F):
         k = params["k"]
         J = ufl.det(F)
         return -J * ufl.inv(F) * k * ufl.inv(F).T * ufl.grad(self.pp["phyd"])
 
-    def darcy_schloegl(self, params, F=None):
+    def darcy_schloegl(self, params, F):
         k = params["k"]
         k_os = params["k_os"]
         k_el = params["k_el"]
