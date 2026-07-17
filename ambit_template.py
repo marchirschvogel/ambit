@@ -28,7 +28,7 @@ def main():
                             "output_path"           : basepath+"/tmp/", # where results are written to
                             "output_path_0D"        : basepath+"/tmp/", # OPTIONAL: different output path for flow0d results (default: output_path)
                             "output_path_pre"       : basepath+"/tmp/", # OPTIONAL: different output path for pre-computed results (before time loop, e.g. prestress) (default: output_path)
-                            "results_to_write"      : ["displacement","velocity","pressure","cauchystress"], # see io_routines.py for what to write
+                            "results_to_write"      : {"solid": ["displacement","velocity","pressure","cauchystress"]}, # see io_routines.py for what to write
                             "simname"               : "my_simulation_name", # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             "restart_step"          : 0, # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
                             "print_enhanced_info"   : False} # OPTIONAL: some extra level of printing, e.g. assembly, ROM projection, preconditioner setup times, ... (default: False)
@@ -171,7 +171,8 @@ def main():
                                       "sussmanbathe_vol"   : {"kappa" : 1.0e3},
                                       "visco_green"        : {"eta" : 0.001},
                                       "active_fiber"       : {"sigma0" : 50.0, "alpha_max" : 15.0, "alpha_min" : -20.0, "activation_curve" : 4, "frankstarling" : True, "amp_min" : 1., "amp_max" : 1.7, "lam_threslo" : 1.01, "lam_maxlo" : 1.15, "lam_threshi" : 999., "lam_maxhi" : 9999.},
-                                      "inertia"            : {"rho0" : 1.0e-6}},
+                                      "inertia"            : {"rho0" : 1.0e-6},
+                                      "id": 1},
                             "MAT2" : {"neohooke_dev"       : {"mu" : 10.},
                                       "ogden_vol"          : {"kappa" : 10./(1.-2.*0.49)},
                                       "inertia"            : {"rho0" : 1.0e-6},
@@ -187,10 +188,13 @@ def main():
                                                               "tau_gr_rev" : 1000.0, # reverse growth time constant
                                                               "gamma_gr_rev" : 2.0, # reverse growth nonlinearity
                                                               "remodeling_mat" : {"neohooke_dev" : {"mu" : 3.}, # remodeling material
-                                                                                  "ogden_vol"    : {"kappa" : 3./(1.-2.*0.49)}}}}}
+                                                                                  "ogden_vol"    : {"kappa" : 3./(1.-2.*0.49)}}},
+                                       "id": 2}}
 
     MATERIALS_FLUID      = {"MAT1" : {"newtonian" : {"mu" : 4.0e-6},
-                                      "inertia"   : {"rho" : 1.025e-6}}}
+                                      "inertia"   : {"rho" : 1.025e-6},
+                                      "bodyforce" : {"dir": [0.0, -1.0, 0.0], "curve": 1, "scale_density": True},
+                                      "id": 3}}
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key "curve" : [X,0,0], or "curve" : X)
@@ -272,10 +276,10 @@ def main():
                                             {"type" : "dashpot", "id" : [3], "dir" : "xyz_ref", "visc" : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid/fluid to flow0d
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [[TIME_PARAMS_SOLID], TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS], [[MATERIALS], MODEL_PARAMS_FLOW0D], [BC_DICT], time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
 
     # problem setup for solid/fluid only: just pass parameters related to solid (fluid) instead of lists, so:
-    #problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
+    #problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID], SOLVER_PARAMS, [FEM_PARAMS], [MATERIALS], [BC_DICT], time_curves=time_curves(), mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

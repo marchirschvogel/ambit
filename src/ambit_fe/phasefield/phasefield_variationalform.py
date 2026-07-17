@@ -59,7 +59,7 @@ class variationalform(variationalform_base):
     def source_term_phi(self, func, phi_prod, ddomain, F=None, phi=None, return_type="weak"):
         source = func * 0.5*(phi_prod - phi)
         if return_type=="weak":
-            return ufl.dot(source, self.tstfnc1) * ddomain
+            return ufl.dot(source, self.var_phi) * ddomain
         elif return_type=="strong":
             return source
         else:
@@ -119,7 +119,7 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         source = J * func * 0.5*(phi_prod - phi)
         if return_type=="weak":
-            return ufl.dot(source, self.tstfnc1) * ddomain
+            return ufl.dot(source, self.var_phi) * ddomain
         elif return_type=="strong":
             return source
         else:

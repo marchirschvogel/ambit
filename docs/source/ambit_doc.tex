@@ -173,7 +173,7 @@ This documentation is structured as follows. In sec. \ref{installation}, instruc
 
 \section{Installation}\label{installation}
 
-In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible tested dolfinx release version: v0.10.0.post5).\\
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible tested dolfinx release version: v0.11.0.post0).\\
 
 Ambit can then be installed using pip, either the current release
 \begin{verbatim}
@@ -235,7 +235,7 @@ def main():
     
     # Finite element discretization
     FEM = {"order_disp"         : 1, # FEM degree for displacement field
-           "quad_degree"        : 2} # quadrature scheme degree
+           "quad_degree"        : 5} # quadrature scheme degree
     
     # Time curves
     class TC:
@@ -258,7 +258,7 @@ def main():
                           "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
     # Problem setup
-    problem = ambit_fe.ambit_main.Ambit(io_params=IO, ctrl_params=CTR, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+    problem = ambit_fe.ambit_main.Ambit(io_params=IO, ctrl_params=CTR, time_params=[TME], solver_params=SOL, fem_params=[FEM], constitutive_params=[MAT], boundary_conditions=[BC], time_curves=TC)
 
     # Run: solve the problem
     problem.solve_problem()
@@ -1449,7 +1449,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 -- conservative form of Navier-Stokes, with capillary force term:
 \begin{equation}
-\label{equation-fluid-strong-form}
+\label{equation-fluid-multi-strong-form}
 \begin{aligned}
 \frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) &= \nabla \cdot \bs{\sigma} -\phi\nabla\mu + \hat{\bs{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
 \frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v}) &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\

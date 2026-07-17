@@ -485,7 +485,7 @@ class PhasefieldProblem(problem_base):
                 f_source_mid.append(ufl.as_ufl(0))
 
         w_source, w_source_old, w_source_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
-        # now calculate body force virtual work
+        # now calculate source weak form
         for n, M in enumerate(self.domain_ids):
             if "source" in self.constitutive_models["MAT" + str(n + 1)].keys():
                 w_source += ufl.dot(f_source[n], self.var_phi) * self.dx(M)

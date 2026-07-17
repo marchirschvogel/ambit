@@ -24,6 +24,7 @@ class boundary_cond:
         self,
         pb,
         ti=None,
+        vf=None,
         dim=None,
         V_field=None,
         Vdisc_scalar=None,
@@ -31,6 +32,7 @@ class boundary_cond:
 
         self.pb = pb
         self.ti = ti  # is also part of pb, but may be a separately passed object (e.g. in case of multiple ti's per problem)
+        self.vf = vf  # is also part of pb, but may be a separately passed object (e.g. in case of multiple vf's per problem)
 
         if dim is None:
             self.dim = V_field.mesh.topology.dim
@@ -1212,6 +1214,42 @@ class boundary_cond_scatra(boundary_cond):
                 raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
             for i in range(len(n[ID])):
-                w += self.pb.vf[0].weakform_neumann(func, ds_[dind](n[ID][i]), F=F)
+                w += self.vf.weakform_neumann(func, ds_[dind](n[ID][i]), F=F)
 
         return w
+
+    # set source tems (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
+    def source(self, mdict, dx_, F=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="weak"):
+        func = fem.Function(self.Vdisc_scalar)
+
+        if "curve" in mdict.keys():
+            assert "val" not in mdict.keys() and "expression" not in mdict.keys()
+            load = expression.template()
+            load.val = self.ti.timecurves(mdict["curve"])(self.ti.t_init)
+            func.interpolate(load.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
+            funcs_to_update.append({func: self.ti.timecurves(mdict["curve"])})
+        elif "val" in mdict.keys():
+            assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
+            func.x.petsc_vec.set(mdict["val"])
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
+        elif "expression" in mdict.keys():
+            assert "curve" not in mdict.keys() and "val" not in mdict.keys()
+            expr = mdict["expression"]()
+            expr.t = self.ti.t_init
+            func.interpolate(expr.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
+            )
+            funcsexpr_to_update[func] = expr
+        else:
+            raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+
+        return self.vf.source_term(func, dx_, F=F, return_type=return_type)

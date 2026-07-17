@@ -26,15 +26,19 @@ The following is supported:
 * Fluid dynamics
   - Incompressible Navier-Stokes/Stokes equations, either in nonconservative or conservative formulation
   - Navier-Stokes/Stokes flow in an Arbitrary Lagrangian Eulerian (ALE) reference frame
-  - Cahn-Hilliard Navier-Stokes equations (Eulerian or ALE) for multiphase flow
+  - Cahn-Hilliard-Navier-Stokes equations (Eulerian or ALE) for multiphase flow
   - BDF2, one-step theta, or generalized-alpha time integration
   - SUPG/PSPG stabilization for equal-order approximations of velocity and pressure
+* Scalar transport
+  - Supports n scalar transport equations, either in Eulerian or ALE reference frame
+  - Coupling between the individual equations provided by special constitutive laws or easily extensible by user
+  - Can be hooked to any solid mechanics problem (fluid coupling to be implemented)
 * Lumped (0D) models
   - Systemic and pulmonary circulation flow models
   - 2-element as well as 4-element Windkessel models
   - Signalling network model
 * Coupling of different physics:
-  - Fluid-solid interaction (FSI): Monolithic FSI in ALE formulation using Lagrange multiplier
+  - Fluid-solid interaction (FSI): Monolithic FSI in ALE formulation, single- or multiphase fluid
   - Monolithic coupling of 3D solid/fluid/ALE-fluid and FSI with lumped 0D flow models
   - Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
 * Fluid-reduced-solid interaction (FrSI)
@@ -48,7 +52,7 @@ The following is supported:
 Still experimental / to-do:
 
 - Finite strain plasticity / sophisticated solid constitutive models beyond hyperelasticity
-- Electrophysiology/scalar transport
+- Electrophysiology
 - ... whatever might be wanted in some future ...
 
 ### Documentation ###
@@ -59,8 +63,8 @@ Documentation can be viewed at https://ambit.readthedocs.io
 
 In order to use Ambit, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation)
 
-Latest Ambit-compatible dolfinx release version: v0.10.0.post5\
-Latest tested Ambit-compatible dolfinx development version dating to 1 Mar 2026
+Latest Ambit-compatible dolfinx release version: v0.11.0.post0\
+Latest tested Ambit-compatible dolfinx development version: to be tested...
 
 Ambit can then be installed using pip, either the current release
 ```

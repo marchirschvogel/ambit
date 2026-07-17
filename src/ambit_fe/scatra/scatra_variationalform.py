@@ -38,11 +38,20 @@ class variationalform(variationalform_base):
     def diffusion_flux(self, difflux, ddomain, F=None):
         return ufl.inner(difflux, ufl.grad(self.var_c)) * ddomain
 
-    def weakform_neumann(self, c1, dboundary, F=None):
-        return c1 * self.var_c * dboundary
+    def weakform_neumann(self, k, dboundary, F=None):
+        return k * self.var_c * dboundary
 
     def weakform_robin(self, k, c, c0, dboundary, F=None):
         return (k * (c - c0) * self.var_c) * dboundary
+
+    def source_term(self, func, ddomain, F=None, return_type="weak"):
+        if return_type=="weak":
+            return ufl.dot(func, self.var_c) * ddomain
+        elif return_type=="strong":
+            return func
+        else:
+            raise ValueError("Unknown return type.")
+
 
 class variationalform_ale(variationalform):
     def diffusion_rate(self, cdot, c, ddomain, v=None, w=None, F=None):
@@ -63,3 +72,12 @@ class variationalform_ale(variationalform):
     def diffusion_flux(self, difflux, ddomain, F=None):
         J = ufl.det(F)
         return J*ufl.inner(ufl.inv(F)*difflux, ufl.grad(self.var_c)) * ddomain
+
+    def source_term(self, func, ddomain, F=None, return_type="weak"):
+        J = ufl.det(F)
+        if return_type=="weak":
+            return J*ufl.dot(func, self.var_c) * ddomain
+        elif return_type=="strong":
+            return J*func
+        else:
+            raise ValueError("Unknown return type.")

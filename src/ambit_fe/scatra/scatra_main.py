@@ -236,7 +236,8 @@ class ScatraProblem(problem_base):
         for i in range(self.num_species):
             self.bc.append(boundaryconditions.boundary_cond_scatra(
                 self,
-                self.ti[i],
+                ti=self.ti[i],
+                vf=self.vf[i],
                 V_field=self.V_c,
                 Vdisc_scalar=self.Vd_scalar,
             ))
@@ -333,10 +334,54 @@ class ScatraProblem(problem_base):
                     funcsexpr_to_update=self.ti[i].funcsexpr_to_update_mid,
                 )
 
+        # now take care of source terms - collect sources, later multiply with test function and integrate over domain (might be beneficial if we need the strong residual expression at some point...)
+        f_source, f_source_old, f_source_mid = [[] for _ in range(self.num_species)], [[] for _ in range(self.num_species)], [[] for _ in range(self.num_species)]
         for i in range(self.num_species):
-            self.variational_form[i] += -w_neumann[i]
-            self.variational_form_old[i] += -w_neumann_old[i]
-            self.variational_form_mid[i] += -w_neumann_mid[i]
+            for n, M in enumerate(self.domain_ids):
+                if "source" in self.constitutive_models[i]["MAT" + str(n + 1)].keys():
+                    self.have_source_phi = True
+                    f_source[i].append(self.bc[i].source(
+                        self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
+                        self.dx(M),
+                        F=self.alevar["Fale"],
+                        funcs_to_update=self.ti[i].funcs_to_update,
+                        funcsexpr_to_update=self.ti[i].funcsexpr_to_update,
+                        return_type="strong",
+                    ))
+                    f_source_old[i].append(self.bc[i].source(
+                        self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
+                        self.dx(M),
+                        F=self.alevar["Fale_old"],
+                        funcs_to_update=self.ti[i].funcs_to_update_old,
+                        funcsexpr_to_update=self.ti[i].funcsexpr_to_update_old,
+                        return_type="strong",
+                    ))
+                    f_source_mid[i].append(self.bc[i].source(
+                        self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
+                        self.dx(M),
+                        F=self.alevar["Fale_mid"],
+                        funcs_to_update=self.ti[i].funcs_to_update_mid,
+                        funcsexpr_to_update=self.ti[i].funcsexpr_to_update_mid,
+                        return_type="strong",
+                    ))
+                else:
+                    f_source[i].append(ufl.as_ufl(0))
+                    f_source_old[i].append(ufl.as_ufl(0))
+                    f_source_mid[i].append(ufl.as_ufl(0))
+
+        w_source, w_source_old, w_source_mid = [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species, [ufl.as_ufl(0)] * self.num_species
+        # now calculate source weak form
+        for i in range(self.num_species):
+            for n, M in enumerate(self.domain_ids):
+                if "source" in self.constitutive_models[i]["MAT" + str(n + 1)].keys():
+                    w_source[i] += ufl.dot(f_source[i][n], self.var_c[i]) * self.dx(M)
+                    w_source_old[i] += ufl.dot(f_source_old[i][n], self.var_c[i]) * self.dx(M)
+                    w_source_mid[i] += ufl.dot(f_source_mid[i][n], self.var_c[i]) * self.dx(M)
+
+        for i in range(self.num_species):
+            self.variational_form[i] += -w_neumann[i] - w_source[i]
+            self.variational_form_old[i] += -w_neumann_old[i] - w_source_old[i]
+            self.variational_form_mid[i] += -w_neumann_mid[i] - w_source_mid[i]
 
         self.weakform_c = [None] * self.num_species
         for i in range(self.num_species):
