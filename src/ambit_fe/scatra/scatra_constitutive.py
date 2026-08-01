@@ -33,10 +33,12 @@ class constitutive:
 
         for key, value in self.materials.items():
             if key not in self.mat_void:
-                if key == "mat_diff":
-                    difflux += mat_flux.mat_diff(value, F=F)
-                elif key == "mat_diff_coup":
-                    difflux += mat_flux.mat_diff_coup(value, F=F)
+                if key == "diffusion_grad_c":
+                    difflux += mat_flux.diffusion_grad_c(value, F=F)
+                elif key == "diffusion_grad_ccoup":
+                    difflux += mat_flux.diffusion_grad_ccoup(value, F=F)
+                elif key == "diffusion_c_grad_ccoup":
+                    difflux += mat_flux.diffusion_c_grad_ccoup(value, F=F)
                 else:
                     raise NameError("Unknown scalar transport material law '%s'!" % (key))
 

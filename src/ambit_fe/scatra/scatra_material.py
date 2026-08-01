@@ -14,7 +14,7 @@ class materiallaw:
         self.c = c
         self.c_coup = c_coup
 
-    def mat_diff(self, params, F=None):
+    def diffusion_grad_c(self, params, F=None):
         D = params["D"]
 
         if F is not None:
@@ -24,18 +24,24 @@ class materiallaw:
 
         return D * grad_c
 
-
-    def mat_diff_coup(self, params, F=None):
-        D, Dc = params["D"], params["Dc"]
+    def diffusion_grad_ccoup(self, params, F=None):
+        D = params["D"]
         cc = params["cc"]
 
-        # c_eff = ufl.max_value(self.c, 1e-8)
-
         if F is not None:
-            grad_c = ufl.inv(F).T*ufl.grad(self.c)
             grad_cc = ufl.inv(F).T*ufl.grad(self.c_coup[cc])
         else:
-            grad_c = ufl.grad(self.c)
             grad_cc = ufl.grad(self.c_coup[cc])
 
-        return D * (grad_c + Dc * grad_cc)
+        return D * grad_cc
+
+    def diffusion_c_grad_ccoup(self, params, F=None):
+        D = params["D"]
+        cc = params["cc"]
+
+        if F is not None:
+            grad_cc = ufl.inv(F).T*ufl.grad(self.c_coup[cc])
+        else:
+            grad_cc = ufl.grad(self.c_coup[cc])
+
+        return D * self.c * grad_cc

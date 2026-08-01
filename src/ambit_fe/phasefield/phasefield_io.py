@@ -58,37 +58,17 @@ class IO_phasefield(IO_field):
                 # save solution to XDMF format
                 for res in self.pb.results_to_write:
                     if res == "phase":
+                        phi_out = fem.Function(self.pb.V_out_scalar, name=self.pb.phi.name)
                         if self.pb.io.output_midpoint:
-                            phi_proj = project(
-                                self.pb.phi_mid,
-                                self.pb.V_phi,
-                                self.pb.dx,
-                                domids=self.pb.domain_ids,
-                                nm="PhaseField",
-                                comm=self.pb.comm,
-                                entity_maps=self.pb.io.entity_maps,
-                            )
-                            phi_out = fem.Function(self.pb.V_out_scalar, name=phi_proj.name)
-                            phi_out.interpolate(phi_proj)
+                            phi_out.interpolate(fem.Expression(self.pb.phi_mid, self.pb.V_out_scalar.element.interpolation_points))
                         else:
-                            phi_out = fem.Function(self.pb.V_out_scalar, name=self.pb.phi.name)
                             phi_out.interpolate(self.pb.phi)
                         self.pb.resultsfiles[res].write_function(phi_out, indicator)
                     elif res == "potential":
+                        mu_out = fem.Function(self.pb.V_out_scalar, name=self.pb.mu.name)
                         if self.pb.io.output_midpoint:
-                            mu_proj = project(
-                                self.pb.mu_mid,
-                                self.pb.V_mu,
-                                self.pb.dx,
-                                domids=self.pb.domain_ids,
-                                nm="Potential",
-                                comm=self.pb.comm,
-                                entity_maps=self.pb.io.entity_maps,
-                            )
-                            mu_out = fem.Function(self.pb.V_out_scalar, name=mu_proj.name)
-                            mu_out.interpolate(mu_proj)
+                            mu_out.interpolate(fem.Expression(self.pb.mu_mid, self.pb.V_out_scalar.element.interpolation_points))
                         else:
-                            mu_out = fem.Function(self.pb.V_out_scalar, name=self.pb.mu.name)
                             mu_out.interpolate(self.pb.mu)
                         self.pb.resultsfiles[res].write_function(mu_out, indicator)
                     else:

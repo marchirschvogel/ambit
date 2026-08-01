@@ -76,38 +76,19 @@ class IO_fluid(IO_field):
                 # save solution to XDMF format
                 for res in self.pb.results_to_write:
                     if res == "velocity":
+                        v_out = fem.Function(self.pb.V_out_vector, name=self.pb.v.name)
                         if self.pb.io.output_midpoint:
-                            v_proj = project(
-                                self.pb.vel_mid,
-                                self.pb.V_v,
-                                self.pb.dx,
-                                domids=self.pb.domain_ids,
-                                nm="Velocity",
-                                comm=self.pb.comm,
-                                entity_maps=self.pb.io.entity_maps,
-                            )
-                            v_out = fem.Function(self.pb.V_out_vector, name=v_proj.name)
-                            v_out.interpolate(v_proj)
+                            v_out.interpolate(fem.Expression(self.pb.vel_mid, self.pb.V_out_vector.element.interpolation_points))
                         else:
-                            v_out = fem.Function(self.pb.V_out_vector, name=self.pb.v.name)
                             v_out.interpolate(self.pb.v)
                         self.pb.resultsfiles[res].write_function(v_out, indicator)
-                    elif res == "acceleration":  # passed in a is not a function but form, so we have to project
+                    elif res == "acceleration":
                         if self.pb.io.output_midpoint:
                             acc = self.pb.acc_mid
                         else:
                             acc = self.pb.acc
-                        a_proj = project(
-                            acc,
-                            self.pb.V_v,
-                            self.pb.dx,
-                            domids=self.pb.domain_ids,
-                            nm="Acceleration",
-                            comm=self.pb.comm,
-                            entity_maps=self.pb.io.entity_maps,
-                        )
-                        a_out = fem.Function(self.pb.V_out_vector, name=a_proj.name)
-                        a_out.interpolate(a_proj)
+                        a_out = fem.Function(self.pb.V_out_vector, name="Acceleration")
+                        a_out.interpolate(fem.Expression(acc, self.pb.V_out_vector.element.interpolation_points))
                         self.pb.resultsfiles[res].write_function(a_out, indicator)
                     elif res == "pressure":
                         if bool(self.pb.io.duplicate_mesh_domains):
@@ -116,37 +97,17 @@ class IO_fluid(IO_field):
                                     self.pb.io.submshes_emap[m + 1][0],
                                     ("Lagrange", self.pb.mesh_degree),
                                 )
+                                p_out = fem.Function(V_out_scalar_sub, name=self.pb.p_[m].name)
                                 if self.pb.io.output_midpoint:
-                                    p_proj = project(
-                                        self.pb.pf_mid_[m],
-                                        self.pb.V_p_[m],
-                                        self.pb.dx_p[m],
-                                        domids=[self.pb.domain_ids[m]],
-                                        nm=self.pb.p_[m].name,
-                                        comm=self.pb.comm,
-                                        entity_maps=[self.pb.io.submshes_emap[m + 1][1]],
-                                    )
-                                    p_out = fem.Function(V_out_scalar_sub, name=p_proj.name)
-                                    p_out.interpolate(p_proj)
+                                    p_out.interpolate(fem.Expression(self.pb.pf_mid_[m], V_out_scalar_sub.element.interpolation_points))
                                 else:
-                                    p_out = fem.Function(V_out_scalar_sub, name=self.pb.p_[m].name)
                                     p_out.interpolate(self.pb.p_[m])
                                 self.pb.resultsfiles[res + str(m + 1)].write_function(p_out, indicator)
                         else:
+                            p_out = fem.Function(self.pb.V_out_scalar, name=self.pb.p_[0].name)
                             if self.pb.io.output_midpoint:
-                                p_proj = project(
-                                    self.pb.pf_mid_[0],
-                                    self.pb.V_p_[0],
-                                    self.pb.dx,
-                                    domids=self.pb.domain_ids,
-                                    nm=self.pb.p_[0].name,
-                                    comm=self.pb.comm,
-                                    entity_maps=self.pb.io.entity_maps,
-                                )
-                                p_out = fem.Function(self.pb.V_out_scalar, name=p_proj.name)
-                                p_out.interpolate(p_proj)
+                                p_out.interpolate(fem.Expression(self.pb.pf_mid_[0], self.pb.V_out_scalar.element.interpolation_points))
                             else:
-                                p_out = fem.Function(self.pb.V_out_scalar, name=self.pb.p_[0].name)
                                 p_out.interpolate(self.pb.p_[0])
                             self.pb.resultsfiles[res].write_function(p_out, indicator)
                     elif res == "cauchystress":
@@ -169,22 +130,13 @@ class IO_fluid(IO_field):
                         cauchystress_out = fem.Function(self.pb.V_out_tensor, name=cauchystress.name)
                         cauchystress_out.interpolate(cauchystress)
                         self.pb.resultsfiles[res].write_function(cauchystress_out, indicator)
-                    elif res == "fluiddisplacement":  # passed in uf is not a function but form, so we have to project
+                    elif res == "fluiddisplacement":
                         if self.pb.io.output_midpoint:
                             uf = self.pb.ufluid_mid
                         else:
                             uf = self.pb.ufluid
-                        uf_proj = project(
-                            uf,
-                            self.pb.V_v,
-                            self.pb.dx,
-                            domids=self.pb.domain_ids,
-                            nm="FluidDisplacement",
-                            comm=self.pb.comm,
-                            entity_maps=self.pb.io.entity_maps,
-                        )
-                        uf_out = fem.Function(self.pb.V_out_vector, name=uf_proj.name)
-                        uf_out.interpolate(uf_proj)
+                        uf_out = fem.Function(self.pb.V_out_vector, name="FluidDisplacement")
+                        uf_out.interpolate(fem.Expression(uf, self.pb.V_out_vector.element.interpolation_points))
                         self.pb.resultsfiles[res].write_function(uf_out, indicator)
                     elif res == "fibers":
                         # written only once at the beginning, not after each time step (since constant in time)

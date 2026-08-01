@@ -49,7 +49,7 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
-    MATERIALS = [{"MAT1": {"mat_diff": {"D": 1.0}, "id": locate_all()}}]
+    MATERIALS = [{"MAT1": {"diffusion_grad_c": {"D": 1.0}, "id": locate_all()}}]
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:

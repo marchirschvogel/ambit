@@ -395,10 +395,14 @@ class SolidmechanicsProblem(problem_base):
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.mesh)
 
+        self.numdof = self.u.x.petsc_vec.getSize()
         if self.incompressible_2field:
-            self.numdof = self.u.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
-        else:
-            self.numdof = self.u.x.petsc_vec.getSize()
+            self.numdof += self.p.x.petsc_vec.getSize()
+        if self.is_poroelastic:
+            self.numdof += self.phyd.x.petsc_vec.getSize()
+        if self.have_diffusion:
+            for i in range(self.pbscat.num_species):
+                self.numdof += self.pbscat.c["c" + str(i+1)].x.petsc_vec.getSize()
 
         self.mor_params = mor_params
 

@@ -339,10 +339,10 @@ class ScatraProblem(problem_base):
         for i in range(self.num_species):
             for n, M in enumerate(self.domain_ids):
                 if "source" in self.constitutive_models[i]["MAT" + str(n + 1)].keys():
-                    self.have_source_phi = True
                     f_source[i].append(self.bc[i].source(
                         self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
                         self.dx(M),
+                        c_coup=self.c,
                         F=self.alevar["Fale"],
                         funcs_to_update=self.ti[i].funcs_to_update,
                         funcsexpr_to_update=self.ti[i].funcsexpr_to_update,
@@ -351,6 +351,7 @@ class ScatraProblem(problem_base):
                     f_source_old[i].append(self.bc[i].source(
                         self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
                         self.dx(M),
+                        c_coup=self.c_old,
                         F=self.alevar["Fale_old"],
                         funcs_to_update=self.ti[i].funcs_to_update_old,
                         funcsexpr_to_update=self.ti[i].funcsexpr_to_update_old,
@@ -359,6 +360,7 @@ class ScatraProblem(problem_base):
                     f_source_mid[i].append(self.bc[i].source(
                         self.constitutive_models[i]["MAT" + str(n + 1)]["source"],
                         self.dx(M),
+                        c_coup=self.c_mid,
                         F=self.alevar["Fale_mid"],
                         funcs_to_update=self.ti[i].funcs_to_update_mid,
                         funcsexpr_to_update=self.ti[i].funcsexpr_to_update_mid,
@@ -479,15 +481,15 @@ class ScatraProblem(problem_base):
         for i in range(self.num_species):
             self.ti[i].set_time_funcs(t, dt)
 
-        # DBC from files - TODO for multiple species...
-        if self.bc[0].have_dirichlet_fileseries:
-            for m in self.ti[0].funcs_data:
-                file = list(m.values())[0].replace("*", str(N))
-                func = list(m.keys())[0]
-                self.io.readfunction(func, file)
-                sc = m["scale"]
-                if sc != 1.0:
-                    func.x.petsc_vec.scale(sc)
+            # DBC from files - TODO for multiple species...
+            if self.bc[i].have_dirichlet_fileseries:
+                for m in self.ti[i].funcs_data:
+                    file = list(m.values())[0].replace("*", str(N))
+                    func = list(m.keys())[0]
+                    self.io.readfunction(func, file)
+                    sc = m["scale"]
+                    if sc != 1.0:
+                        func.x.petsc_vec.scale(sc)
 
     def evaluate_post_solve(self, t, N):
         pass

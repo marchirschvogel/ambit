@@ -25,17 +25,17 @@ def test_main():
 
     IO_PARAMS = {
         "problem_type": "solid",
-        "mesh_domain": {"type": "rectangle", "celltype": "quadrilateral", "coords_a": [0.0, 0.0], "coords_b": [0.127, 0.127], "meshsize": [20,20]},
+        "mesh_domain": {"type": "rectangle", "celltype": "quadrilateral", "coords_a": [0.0, 0.0], "coords_b": [0.127, 0.127], "meshsize": [160,160]},
         "indicate_results_by": "step0",
         "write_results_every": 1,
         "write_restart_every": -1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": {"solid": ["displacement", "porehydpressure"], "scatra": {"concentration"}},
+        "results_to_write": {"solid": ["displacement", "porehydpressure", "vonmises_cauchystress"], "scatra": {"concentration"}},
         "simname": "solid_poro_dary_schloegl_nernst_planck_electrostatics",
     }
 
-    CONTROL_PARAMS = {"maxtime": 1.0,
+    CONTROL_PARAMS = {"maxtime": 4.0,
                       "numstep": 100,
                       # "numstep_stop": 5,
                       }
@@ -44,7 +44,7 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "tol_res": 1.0e-8,
-        "tol_inc": 1.0e-8,
+        "tol_inc": 1.0e-6,
     }
 
     TIME_PARAMS = {
@@ -75,19 +75,42 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
+    # Antonini et al. parameters
+    nS_0S = 0.61 #-
+    KS0   = 4.77e-14 #mm2
+    etaFR = 3.55e-10 #N*s/mm2
+    nF_0S = 1.0 - nS_0S #-
+    epsF = 100.0 #C/Nmm2
+    F = 96485.0 #C/mol
+    z_fc = -1.0 #-
+    z_proton = 1.0 #-
+    teta = 353.0 #K
+    MmH = 1.008e-3 #kg/mol
+    R = 8314.4 #(N*mm)/(mol*K)
+    D_proton = 1.35e-3 #mm2/s
+    cmfc_0S = 2.8e-6 #mol/mm3
+    cmH20 = 55.5e-6 #mol/mm3
+
+
     mu, kappa = 110., 330.  # 110 and 330 MPa (=N/mm^2), cf. Antonini et al. (2025)
     MATERIALS = {
         "MAT1": {
             "neohooke_dev": {"mu": mu},
             "ogden_vol": {"kappa": kappa},
             "inertia": {"rho0": 1e-6},
-            "MAT_PORO": {"darcy_schloegl": {"k": 1.0e-2, "k_os": 1e-3, "k_el": 1e-3}},
+            "MAT_PORO": {"darcy_schloegl": {"k": KS0/etaFR, "k_os": R*teta, "k_el": z_proton*F}},
             "id": locate_all(),
         }
     }
 
-    MATERIALS_SC = [{"MAT1": {"mat_diff_coup": {"D": 1e-2, "Dc": 1.0, "cc": "c2"}, "id": locate_all()}},  # Nernst-Planck equation for flux of protons
-                    {"MAT1": {"mat_diff": {"D": 1e-2}, "id": locate_all()}}]  # Poisson equation of electrostatics
+                     # Proton concentration
+    MATERIALS_SC = [{"MAT1": {"diffusion_grad_c":       {"D": D_proton},  # Nernst-Planck equation for flux of protons
+                              # "diffusion_c_grad_ccoup": {"D": D_proton*z_proton*F/(R*teta), "cc": "c2"},
+                              "id": locate_all()}},
+                     # Electric Potential
+                    {"MAT1": {"diffusion_grad_c": {"D": 1.0},  # Poisson equation of electrostatics
+                              "source": {"type": "coup", "val": F*z_proton/epsF, "cc": "c1"},
+                              "id": locate_all()}}]
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -110,28 +133,61 @@ def test_main():
         def evaluate(self, x):
             return np.isclose(x[1], 0.127)
 
-    class expr_dbc_poro:
-        def __init__(self):
-            self.t = 0.0
-
-        def evaluate(self, x):
-            val = 1.0
-            return (np.full(x.shape[1], val))
-
-
     class expression_neu:
         def __init__(self):
             self.t = 0.0
-            self.t_ramp = 0.5
-            self.delta = 1.0 # in [0, 1]
-            self.lmbda = 0.02 # mm
+            self.t_ramp = 1.0
+
+            self.h = 0.127
+            self.dy = 0.005
         def evaluate(self, x):
-            g0 = -10.0
+            g0 = -50.0
             val_t = g0 * 0.5 * (1.0 - np.cos(np.pi * self.t / self.t_ramp)) * (
                 self.t < self.t_ramp
             ) + g0 * (self.t >= self.t_ramp)
-            val = val_t * (1.+self.delta*np.sin(2.*np.pi*x[1]/self.lmbda))
+
+            val = val_t * (x[1]>=0.1*self.h-self.dy/2.)*(x[1]<0.1*self.h+self.dy/2.) + \
+                  val_t * (x[1]>=0.3*self.h-self.dy/2.)*(x[1]<0.3*self.h+self.dy/2.) + \
+                  val_t * (x[1]>=0.5*self.h-self.dy/2.)*(x[1]<0.5*self.h+self.dy/2.) + \
+                  val_t * (x[1]>=0.7*self.h-self.dy/2.)*(x[1]<0.7*self.h+self.dy/2.) + \
+                  val_t * (x[1]>=0.9*self.h-self.dy/2.)*(x[1]<0.9*self.h+self.dy/2.)
             return (np.full(x.shape[1], val))
+
+    class expr_dbc_poro:
+        def __init__(self):
+            self.t = 0.0
+            self.t_off = 1.0
+            self.t_ramp = 0.5
+            self.p0 = 0.0
+            self.p1 = 0.1
+        def evaluate(self, x):
+            val = self.p0*(self.t < self.t_off) + (self.p0 + (self.p1-self.p0) * (self.t-self.t_off)/self.t_ramp) * (self.t >= self.t_off)*(self.t < self.t_off+self.t_ramp) + self.p1*(self.t >= self.t_off+self.t_ramp)
+            return (np.full(x.shape[1], val))
+
+    class expr_dbc_cm:
+        def __init__(self):
+            self.t = 0.0
+            self.t_off = 2.0
+            self.t_ramp = 0.5
+            self.cm0 = 2.8e-6
+            self.cm1 = 2.9e-6
+        def evaluate(self, x):
+            val = self.cm0*(self.t < self.t_off) + (self.cm0 + (self.cm1-self.cm0) * (self.t-self.t_off)/self.t_ramp) * (self.t >= self.t_off)*(self.t < self.t_off+self.t_ramp) + self.cm1*(self.t >= self.t_off+self.t_ramp)
+            return (np.full(x.shape[1], val))
+
+
+    class expr_dbc_phie:
+        def __init__(self):
+            self.t = 0.0
+            self.t_off = 2.0
+            self.t_ramp = 0.5
+            self.phie0 = 0.0
+            self.phie1 = 247.0
+        def evaluate(self, x):
+            val = self.phie0*(self.t < self.t_off) + (self.phie0 + (self.phie1-self.phie0) * (self.t-self.t_off)/self.t_ramp) * (self.t >= self.t_off)*(self.t < self.t_off+self.t_ramp) + self.phie1*(self.t >= self.t_off+self.t_ramp)
+            return (np.full(x.shape[1], val))
+
+
 
     BC_DICT = {
         "dirichlet": [{"id": [locate_right()], "dir": "x", "val": 0.0},
@@ -141,10 +197,15 @@ def test_main():
         "neumann": [{"id": [locate_left()], "dir": "normal_cur", "expression": expression_neu}],
     }
 
-    BC_DICT_SC = {"dirichlet_c1": [{"id": [locate_left()], "val": 2.8},  # mol/l
-                                   {"id": [locate_right()], "val": 2.8}],  # mol/l
-                  "dirichlet_c2": [{"id": [locate_left()], "val": 125.0},  # mV
-                                   {"id": [locate_right()], "val": 0.0}]}  # mV
+    BC_DICT_SC = {"dirichlet_c1": [
+                                   {"id": [locate_left()], "expression": expr_dbc_cm},
+                                   {"id": [locate_right()], "val": 2.8e-6},  # mol/mm^3
+                                   ],
+                  "dirichlet_c2": [
+                                   {"id": [locate_left()], "expression": expr_dbc_phie},  # mV
+                                   {"id": [locate_right()], "val": 0.0},  # mV
+                                   ]
+                  }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(

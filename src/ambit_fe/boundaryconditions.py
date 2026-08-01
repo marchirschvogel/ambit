@@ -1219,7 +1219,7 @@ class boundary_cond_scatra(boundary_cond):
         return w
 
     # set source tems (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def source(self, mdict, dx_, F=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="weak"):
+    def source(self, mdict, dx_, c_coup=None, F=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="weak"):
         func = fem.Function(self.Vdisc_scalar)
 
         if "curve" in mdict.keys():
@@ -1252,4 +1252,13 @@ class boundary_cond_scatra(boundary_cond):
         else:
             raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-        return self.vf.source_term(func, dx_, F=F, return_type=return_type)
+        # type of source term model
+        stype = mdict.get("type", "const")
+
+        if stype == "const":
+            return self.vf.source_term(func, dx_, F=F, return_type=return_type)
+        elif stype == "coup":
+            cc_id = mdict.get("cc", "c1")
+            return self.vf.source_term_coup(func, c_coup[cc_id], dx_, F=F, return_type=return_type)
+        else:
+            raise ValueError("Unknown source type!")

@@ -52,6 +52,14 @@ class variationalform(variationalform_base):
         else:
             raise ValueError("Unknown return type.")
 
+    def source_term_coup(self, func, c_coup, ddomain, F=None, return_type="weak"):
+        if return_type=="weak":
+            return ufl.dot(c_coup * func, self.var_c) * ddomain
+        elif return_type=="strong":
+            return c_coup * func
+        else:
+            raise ValueError("Unknown return type.")
+
 
 class variationalform_ale(variationalform):
     def diffusion_rate(self, cdot, c, ddomain, v=None, w=None, F=None):
@@ -79,5 +87,14 @@ class variationalform_ale(variationalform):
             return J*ufl.dot(func, self.var_c) * ddomain
         elif return_type=="strong":
             return J*func
+        else:
+            raise ValueError("Unknown return type.")
+
+    def source_term_coup(self, func, c_coup, ddomain, F=None, return_type="weak"):
+        J = ufl.det(F)
+        if return_type=="weak":
+            return J*ufl.dot(func * c_coup, self.var_c) * ddomain
+        elif return_type=="strong":
+            return J*func * c_coup
         else:
             raise ValueError("Unknown return type.")

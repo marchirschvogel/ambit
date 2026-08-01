@@ -81,7 +81,7 @@ def test_main():
         }
     }
 
-    MATERIALS_SC = [{"MAT1": {"mat_diff": {"D": 1e-2}}}]
+    MATERIALS_SC = [{"MAT1": {"diffusion_grad_c": {"D": 1e-2}}}]
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:

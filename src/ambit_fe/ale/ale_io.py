@@ -62,17 +62,8 @@ class IO_ale(IO_field):
                         d_out.interpolate(self.pb.d)
                         self.pb.resultsfiles[res].write_function(d_out, indicator)
                     elif res == "alevelocity":
-                        w_proj = project(
-                            self.pb.wel,
-                            self.pb.V_d,
-                            self.pb.dx,
-                            domids=self.pb.domain_ids,
-                            nm="AleVelocity",
-                            comm=self.pb.comm,
-                            entity_maps=self.pb.io.entity_maps,
-                        )
-                        w_out = fem.Function(self.pb.V_out_vector, name=w_proj.name)
-                        w_out.interpolate(w_proj)
+                        w_out = fem.Function(self.pb.V_out_vector, name="AleVelocity")
+                        w_out.interpolate(fem.Expression(self.pb.wel, self.pb.V_out_vector.element.interpolation_points))
                         self.pb.resultsfiles[res].write_function(w_out, indicator)
                     elif res == "alestress": # might be needed for some debugging purposes...
                         stressfuncs = []
