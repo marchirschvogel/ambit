@@ -178,7 +178,7 @@ class FSIProblem(problem_base):
         self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "no_slip")  # no_slip, slip
         self.fsi_kinematic_quantity = self.coupling_params.get("fsi_kinematic_quantity", "displacement")  # displacement, velocity
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann")  # neumann_neumann, neumann_dirichlet
-        self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {})  # only for multiphase FSI
+        self.fluid_solid_surface_tension = self.coupling_params.get("fluid_solid_surface_tension", {})  # only for multiphase FSI
 
     def get_problem_var_list(self):
         vlist_, is_ghosted = self.pbs.get_problem_var_list()

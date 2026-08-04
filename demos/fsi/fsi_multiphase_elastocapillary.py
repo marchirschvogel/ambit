@@ -194,11 +194,13 @@ def main():
 
     sig_sl = 36.
     sig_sa = 31.
-    wet = 3.*(sig_sa-sig_sl)/4.
     COUPLING_PARAMS_FSI = {
         "coupling_fsi": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
-        "wetting_condition_interface": {"c1": wet}, # wetting Robin condition at interface
+        "fluid_solid_surface_tension": {"sig_sf1": sig_sa,
+                                        "sig_sf2": sig_sl,
+                                        "wetting": True,
+                                        "traction": True},
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!

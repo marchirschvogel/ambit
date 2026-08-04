@@ -272,12 +272,12 @@ def check_params_coupling_fsi_fluid_ale(params):
         "coupling_fsi",
         "coupling_phase_solidscatra",
         "coupling_strategy",
+        "fluid_solid_surface_tension",
         "fsi_interface_motion",
         "fsi_kinematic_coupling",
         "fsi_kinematic_quantity",
         "fsi_system",
         "k_pen",
-        "wetting_condition_interface",
     ]
 
     for k in params.keys():

@@ -124,8 +124,8 @@ def test_main():
     sig_sa = 31e-3
     COUPLING_PARAMS_FSI = {
         "coupling_fsi": {"interface": [locate_interf()]},
-        "fsi_system": "neumann_dirichlet",
-        "wetting_condition_interface": {"c1": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
+        "fsi_system": "neumann_dirichlet",  # neumann_dirichlet, neumann_neumann
+        "fluid_solid_surface_tension": {"sig_sf1": sig_sa, "sig_sf2": sig_sl, "wetting": True, "traction": True},
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
@@ -234,11 +234,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = 9.0328129760261139E-02  # x
-    u_corr[1] = 4.4280664205851694E-01  # y
+    u_corr[0] = -1.0987486500712629E-02  # x
+    u_corr[1] = 4.3593829261333561E-01  # y
 
-    v_corr[0] = 2.3074767133748433E-03  # x
-    v_corr[1] = 1.0848961391266596E-02  # y
+    v_corr[0] = 8.2815818921491734E-05  # x
+    v_corr[1] = 1.0562653809886682E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

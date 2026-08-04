@@ -225,24 +225,50 @@ class FSIMultiphaseProblem(problem_base):
         self.set_variational_forms_jacobian_coupling()
 
     def set_variational_forms_residual_coupling(self):
-        # wetting (or other) conditions imposed at interface
-        if bool(self.pbfsi.wetting_interface):
-            wetting = self.pbp.vf.weakform_robin_wetting(self.pbp.phi, self.pbp.phidot, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale"])
-            wetting_old = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_old, self.pbp.phidot_old, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_old"])
-            wetting_mid = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_mid, self.pbp.phidot_mid, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_mid"])
+        # fluid-solid surface tension effects - wetting and traction
+        if bool(self.pbfsi.fluid_solid_surface_tension):
+            sig_sf1, sig_sf2 = self.pbfsi.fluid_solid_surface_tension["sig_sf1"], self.pbfsi.fluid_solid_surface_tension["sig_sf2"]
 
-            if self.pbp.ti.res_eval == "trap":
-                if not self.pbp.ti.potential_at_midpoint:
+            sigma_sf = 0.25*(self.pbp.phi**3.0 - 3.0*self.pbp.phi)*(sig_sf1 - sig_sf2) + 0.5*(sig_sf1 + sig_sf2)
+            sigma_sf_old = 0.25*(self.pbp.phi_old**3.0 - 3.0*self.pbp.phi_old)*(sig_sf1 - sig_sf2) + 0.5*(sig_sf1 + sig_sf2)
+            sigma_sf_mid = 0.25*(self.pbp.phi_mid**3.0 - 3.0*self.pbp.phi_mid)*(sig_sf1 - sig_sf2) + 0.5*(sig_sf1 + sig_sf2)
+
+            dsigma_sf = ufl.diff(sigma_sf, self.pbp.phi)
+            dsigma_sf_old = ufl.diff(sigma_sf_old, self.pbp.phi_old)
+            dsigma_sf_mid = ufl.diff(sigma_sf_mid, self.pbp.phi_mid)
+
+            # wetting conditions imposed at interface
+            if self.pbfsi.fluid_solid_surface_tension["wetting"]:
+                wetting = self.pbp.vf.weakform_neumann_wetting(dsigma_sf, self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale"])
+                wetting_old = self.pbp.vf.weakform_neumann_wetting(dsigma_sf_old, self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_old"])
+                wetting_mid = self.pbp.vf.weakform_neumann_wetting(dsigma_sf_mid, self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_mid"])
+
+                if self.pbp.ti.res_eval == "trap":
+                    if not self.pbp.ti.potential_at_midpoint:
+                        self.pbp.weakform_mu += wetting
+                    else:
+                        self.pbp.weakform_mu += (self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
+                if self.pbp.ti.res_eval == "midp":
+                    if not self.pbp.ti.potential_at_midpoint:
+                        self.pbp.weakform_mu += wetting
+                    else:
+                        self.pbp.weakform_mu += wetting_mid
+                if self.pbp.ti.res_eval == "back":
                     self.pbp.weakform_mu += wetting
-                else:
-                    self.pbp.weakform_mu += (self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
-            if self.pbp.ti.res_eval == "midp":
-                if not self.pbp.ti.potential_at_midpoint:
-                    self.pbp.weakform_mu += wetting
-                else:
-                    self.pbp.weakform_mu += wetting_mid
-            if self.pbp.ti.res_eval == "back":
-                self.pbp.weakform_mu += wetting
+
+            # surface tension traction imposed at interface (here, we impose it on the fluid side for convenience!)
+            if self.pbfsi.fluid_solid_surface_tension["traction"]:
+                # ALE metrics
+                F = self.pbf.alevar["Fale"]
+                J = ufl.det(F)
+                ja = J * ufl.sqrt(ufl.dot(self.pbf.io.n0, (ufl.inv(F) * ufl.inv(F).T) * self.pbf.io.n0))
+                n_c = J*ufl.inv(F).T*self.pbf.io.n0 / ja
+                # surface tension contribution, cf. van Brummelen 2017, 2021
+                I = ufl.Identity(len(self.pbf.v))
+                P_gamma = I - ufl.outer(n_c, n_c)
+                fs_surface_tension = sigma_sf * ufl.inner(P_gamma*ufl.inv(F).T, ufl.grad(self.pbf.var_v)) * ja*self.io.ds(self.io.interface_id_f)
+                # add to fluid residual
+                self.pbf.weakform_v += fs_surface_tension
 
         # phasefield coupling to solid scalar transport
         if self.coupling_phase_solidscatra:
