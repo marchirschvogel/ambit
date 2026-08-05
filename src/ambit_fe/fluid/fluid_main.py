@@ -293,10 +293,9 @@ class FluidmechanicsProblem(problem_base):
         # values of previous time step(s)
         self.v_old = fem.Function(self.V_v)
         self.a_old = fem.Function(self.V_v)
+        self.amom_old = fem.Function(self.V_v)
         self.v_veryold = fem.Function(self.V_v)
-        # auxiliary acceleration vector
-        self.a = fem.Function(self.V_v, name="Acceleration")
-        # fluid displacement (needed in ALE)
+        # fluid displacement (needed in ALE / FSI)
         self.uf = fem.Function(self.V_v, name="FluidDisplacement")
         self.uf_old = fem.Function(self.V_v)
         self.uf_veryold = fem.Function(self.V_v)
@@ -389,6 +388,7 @@ class FluidmechanicsProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
+            V=self.V_v,
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,
@@ -540,13 +540,16 @@ class FluidmechanicsProblem(problem_base):
                 self.phasevar["chi"] = self.chi_clipped(self.phasevar["phi"], self.phasevar["phi_range"][0], self.phasevar["phi_range"][1], self.phasevar["epsilon_clip"], smooth_clip=self.phasevar["smooth_clip"])
                 self.phasevar["chi_old"] = self.chi_clipped(self.phasevar["phi_old"], self.phasevar["phi_range"][0], self.phasevar["phi_range"][1], self.phasevar["epsilon_clip"], smooth_clip=self.phasevar["smooth_clip"])
                 self.phasevar["chi_mid"] = self.chi_clipped(self.phasevar["phi_mid"], self.phasevar["phi_range"][0], self.phasevar["phi_range"][1], self.phasevar["epsilon_clip"], smooth_clip=self.phasevar["smooth_clip"])
+                self.phasevar["chi_veryold"] = self.chi_clipped(self.phasevar["phi_veryold"], self.phasevar["phi_range"][0], self.phasevar["phi_range"][1], self.phasevar["epsilon_clip"], smooth_clip=self.phasevar["smooth_clip"])
             else:
                 self.phasevar["chi"] = (self.phasevar["phi"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
                 self.phasevar["chi_old"] = (self.phasevar["phi_old"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
                 self.phasevar["chi_mid"] = (self.phasevar["phi_mid"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
+                self.phasevar["chi_veryold"] = (self.phasevar["phi_veryold"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU"] = (self.phasevar["phi"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU_old"] = (self.phasevar["phi_old"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU_mid"] = (self.phasevar["phi_mid"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
+            self.phasevar["chiU_veryold"] = (self.phasevar["phi_veryold"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             # set alpha parameter - for consistent mass-averaged CH-NS
             self.alpha, self.alpha_old, self.alpha_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
             for n, M in enumerate(self.domain_ids):
@@ -569,9 +572,19 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chi"], self.phasevar["chiU"] = None, None
             self.phasevar["chi_old"], self.phasevar["chiU_old"] = None, None
             self.phasevar["chi_mid"], self.phasevar["chiU_mid"] = None, None
+            self.phasevar["chi_veryold"], self.phasevar["chiU_veryold"] = None, None
 
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.v_veryold, self.a_old)
+
+        self.acc_mom = [None]*self.num_domains
+        if self.is_multiphase:
+            for n, M in enumerate(self.domain_ids):
+                rho = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
+                rho_old = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
+                rho_veryold = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_veryold"])
+                self.acc_mom[n] = self.ti.set_acc(rho*self.v, rho_old*self.v_old, rho_veryold*self.v_veryold, self.amom_old)
+
         # set form for fluid displacement (needed for FrSI)
         self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old, self.uf_veryold)
 
@@ -579,6 +592,11 @@ class FluidmechanicsProblem(problem_base):
         self.acc_mid = self.timefac_m * self.acc + (1.0 - self.timefac_m) * self.a_old
         self.vel_mid = self.timefac * self.v + (1.0 - self.timefac) * self.v_old
         self.ufluid_mid = self.timefac * self.ufluid + (1.0 - self.timefac) * self.uf_old
+
+        self.acc_mom_mid = [None]*self.num_domains
+        if self.is_multiphase:
+            for n, M in enumerate(self.domain_ids):
+                self.acc_mom_mid[n] = self.timefac * self.acc_mom[n] + (1.0 - self.timefac) * self.amom_old
 
         self.pf_mid__ = {}
         if self.num_dupl > 1:
@@ -2800,13 +2818,11 @@ class FluidmechanicsProblem(problem_base):
             self.v,
             self.v_old,
             self.v_veryold,
-            self.a,
             self.a_old,
             self.p,
             self.p_old,
             self.internalvars,
             self.internalvars_old,
-            uf=self.uf,
             uf_old=self.uf_old,
             uf_veryold=self.uf_veryold,
         )

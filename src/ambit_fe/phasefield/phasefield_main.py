@@ -158,7 +158,6 @@ class PhasefieldProblem(problem_base):
         self.dphi = ufl.TrialFunction(self.V_phi)  # Incremental phase field
         self.var_phi = ufl.TestFunction(self.V_phi)  # Test function
         self.phi = fem.Function(self.V_phi, name="PhaseField")
-        self.phidot = fem.Function(self.V_phi)
         # functions potential
         self.dmu = ufl.TrialFunction(self.V_mu)  # Incremental potential
         self.var_mu = ufl.TestFunction(self.V_mu)  # Test function
@@ -176,6 +175,7 @@ class PhasefieldProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
+            V=self.V_phi,
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,
@@ -198,11 +198,11 @@ class PhasefieldProblem(problem_base):
             self.vf = phasefield_variationalform.variationalform_ale(tstfncs=[self.var_phi, self.var_mu], n0=self.io.n0)
 
         # set form for phidot
-        self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
+        self.phidot = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
 
         # set mid-point representations
         self.phi_mid = self.timefac * self.phi + (1.0 - self.timefac) * self.phi_old
-        self.phidot_mid = self.timefac * self.phidot_expr + (1.0 - self.timefac) * self.phidot_old
+        self.phidot_mid = self.timefac * self.phidot + (1.0 - self.timefac) * self.phidot_old
         self.mu_mid = self.timefac * self.mu + (1.0 - self.timefac) * self.mu_old
 
         # initialize boundary condition class
@@ -276,7 +276,7 @@ class PhasefieldProblem(problem_base):
         self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+            self.phase_field += self.vf.cahnhilliard_phase(self.phidot, self.phi, self.mu, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
             self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
             self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
             self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.kappa[n], self.dx(M), F=self.alevar["Fale"])
@@ -355,7 +355,7 @@ class PhasefieldProblem(problem_base):
             w_robin_wetting += self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi,
-                self.phidot_expr,
+                self.phidot,
                 self.bmeasures,
                 v=self.fluidvar["v"],
                 w=self.alevar["w"],
@@ -387,7 +387,7 @@ class PhasefieldProblem(problem_base):
             w_robin_flux += self.bc.robin_bcs(
                 self.bc_dict["robin_flux"],
                 self.phi,
-                self.phidot_expr,
+                self.phidot,
                 self.bmeasures,
                 v=self.fluidvar["v"],
                 w=self.alevar["w"],
@@ -419,7 +419,7 @@ class PhasefieldProblem(problem_base):
             w_robin_flux += self.bc.robin_bcs(
                 self.bc_dict["advective_influx"],
                 self.phi,
-                self.phidot_expr,
+                self.phidot,
                 self.bmeasures,
                 v=self.fluidvar["v"],
                 w=self.alevar["w"],
@@ -746,7 +746,7 @@ class PhasefieldProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot, self.phidot_old, self.mu, self.mu_old)
+        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_old, self.mu, self.mu_old)
 
     def print_to_screen(self):
         pass

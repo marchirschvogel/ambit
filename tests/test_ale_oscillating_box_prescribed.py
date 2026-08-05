@@ -95,7 +95,7 @@ def test_main():
     w_corr[1] = 0.0  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.w,
+        problem.mp.ti.w_work,
         check_node,
         w_corr,
         problem.mp.V_d,

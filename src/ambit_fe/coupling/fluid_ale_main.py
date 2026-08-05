@@ -88,6 +88,7 @@ class FluidmechanicsAleProblem(problem_base):
         # set ALE variables
         self.pbf.alevar["Fale"] = self.pba.ki.F(self.pba.d)
         self.pbf.alevar["Fale_old"] = self.pba.ki.F(self.pba.d_old)
+        self.pbf.alevar["Fale_veryold"] = self.pba.ki.F(self.pba.d_veryold)
         self.pbf.alevar["w"] = self.pba.wel
         self.pbf.alevar["w_old"] = self.pba.w_old
 
@@ -430,31 +431,11 @@ class FluidmechanicsAleProblem(problem_base):
 
     def evaluate_residual_dbc_coupling(self):
         if self.have_dbc_fluid_ale:
-            # we need a vector representation of ufluid to apply in ALE DBCs
-            self.pbf.ti.update_varint(
-                self.pbf.v.x.petsc_vec,
-                self.pbf.v_old.x.petsc_vec,
-                self.pbf.uf_old.x.petsc_vec,
-                self.pbase.dt,
-                varint_veryold=self.pbf.uf_veryold.x.petsc_vec,
-                varintout=self.pbf.uf.x.petsc_vec,
-                uflform=False,
-            )
-            self.ufa.x.petsc_vec.axpby(1.0, 0.0, self.pbf.uf.x.petsc_vec)
+            self.ufa.interpolate(self.pbf.ti.uf_expr)
             self.ufa.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.have_dbc_ale_fluid:
-            # we need a vector representation of w to apply in fluid DBCs
-            self.pba.ti.update_dvar(
-                self.pba.d.x.petsc_vec,
-                self.pba.d_old.x.petsc_vec,
-                self.pba.w_old.x.petsc_vec,
-                self.pbase.dt,
-                var_veryold=self.pba.d_veryold.x.petsc_vec,
-                dvarout=self.pba.w.x.petsc_vec,
-                uflform=False,
-            )
-            self.wf.x.petsc_vec.axpby(1.0, 0.0, self.pba.w.x.petsc_vec)
+            self.wf.interpolate(self.pba.ti.wel_expr)
             self.wf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):

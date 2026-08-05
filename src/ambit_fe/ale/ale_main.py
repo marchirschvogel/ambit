@@ -178,8 +178,6 @@ class AleProblem(problem_base):
         self.dd = ufl.TrialFunction(self.V_d)  # Incremental displacement
         self.var_d = ufl.TestFunction(self.V_d)  # Test function
         self.d = fem.Function(self.V_d, name="AleDisplacement")
-        # auxiliary domain velocity vector
-        self.w = fem.Function(self.V_d, name="AleVelocity")
         # values of previous time step(s)
         self.d_old = fem.Function(self.V_d)
         self.w_old = fem.Function(self.V_d)
@@ -195,6 +193,7 @@ class AleProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
+            V=self.V_d,
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,
@@ -377,7 +376,7 @@ class AleProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.w, self.w_old)
+        self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.w_old)
 
     def print_to_screen(self):
         pass

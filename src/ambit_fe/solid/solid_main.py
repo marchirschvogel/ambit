@@ -311,9 +311,6 @@ class SolidmechanicsProblem(problem_base):
             self.dphyd = None
             self.var_phyd = None
 
-        # auxiliary velocity and acceleration vectors
-        self.v = fem.Function(self.V_u, name="Velocity")
-        self.a = fem.Function(self.V_u, name="Acceleration")
         # values of previous time step
         self.u_old = fem.Function(self.V_u)
         self.v_old = fem.Function(self.V_u)
@@ -411,6 +408,7 @@ class SolidmechanicsProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
+            V=self.V_u,
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,
@@ -2108,9 +2106,7 @@ class SolidmechanicsProblem(problem_base):
         self.ti.update_timestep(
             self.u,
             self.u_old,
-            self.v,
             self.v_old,
-            self.a,
             self.a_old,
             self.p,
             self.p_old,

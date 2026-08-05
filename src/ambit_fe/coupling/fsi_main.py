@@ -738,17 +738,9 @@ class FSIProblem(problem_base):
             self.K_du.assemble()
 
     def evaluate_residual_dbc_coupling(self):
-        # we need a vector representation of ufluid to apply in solid DBCs
-        self.pbf.ti.update_varint(
-            self.pbf.v.x.petsc_vec,
-            self.pbf.v_old.x.petsc_vec,
-            self.pbf.uf_old.x.petsc_vec,
-            self.pbase.dt,
-            varint_veryold=self.pbf.uf_veryold.x.petsc_vec,
-            varintout=self.pbf.uf.x.petsc_vec,
-            uflform=False,
-        )
-
+        # interpolate into uf vector from expression
+        self.pbf.uf.interpolate(self.pbf.ti.uf_expr)
+        self.pbf.uf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # now overwrite interface dofs with uf
         self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
         self.ufs.x.petsc_vec.setValues(self.fdofs_solid_global_sub, self.ufs_subvec.array)

@@ -166,13 +166,12 @@ class ScatraProblem(problem_base):
         self.Vcoord = fem.functionspace(self.mesh, self.Vex)
 
         # functions
-        self.dc, self.var_c, self.cdot, self.c_veryold, self.cdot_old = [], [], [], [], []
+        self.dc, self.var_c, self.c_veryold, self.cdot_old = [], [], [], []
         self.c, self.c_old = {}, {}  # use dict for easier cross-field access
         for i in range(self.num_species):
             self.dc.append(ufl.TrialFunction(self.V_c))  # Incremental concentrations
             self.var_c.append(ufl.TestFunction(self.V_c))  # Test function
             self.c["c" + str(i+1)] = fem.Function(self.V_c, name="Concentration"+str(i+1))
-            self.cdot.append(fem.Function(self.V_c))
             # values of previous time step(s)
             self.c_old["c" + str(i+1)] = fem.Function(self.V_c)
             self.c_veryold.append(fem.Function(self.V_c))
@@ -192,6 +191,7 @@ class ScatraProblem(problem_base):
                 self.time_params[i],
                 self.pbase.dt,
                 self.pbase.numstep,
+                V=self.V_c,
                 time_curves=time_curves,
                 t_init=self.pbase.t_init,
                 dim=self.dim,
@@ -221,15 +221,15 @@ class ScatraProblem(problem_base):
                 self.vf.append(scatra_variationalform.variationalform_ale(tstfncs=[self.var_c[i]], n0=self.io.n0))
 
         # set form for cdot
-        self.cdot_expr = []
+        self.cdot = []
         for i in range(self.num_species):
-            self.cdot_expr.append(self.ti[i].set_cdot(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i]))
+            self.cdot.append(self.ti[i].set_cdot(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i]))
 
         # set mid-point representations
         self.c_mid, self.cdot_mid = {}, []
         for i in range(self.num_species):
             self.c_mid["c" + str(i+1)] = self.timefac[i] * self.c["c" + str(i+1)] + (1.0 - self.timefac[i]) * self.c_old["c" + str(i+1)]
-            self.cdot_mid.append(self.timefac[i] * self.cdot_expr[i] + (1.0 - self.timefac[i]) * self.cdot_old[i])
+            self.cdot_mid.append(self.timefac[i] * self.cdot[i] + (1.0 - self.timefac[i]) * self.cdot_old[i])
 
         # initialize boundary condition class
         self.bc = []
@@ -302,7 +302,7 @@ class ScatraProblem(problem_base):
         for i in range(self.num_species):
             for n, M in enumerate(self.domain_ids):
                 if self.ti[i].timint != "static":
-                    self.variational_form[i] += self.vf[i].diffusion_rate(self.cdot_expr[i], self.c["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
+                    self.variational_form[i] += self.vf[i].diffusion_rate(self.cdot[i], self.c["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w"], F=self.alevar["Fale"])
                     self.variational_form_old[i] += self.vf[i].diffusion_rate(self.cdot_old[i], self.c_old["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w_old"], F=self.alevar["Fale_old"])
                     self.variational_form_mid[i] += self.vf[i].diffusion_rate(self.cdot_mid[i], self.c_mid["c" + str(i+1)], self.dx(M), v=None, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
 
@@ -502,7 +502,7 @@ class ScatraProblem(problem_base):
 
     def update(self):
         for i in range(self.num_species):
-            self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot[i], self.cdot_old[i])
+            self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i])
 
     def print_to_screen(self):
         pass

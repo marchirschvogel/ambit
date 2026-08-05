@@ -38,7 +38,6 @@ def test_main():
 
     TIME_PARAMS_SOLID = {
         "timint": "genalpha",
-        "theta_ost": 1.0,
         "rho_inf_genalpha": 0.8,
     }
 
@@ -62,7 +61,7 @@ def test_main():
     FEM_PARAMS = {
         "order_disp": 1,
         "order_pres": 1,
-        "quad_degree": 1,
+        "quad_degree": 2,
         "incompressibility": "no",
     }
 
@@ -117,9 +116,9 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 9.2733644380642666e00
-    s_corr[1] = -9.1004836216937203e-03
-    s_corr[2] = -1.6375196030721982e-02
+    s_corr[0] = 9.2733643992428316E+00
+    s_corr[1] = -9.1004836214001687E-03
+    s_corr[2] = -1.6375188325732568E-02
 
     check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

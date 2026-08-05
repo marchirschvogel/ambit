@@ -24,6 +24,7 @@ class timeintegration:
         time_params,
         dt,
         Nmax,
+        V=None,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -35,6 +36,7 @@ class timeintegration:
         self.numstep = Nmax
 
         self.time_curves = time_curves
+        self.V = V
         self.t_init = t_init
 
         self.eval_nonlin_terms = time_params.get("eval_nonlin_terms", "trapezoidal")
@@ -281,13 +283,8 @@ class timeintegration:
                 )
 
     # OST update formula for the time derivative of a variable
-    def update_dvar_ost(self, var, var_old, dvar_old, dt, dvarout=None, uflform=True):
-        if uflform:  # ufl form
-            return 1.0 / (self.theta_ost * dt) * (var - var_old) - (1.0 - self.theta_ost) / self.theta_ost * dvar_old
-        else:  # PETSc vector update
-            dvarout.axpby(-(1.0 - self.theta_ost) / self.theta_ost, 0.0, dvar_old)
-            dvarout.axpy(1.0 / (self.theta_ost * dt), var)
-            dvarout.axpy(-1.0 / (self.theta_ost * dt), var_old)
+    def update_dvar_ost(self, var, var_old, dvar_old, dt):
+        return 1.0 / (self.theta_ost * dt) * (var - var_old) - (1.0 - self.theta_ost) / self.theta_ost * dvar_old
 
     # OST update formula for the second time derivative of a variable
     def update_d2var_ost(
@@ -297,46 +294,24 @@ class timeintegration:
         dvar_old,
         d2var_old,
         dt,
-        d2varout=None,
-        uflform=True,
     ):
-        if uflform:  # ufl form
-            return (
-                1.0 / (self.theta_ost * self.theta_ost * dt * dt) * (var - var_old)
-                - 1.0 / (self.theta_ost * self.theta_ost * dt) * dvar_old
-                - (1.0 - self.theta_ost) / self.theta_ost * d2var_old
-            )
-        else:  # PETSc vector update
-            d2varout.axpby(-(1.0 - self.theta_ost) / self.theta_ost, 0.0, d2var_old)
-            d2varout.axpy(-1.0 / (self.theta_ost * self.theta_ost * dt), dvar_old)
-            d2varout.axpy(1.0 / (self.theta_ost * self.theta_ost * dt * dt), var)
-            d2varout.axpy(-1.0 / (self.theta_ost * self.theta_ost * dt * dt), var_old)
+        return (
+            1.0 / (self.theta_ost * self.theta_ost * dt * dt) * (var - var_old)
+            - 1.0 / (self.theta_ost * self.theta_ost * dt) * dvar_old
+            - (1.0 - self.theta_ost) / self.theta_ost * d2var_old
+        )
 
     # Newmark update formula for the time derivative of a variable: 1st order scheme
-    def update_dvar_newmark_1st(self, var, var_old, dvar_old, dt, dvarout=None, uflform=True):
-        if uflform:  # ufl form
-            return 1.0 / (self.gamma * dt) * (var - var_old) - (1.0 - self.gamma) / self.gamma * dvar_old
-        else:  # PETSc vector update
-            dvarout.axpby(-(1.0 - self.gamma) / self.gamma, 0.0, dvar_old)
-            dvarout.axpy(1.0 / (self.gamma * dt), var)
-            dvarout.axpy(-1.0 / (self.gamma * dt), var_old)
+    def update_dvar_newmark_1st(self, var, var_old, dvar_old, dt):
+        return 1.0 / (self.gamma * dt) * (var - var_old) - (1.0 - self.gamma) / self.gamma * dvar_old
 
     # Newmark update formula for the time derivative of a variable: 2nd order scheme
-    def update_dvar_newmark_2nd(self, var, var_old, dvar_old, d2var_old, dt, dvarout=None, uflform=True):
-        if uflform:  # ufl form
-            return (
-                self.gamma / (self.beta * dt) * (var - var_old)
-                - (self.gamma - self.beta) / self.beta * dvar_old
-                - (self.gamma - 2.0 * self.beta) / (2.0 * self.beta) * dt * d2var_old
-            )
-        else:  # PETSc vector update
-            dvarout.axpby(-(self.gamma - self.beta) / self.beta, 0.0, dvar_old)
-            dvarout.axpy(
-                -(self.gamma - 2.0 * self.beta) / (2.0 * self.beta) * dt,
-                d2var_old,
-            )
-            dvarout.axpy(self.gamma / (self.beta * dt), var)
-            dvarout.axpy(-self.gamma / (self.beta * dt), var_old)
+    def update_dvar_newmark_2nd(self, var, var_old, dvar_old, d2var_old, dt):
+        return (
+            self.gamma / (self.beta * dt) * (var - var_old)
+            - (self.gamma - self.beta) / self.beta * dvar_old
+            - (self.gamma - 2.0 * self.beta) / (2.0 * self.beta) * dt * d2var_old
+        )
 
     # Newmark update formula for the second time derivative of a variable
     def update_d2var_newmark(
@@ -346,56 +321,28 @@ class timeintegration:
         dvar_old,
         d2var_old,
         dt,
-        d2varout=None,
-        uflform=True,
     ):
-        if uflform:  # ufl form
-            return (
-                1.0 / (self.beta * dt * dt) * (var - var_old)
-                - 1.0 / (self.beta * dt) * dvar_old
-                - (1.0 - 2.0 * self.beta) / (2.0 * self.beta) * d2var_old
-            )
-        else:  # PETSc vector update
-            d2varout.axpby(-(1.0 - 2.0 * self.beta) / (2.0 * self.beta), 0.0, d2var_old)
-            d2varout.axpy(-1.0 / (self.beta * dt), dvar_old)
-            d2varout.axpy(1.0 / (self.beta * dt * dt), var)
-            d2varout.axpy(-1.0 / (self.beta * dt * dt), var_old)
+        return (
+            1.0 / (self.beta * dt * dt) * (var - var_old)
+            - 1.0 / (self.beta * dt) * dvar_old
+            - (1.0 - 2.0 * self.beta) / (2.0 * self.beta) * d2var_old
+        )
 
     # BDF2 update formula for the time derivative of a variable
-    def update_dvar_bdf2(self, var, var_old, var_veryold, dt, dvarout=None, uflform=True):
-        if uflform:  # ufl form
-            return 3.0 / (2.0 * dt) * var - 2.0 / dt * var_old + 1.0 / (2.0 * dt) * var_veryold
-        else:  # PETSc vector update
-            dvarout.axpby(1.0 / (2.0 * dt), 0.0, var_veryold)
-            dvarout.axpy(3.0 / (2.0 * dt), var)
-            dvarout.axpy(-2.0 / dt, var_old)
+    def update_dvar_bdf2(self, var, var_old, var_veryold, dt):
+        return 3.0 / (2.0 * dt) * var - 2.0 / dt * var_old + 1.0 / (2.0 * dt) * var_veryold
 
     # OST update formula for the first integration of a variable
-    def update_varint_ost(self, var, var_old, varint_old, dt, varintout=None, uflform=True):
-        if uflform:  # ufl form
-            return self.theta_ost * dt * var + (1.0 - self.theta_ost) * dt * var_old + varint_old
-        else:
-            varintout.axpby(1.0, 0.0, varint_old)
-            varintout.axpy(self.theta_ost * dt, var)
-            varintout.axpy((1.0 - self.theta_ost) * dt, var_old)
+    def update_varint_ost(self, var, var_old, varint_old, dt):
+        return self.theta_ost * dt * var + (1.0 - self.theta_ost) * dt * var_old + varint_old
 
     # Newmark update formula for the first integration of a variable: 1st order scheme
-    def update_varint_newmark_1st(self, var, var_old, varint_old, dt, varintout=None, uflform=True):
-        if uflform:  # ufl form
-            return self.gamma * dt * var + (1.0 - self.gamma) * dt * var_old + varint_old
-        else:  # PETSc vector update
-            varintout.axpby(1.0, 0.0, varint_old)
-            varintout.axpy(self.gamma * dt, var)
-            varintout.axpy((1.0 - self.gamma) * dt, var_old)
+    def update_varint_newmark_1st(self, var, var_old, varint_old, dt):
+        return self.gamma * dt * var + (1.0 - self.gamma) * dt * var_old + varint_old
 
     # BDF2 update formula for the first integration of a variable
-    def update_varint_bdf2(self, var, varint_old, varint_veryold, dt, varintout=None, uflform=True):
-        if uflform:  # ufl form
-            return 2.0 * dt * var / 3.0 + 4.0 * varint_old / 3.0 - varint_veryold / 3.0
-        else:
-            varintout.axpby(-1.0 / 3.0, 0.0, varint_veryold)
-            varintout.axpy(4.0 / 3.0, varint_old)
-            varintout.axpy(2.0 * dt / 3.0, var)
+    def update_varint_bdf2(self, var, varint_old, varint_veryold, dt):
+        return 2.0 * dt * var / 3.0 + 4.0 * varint_old / 3.0 - varint_veryold / 3.0
 
     # get constant time integration factors for the derivative w.r.t. the primary var
     # (may be needed by some algorithms that don't use the ufl form)
@@ -482,6 +429,7 @@ class timeintegration_solid(timeintegration):
         time_params,
         dt,
         Nmax,
+        V=None,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -492,11 +440,16 @@ class timeintegration_solid(timeintegration):
             time_params,
             dt,
             Nmax,
+            V=V,
             time_curves=time_curves,
             t_init=t_init,
             dim=dim,
             comm=comm,
         )
+
+        # work vectors for velocity and acceleration
+        self.v_work = fem.Function(self.V)
+        self.a_work = fem.Function(self.V)
 
         if self.timint == "genalpha":
             # if the spectral radius, rho_inf_genalpha, is specified, the parameters are computed from it
@@ -521,8 +474,12 @@ class timeintegration_solid(timeintegration):
             acc = ufl.constantvalue.zero(self.dim)
             vel = ufl.constantvalue.zero(self.dim)
         else:
-            acc = self.update_d2var(u, u_old, v_old, a_old, self.dt, uflform=True)
-            vel = self.update_dvar(u, u_old, v_old, a_old, self.dt, uflform=True)
+            acc = self.update_d2var(u, u_old, v_old, a_old, self.dt)
+            vel = self.update_dvar(u, u_old, v_old, a_old, self.dt)
+
+        # compiled expressions for velocity and acceleration - for updates of old states
+        self.acc_expr = fem.Expression(acc, self.a_work.function_space.element.interpolation_points)
+        self.vel_expr = fem.Expression(vel, self.v_work.function_space.element.interpolation_points)
 
         return acc, vel
 
@@ -542,9 +499,7 @@ class timeintegration_solid(timeintegration):
         self,
         u,
         u_old,
-        v,
         v_old,
-        a,
         a_old,
         p,
         p_old,
@@ -554,7 +509,7 @@ class timeintegration_solid(timeintegration):
         internalvars_old,
     ):
         # now update old kinematic fields with new quantities
-        self.update_fields(u, u_old, v, v_old, a, a_old)
+        self.update_fields(u, u_old, v_old, a_old)
 
         # update pressure variable
         if p is not None:
@@ -578,30 +533,17 @@ class timeintegration_solid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, u, u_old, v, v_old, a, a_old):
-        # use update functions using vector arguments
-        self.update_d2var(
-            u.x.petsc_vec,
-            u_old.x.petsc_vec,
-            v_old.x.petsc_vec,
-            a_old.x.petsc_vec,
-            self.dt,
-            d2varout=a.x.petsc_vec,
-            uflform=False,
-        )
-        self.update_dvar(
-            u.x.petsc_vec,
-            u_old.x.petsc_vec,
-            v_old.x.petsc_vec,
-            a_old.x.petsc_vec,
-            self.dt,
-            dvarout=v.x.petsc_vec,
-            uflform=False,
-        )
+    def update_fields(self, u, u_old, v_old, a_old):
+        # update work vectors - interpolate expressions
+        self.v_work.interpolate(self.vel_expr)
+        self.v_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_a_v_u_old(a_old, v_old, u_old, a, v, u)
+        self.a_work.interpolate(self.acc_expr)
+        self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    def update_dvar(self, var, var_old, dvar_old, d2var_old, dt, dvarout=None, uflform=True):
+        self.update_a_v_u_old(a_old, v_old, u_old, u)
+
+    def update_dvar(self, var, var_old, dvar_old, d2var_old, dt):
         if self.timint == "genalpha":
             return self.update_dvar_newmark_2nd(
                 var,
@@ -609,11 +551,9 @@ class timeintegration_solid(timeintegration):
                 dvar_old,
                 d2var_old,
                 dt,
-                dvarout=dvarout,
-                uflform=uflform,
             )
         elif self.timint == "ost":
-            return self.update_dvar_ost(var, var_old, dvar_old, dt, dvarout=dvarout, uflform=uflform)
+            return self.update_dvar_ost(var, var_old, dvar_old, dt)
         elif self.timint == "static":
             pass
         else:
@@ -626,8 +566,6 @@ class timeintegration_solid(timeintegration):
         dvar_old,
         d2var_old,
         dt,
-        d2varout=None,
-        uflform=True,
     ):
         if self.timint == "genalpha":
             return self.update_d2var_newmark(
@@ -636,8 +574,6 @@ class timeintegration_solid(timeintegration):
                 dvar_old,
                 d2var_old,
                 dt,
-                d2varout=d2varout,
-                uflform=uflform,
             )
         elif self.timint == "ost":
             return self.update_d2var_ost(
@@ -646,21 +582,19 @@ class timeintegration_solid(timeintegration):
                 dvar_old,
                 d2var_old,
                 dt,
-                d2varout=d2varout,
-                uflform=uflform,
             )
         elif self.timint == "static":
             pass
         else:
             raise NameError("Unknown time-integration algorithm for solid mechanics!")
 
-    def update_a_v_u_old(self, a_old, v_old, u_old, a, v, u):
+    def update_a_v_u_old(self, a_old, v_old, u_old, u):
         # update acceleration: a_old <- a
-        a_old.x.petsc_vec.axpby(1.0, 0.0, a.x.petsc_vec)
+        a_old.x.petsc_vec.axpby(1.0, 0.0, self.a_work.x.petsc_vec)
         a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_old <- v
-        v_old.x.petsc_vec.axpby(1.0, 0.0, v.x.petsc_vec)
+        v_old.x.petsc_vec.axpby(1.0, 0.0, self.v_work.x.petsc_vec)
         v_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update displacement: u_old <- u
@@ -702,6 +636,7 @@ class timeintegration_fluid(timeintegration):
         time_params,
         dt,
         Nmax,
+        V=None,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -712,11 +647,19 @@ class timeintegration_fluid(timeintegration):
             time_params,
             dt,
             Nmax,
+            V=V,
             time_curves=time_curves,
             t_init=t_init,
             dim=dim,
             comm=comm,
         )
+
+        # work vectors for acceleration and fluid displacement
+        self.a_work = fem.Function(self.V)
+        self.uf_work = fem.Function(self.V)
+
+        # work vector for mesh velocity - needed for ALE fluid
+        self.w_work = fem.Function(self.V)
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -740,13 +683,19 @@ class timeintegration_fluid(timeintegration):
 
     def set_acc(self, v, v_old, v_veryold, a_old):
         # set form for acceleration
-        acc = self.update_dvar(v, v_old, a_old, self.dt, var_veryold=v_veryold, uflform=True)
+        acc = self.update_dvar(v, v_old, a_old, self.dt, var_veryold=v_veryold)
+
+        # compiled expression for acceleration - for updates of old states
+        self.acc_expr = fem.Expression(acc, self.a_work.function_space.element.interpolation_points)
 
         return acc
 
     def set_uf(self, v, v_old, uf_old, uf_veryold):
         # set form for fluid displacement
-        uf = self.update_varint(v, v_old, uf_old, self.dt, varint_veryold=uf_veryold, uflform=True)
+        uf = self.update_varint(v, v_old, uf_old, self.dt, varint_veryold=uf_veryold)
+
+        # compiled expression for fluid displacement - for updates of old states
+        self.uf_expr = fem.Expression(uf, self.uf_work.function_space.element.interpolation_points)
 
         return uf
 
@@ -770,18 +719,16 @@ class timeintegration_fluid(timeintegration):
         v,
         v_old,
         v_veryold,
-        a,
         a_old,
         p,
         p_old,
         internalvars,
         internalvars_old,
-        uf=None,
         uf_old=None,
         uf_veryold=None,
     ):
         # update old fields with new quantities
-        self.update_fields(v, v_old, v_veryold, a, a_old, uf=uf, uf_old=uf_old, uf_veryold=uf_veryold)
+        self.update_fields(v, v_old, v_veryold, a_old, uf_old=uf_old, uf_veryold=uf_veryold)
 
         # update pressure variable
         p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
@@ -804,53 +751,35 @@ class timeintegration_fluid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, v, v_old, v_veryold, a, a_old, uf=None, uf_old=None, uf_veryold=None):
-        # use update functions using vector arguments
-        self.update_dvar(
-            v.x.petsc_vec,
-            v_old.x.petsc_vec,
-            a_old.x.petsc_vec,
-            self.dt,
-            var_veryold=v_veryold.x.petsc_vec,
-            dvarout=a.x.petsc_vec,
-            uflform=False,
-        )
+    def update_fields(self, v, v_old, v_veryold, a_old, uf_old=None, uf_veryold=None):
+        self.a_work.interpolate(self.acc_expr)
+        self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if uf_old is not None:
-            # use update functions using vector arguments
-            self.update_varint(
-                v.x.petsc_vec,
-                v_old.x.petsc_vec,
-                uf_old.x.petsc_vec,
-                self.dt,
-                varint_veryold=uf_veryold.x.petsc_vec,
-                varintout=uf.x.petsc_vec,
-                uflform=False,
-            )
+            self.uf_work.interpolate(self.uf_expr)
+            self.uf_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_a_v_old(a_old, v_veryold, v_old, a, v, uf_veryold=uf_veryold, uf_old=uf_old, uf=uf)
+        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old)
 
-    def update_dvar(self, var, var_old, dvar_old, dt, var_veryold=None, dvarout=None, uflform=True):
+    def update_dvar(self, var, var_old, dvar_old, dt, var_veryold=None):
         if self.timint == "ost":
-            return self.update_dvar_ost(var, var_old, dvar_old, dt, dvarout=dvarout, uflform=uflform)
+            return self.update_dvar_ost(var, var_old, dvar_old, dt)
         elif self.timint == "genalpha":
-            return self.update_dvar_newmark_1st(var, var_old, dvar_old, dt, dvarout=dvarout, uflform=uflform)
+            return self.update_dvar_newmark_1st(var, var_old, dvar_old, dt)
         elif self.timint == "bdf2":
-            return self.update_dvar_bdf2(var, var_old, var_veryold, dt, dvarout=dvarout, uflform=uflform)
+            return self.update_dvar_bdf2(var, var_old, var_veryold, dt)
         elif self.timint == "static":
             pass
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-    def update_varint(self, var, var_old, varint_old, dt, varint_veryold=None, varintout=None, uflform=True):
+    def update_varint(self, var, var_old, varint_old, dt, varint_veryold=None):
         if self.timint == "ost":
             return self.update_varint_ost(
                 var,
                 var_old,
                 varint_old,
                 dt,
-                varintout=varintout,
-                uflform=uflform,
             )
         elif self.timint == "genalpha":
             return self.update_varint_newmark_1st(
@@ -858,8 +787,6 @@ class timeintegration_fluid(timeintegration):
                 var_old,
                 varint_old,
                 dt,
-                varintout=varintout,
-                uflform=uflform,
             )
         elif self.timint == "bdf2":
             return self.update_varint_bdf2(
@@ -867,15 +794,13 @@ class timeintegration_fluid(timeintegration):
                 varint_old,
                 varint_veryold,
                 dt,
-                varintout=varintout,
-                uflform=uflform,
             )
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-    def update_a_v_old(self, a_old, v_veryold, v_old, a, v, uf_veryold=None, uf_old=None, uf=None):
+    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None):
         # update acceleration: a_old <- a
-        a_old.x.petsc_vec.axpby(1.0, 0.0, a.x.petsc_vec)
+        a_old.x.petsc_vec.axpby(1.0, 0.0, self.a_work.x.petsc_vec)
         a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_veryold <- v_old
@@ -891,7 +816,7 @@ class timeintegration_fluid(timeintegration):
             uf_veryold.x.petsc_vec.axpby(1.0, 0.0, uf_old.x.petsc_vec)
             uf_veryold.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             # update fluid displacement: uf_old <- uf
-            uf_old.x.petsc_vec.axpby(1.0, 0.0, uf.x.petsc_vec)
+            uf_old.x.petsc_vec.axpby(1.0, 0.0, self.uf_work.x.petsc_vec)
             uf_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def compute_genalpha_params(self, rho_inf):  # cf. Jansen et al. (2000)
@@ -928,35 +853,31 @@ class timeintegration_fluid(timeintegration):
 
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
-    def update_timestep(self, d, d_old, d_veryold, w, w_old):
+    def update_timestep(self, d, d_old, d_veryold, w_old):
         # update old fields with new quantities
-        self.update_fields(d, d_old, d_veryold, w, w_old)
+        self.update_fields(d, d_old, d_veryold, w_old)
 
         # no old time-dependent load curves to update - ALE is quasi-static
 
     def set_wel(self, d, d_old, d_veryold, w_old):
         # set form for domain velocity wel
-        wel = self.update_dvar(d, d_old, w_old, self.dt, var_veryold=d_veryold, uflform=True)
+        wel = self.update_dvar(d, d_old, w_old, self.dt, var_veryold=d_veryold)
+
+        # compiled expression for mesh velocity - for updates of old states
+        self.wel_expr = fem.Expression(wel, self.w_work.function_space.element.interpolation_points)
 
         return wel
 
-    def update_fields(self, d, d_old, d_veryold, w, w_old):
-        # use update functions using vector arguments
-        self.update_dvar(
-            d.x.petsc_vec,
-            d_old.x.petsc_vec,
-            w_old.x.petsc_vec,
-            self.dt,
-            var_veryold=d_veryold.x.petsc_vec,
-            dvarout=w.x.petsc_vec,
-            uflform=False,
-        )
+    def update_fields(self, d, d_old, d_veryold, w_old):
+        # update work vector - interpolate expression
+        self.w_work.interpolate(self.wel_expr)
+        self.w_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_w_d_old(w_old, d_veryold, d_old, w, d)
+        self.update_w_d_old(w_old, d_veryold, d_old, d)
 
-    def update_w_d_old(self, w_old, d_veryold, d_old, w, d):
+    def update_w_d_old(self, w_old, d_veryold, d_old, d):
         # update ALE velocity: w_old <- w
-        w_old.x.petsc_vec.axpby(1.0, 0.0, w.x.petsc_vec)
+        w_old.x.petsc_vec.axpby(1.0, 0.0, self.w_work.x.petsc_vec)
         w_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update ALE displacement: d_veryold <- d_old
@@ -974,6 +895,7 @@ class timeintegration_phasefield(timeintegration_fluid):
         time_params,
         dt,
         Nmax,
+        V=None,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -984,11 +906,15 @@ class timeintegration_phasefield(timeintegration_fluid):
             time_params,
             dt,
             Nmax,
+            V=V,
             time_curves=time_curves,
             t_init=t_init,
             dim=dim,
             comm=comm,
         )
+
+        # work vector for time derivative of phase field
+        self.phidot_work = fem.Function(self.V)
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -997,32 +923,30 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
-    def update_timestep(self, phi, phi_old, phi_veryold, phidot, phidot_old, mu, mu_old):
+    def update_timestep(self, phi, phi_old, phi_veryold, phidot_old, mu, mu_old):
         # update old fields with new quantities
-        self.update_fields(phi, phi_old, phi_veryold, phidot, phidot_old, mu, mu_old)
+        self.update_fields(phi, phi_old, phi_veryold, phidot_old, mu, mu_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
     def set_phidot(self, phi, phi_old, phi_veryold, phidot_old):
-        return self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold, uflform=True)
+        phidot = self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold)
 
-    def update_fields(self, phi, phi_old, phi_veryold, phidot, phidot_old, mu, mu_old):
-        # use update functions using vector arguments
-        self.update_dvar(
-            phi.x.petsc_vec,
-            phi_old.x.petsc_vec,
-            phidot_old.x.petsc_vec,
-            self.dt,
-            var_veryold=phi_veryold.x.petsc_vec,
-            dvarout=phidot.x.petsc_vec,
-            uflform=False,
-        )
+        # compiled expression for time derivative of phase field - for updates of old states
+        self.phidot_expr = fem.Expression(phidot, self.phidot_work.function_space.element.interpolation_points)
 
-        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phidot, phi, mu)
+        return phidot
 
-    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phidot, phi, mu):
+    def update_fields(self, phi, phi_old, phi_veryold, phidot_old, mu, mu_old):
+        # update work vector - interpolate expression
+        self.phidot_work.interpolate(self.phidot_expr)
+        self.phidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu)
+
+    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phi, mu):
         # update time derivative of phase field: phidot_old <- phidot
-        phidot_old.x.petsc_vec.axpby(1.0, 0.0, phidot.x.petsc_vec)
+        phidot_old.x.petsc_vec.axpby(1.0, 0.0, self.phidot_work.x.petsc_vec)
         phidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update phase field: phi_veryold <- phi_old
@@ -1055,6 +979,7 @@ class timeintegration_scatra(timeintegration_fluid):
         time_params,
         dt,
         Nmax,
+        V=None,
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -1065,11 +990,15 @@ class timeintegration_scatra(timeintegration_fluid):
             time_params,
             dt,
             Nmax,
+            V=V,
             time_curves=time_curves,
             t_init=t_init,
             dim=dim,
             comm=comm,
         )
+
+        # work vector for time derivative of concentration
+        self.cdot_work = fem.Function(self.V)
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -1078,9 +1007,9 @@ class timeintegration_scatra(timeintegration_fluid):
         if self.timint == "static":
             self.res_eval = "back"
 
-    def update_timestep(self, c, c_old, c_veryold, cdot, cdot_old):
+    def update_timestep(self, c, c_old, c_veryold, cdot_old):
         # update old fields with new quantities
-        self.update_fields(c, c_old, c_veryold, cdot, cdot_old)
+        self.update_fields(c, c_old, c_veryold, cdot_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
@@ -1088,33 +1017,30 @@ class timeintegration_scatra(timeintegration_fluid):
         if self.timint == "static":
             cdot = ufl.as_ufl(0)
         else:
-            cdot = self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold, uflform=True)
+            cdot = self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold)
+
+        # compiled expression for time derivative of concentration - for updates of old states
+        self.cdot_expr = fem.Expression(cdot, self.cdot_work.function_space.element.interpolation_points)
+
         return cdot
 
-    def update_fields(self, c, c_old, c_veryold, cdot, cdot_old):
-        # use update functions using vector arguments
-        self.update_dvar(
-            c.x.petsc_vec,
-            c_old.x.petsc_vec,
-            cdot_old.x.petsc_vec,
-            self.dt,
-            var_veryold=c_veryold.x.petsc_vec,
-            dvarout=cdot.x.petsc_vec,
-            uflform=False,
-        )
+    def update_fields(self, c, c_old, c_veryold, cdot_old):
+        # update work vector - interpolate expression
+        self.cdot_work.interpolate(self.cdot_expr)
+        self.cdot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_cdot_c_old(cdot_old, c_veryold, c_old, cdot, c)
+        self.update_cdot_c_old(cdot_old, c_veryold, c_old, c)
 
-    def update_cdot_c_old(self, cdot_old, c_veryold, c_old, cdot, c):
-        # update time derivative of phase field: cdot_old <- cdot
-        cdot_old.x.petsc_vec.axpby(1.0, 0.0, cdot.x.petsc_vec)
+    def update_cdot_c_old(self, cdot_old, c_veryold, c_old, c):
+        # update time derivative of concentration: cdot_old <- cdot
+        cdot_old.x.petsc_vec.axpby(1.0, 0.0, self.cdot_work.x.petsc_vec)
         cdot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update phase field: c_veryold <- c_old
+        # update concentration: c_veryold <- c_old
         c_veryold.x.petsc_vec.axpby(1.0, 0.0, c_old.x.petsc_vec)
         c_veryold.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update phase field: c_old <- c
+        # update concentration: c_old <- c
         c_old.x.petsc_vec.axpby(1.0, 0.0, c.x.petsc_vec)
         c_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
