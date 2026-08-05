@@ -588,6 +588,9 @@ class FluidmechanicsProblem(problem_base):
         # set form for fluid displacement (needed for FrSI)
         self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old, self.uf_veryold)
 
+        if self.pbase.have_rom:
+            self.xdtr_expr, self.xintr_expr = self.ti.acc_expr, self.ti.uf_expr
+
         # set mid-point representations
         self.acc_mid = self.timefac_m * self.acc + (1.0 - self.timefac_m) * self.a_old
         self.vel_mid = self.timefac * self.v + (1.0 - self.timefac) * self.v_old

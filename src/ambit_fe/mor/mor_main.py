@@ -178,7 +178,8 @@ class ModelOrderReduction:
         # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
         # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
         if bool(self.regularizations):
-            self.xreg = self.V.createVecLeft()
+            #self.xreg = self.V.createVecLeft()
+            self.xreg = fem.Function(self.Vspace)
             self.CpenVTV = self.Cpen.matMult(self.VTV)  # Cpen * V^T * V
             self.Vtx, self.regtermx = (
                 self.V.createVecRight(),
@@ -187,7 +188,8 @@ class ModelOrderReduction:
             if self.pb.xrpre_ is not None:
                 self.Vtxpre = self.V.createVecRight()
         if bool(self.regularizations_integ):
-            self.xreginteg = self.V.createVecLeft()
+            # self.xreginteg = self.V.createVecLeft()
+            self.xreginteg = fem.Function(self.Vspace)
             self.CpenintegVTV = self.Cpeninteg.matMult(self.VTV)  # Cpeninteg * V^T * V
             self.Vtx_integ, self.regtermx_integ = (
                 self.V.createVecRight(),
@@ -196,7 +198,8 @@ class ModelOrderReduction:
             if self.pb.xintrpre_ is not None:
                 self.Vtxpre = self.V.createVecRight()
         if bool(self.regularizations_deriv):
-            self.xregderiv = self.V.createVecLeft()
+            # self.xregderiv = self.V.createVecLeft()
+            self.xregderiv = fem.Function(self.Vspace)
             self.CpenderivVTV = self.Cpenderiv.matMult(self.VTV)  # Cpeninteg * V^T * V
             self.Vtx_deriv, self.regtermx_deriv = (
                 self.V.createVecRight(),
@@ -817,46 +820,35 @@ class ModelOrderReduction:
             timefac, dt = 1.0, self.pb.prestress_dt
 
         if bool(self.regularizations):
-            self.xreg.axpby(timefac, 0.0, self.pb.xr_.x.petsc_vec)
-            self.xreg.axpy(1.0 - timefac, self.pb.xr_old_.x.petsc_vec)
+            self.xreg.x.petsc_vec.axpby(timefac, 0.0, self.pb.xr_.x.petsc_vec)
+            self.xreg.x.petsc_vec.axpy(1.0 - timefac, self.pb.xr_old_.x.petsc_vec)
+            self.xreg.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             if self.pb.xrpre_ is not None:
-                self.xreg.axpy(1.0, self.pb.xrpre_.x.petsc_vec)
+                self.xreg.x.petsc_vec.axpy(1.0, self.pb.xrpre_.x.petsc_vec)
             # project
-            self.V.multTranspose(self.xreg, self.Vtx)  # V^T * x
+            self.V.multTranspose(self.xreg.x.petsc_vec, self.Vtx)  # V^T * x
             self.Cpen.mult(self.Vtx, self.regtermx)  # Cpen * V^T * x
             r_list_rom[self.fid].axpy(1.0, self.regtermx)  # add penalty term to reduced residual
 
         if bool(self.regularizations_integ):
             # get integration of variable
-            self.pb.ti.update_varint(
-                self.pb.xr_.x.petsc_vec,
-                self.pb.xr_old_.x.petsc_vec,
-                self.pb.xintr_old_.x.petsc_vec,
-                dt,
-                varintout=self.xreginteg,
-                uflform=False,
-            )
-            self.xreginteg.axpby(1.0 - timefac, timefac, self.pb.xintr_old_.x.petsc_vec)
+            self.xreginteg.interpolate(self.pb.xintr_expr)
+            self.xreginteg.x.petsc_vec.axpby(1.0 - timefac, timefac, self.pb.xintr_old_.x.petsc_vec)
+            self.xreginteg.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             if self.pb.xintrpre_ is not None:
-                self.xreginteg.axpy(1.0, self.pb.xintrpre_.x.petsc_vec)
+                self.xreginteg.x.petsc_vec.axpy(1.0, self.pb.xintrpre_.x.petsc_vec)
             # project
-            self.V.multTranspose(self.xreginteg, self.Vtx_integ)  # V^T * x_integ
+            self.V.multTranspose(self.xreginteg.x.petsc_vec, self.Vtx_integ)  # V^T * x_integ
             self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ)  # Cpeninteg * V^T * x_integ
             r_list_rom[self.fid].axpy(1.0, self.regtermx_integ)  # add penalty term to reduced residual
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
-            self.pb.ti.update_dvar(
-                self.pb.xr_.x.petsc_vec,
-                self.pb.xr_old_.x.petsc_vec,
-                self.pb.xdtr_old_.x.petsc_vec,
-                dt,
-                dvarout=self.xregderiv,
-                uflform=False,
-            )
-            self.xregderiv.axpby(1.0 - timefac, timefac, self.pb.xdtr_old_.x.petsc_vec)
+            self.xregderiv.interpolate(self.pb.xdtr_expr)
+            self.xregderiv.x.petsc_vec.axpby(1.0 - timefac, timefac, self.pb.xdtr_old_.x.petsc_vec)
+            self.xregderiv.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             # project
-            self.V.multTranspose(self.xregderiv, self.Vtx_deriv)  # V^T * x_deriv
+            self.V.multTranspose(self.xregderiv.x.petsc_vec, self.Vtx_deriv)  # V^T * x_deriv
             self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv)  # Cpenderiv * V^T * x_deriv
             r_list_rom[self.fid].axpy(1.0, self.regtermx_deriv)  # add penalty term to reduced residual
 
