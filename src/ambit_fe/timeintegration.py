@@ -478,8 +478,15 @@ class timeintegration_solid(timeintegration):
             vel = self.update_dvar(u, u_old, v_old, a_old, self.dt)
 
         # compiled expressions for velocity and acceleration - for updates of old states
-        self.acc_expr = fem.Expression(acc, self.a_work.function_space.element.interpolation_points)
-        self.vel_expr = fem.Expression(vel, self.v_work.function_space.element.interpolation_points)
+        if not isinstance(vel, ufl.constantvalue.Zero):
+            self.vel_expr = fem.Expression(vel, self.v_work.function_space.element.interpolation_points)
+        else:
+            self.vel_expr = None
+
+        if not isinstance(acc, ufl.constantvalue.Zero):
+            self.acc_expr = fem.Expression(acc, self.a_work.function_space.element.interpolation_points)
+        else:
+            self.acc_expr = None
 
         return acc, vel
 
@@ -535,11 +542,13 @@ class timeintegration_solid(timeintegration):
 
     def update_fields(self, u, u_old, v_old, a_old):
         # update work vectors - interpolate expressions
-        self.v_work.interpolate(self.vel_expr)
-        self.v_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.vel_expr is not None:
+            self.v_work.interpolate(self.vel_expr)
+            self.v_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.a_work.interpolate(self.acc_expr)
-        self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.acc_expr is not None:
+            self.a_work.interpolate(self.acc_expr)
+            self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         self.update_a_v_u_old(a_old, v_old, u_old, u)
 
