@@ -74,10 +74,10 @@ def main():
         "write_initial_fields": True,
         "report_conservation_properties": True,
         # "write_submeshes": True,
-        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine),
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine) + "_eps1.0wetNEG",
     }
 
-    eps = 10.0 # 1 µm (E. H. van Brummelen et al. 2021)
+    eps = 1.0 # 1 µm (E. H. van Brummelen et al. 2021)
 
     class expr1:
         def __init__(self):

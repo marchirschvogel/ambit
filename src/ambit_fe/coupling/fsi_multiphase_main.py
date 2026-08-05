@@ -245,16 +245,16 @@ class FSIMultiphaseProblem(problem_base):
 
                 if self.pbp.ti.res_eval == "trap":
                     if not self.pbp.ti.potential_at_midpoint:
-                        self.pbp.weakform_mu += wetting
+                        self.pbp.weakform_mu += -wetting
                     else:
-                        self.pbp.weakform_mu += (self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
+                        self.pbp.weakform_mu += -(self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
                 if self.pbp.ti.res_eval == "midp":
                     if not self.pbp.ti.potential_at_midpoint:
-                        self.pbp.weakform_mu += wetting
+                        self.pbp.weakform_mu += -wetting
                     else:
-                        self.pbp.weakform_mu += wetting_mid
+                        self.pbp.weakform_mu += -wetting_mid
                 if self.pbp.ti.res_eval == "back":
-                    self.pbp.weakform_mu += wetting
+                    self.pbp.weakform_mu += -wetting
 
             # surface tension traction imposed at interface (here, we impose it on the fluid side for convenience!)
             if self.pbfsi.fluid_solid_surface_tension["traction"]:
