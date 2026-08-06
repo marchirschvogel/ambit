@@ -981,7 +981,6 @@ class timeintegration_phasefield(timeintegration_fluid):
         return timefac_m, timefac
 
 
-
 class timeintegration_scatra(timeintegration_fluid):
     def __init__(
         self,

@@ -429,7 +429,6 @@ if category == "fluid_flow0d" or category == "all":
             "test_fluid_flow0d_nonc_taylorhood_cylinder.py",
         ]
     )
-
     errs["test_fluid_flow0d_nonc_taylorhood_cylinder_condensed 2"] = subprocess.call(
         [
             "mpiexec",
@@ -437,6 +436,24 @@ if category == "fluid_flow0d" or category == "all":
             "2",
             "python3",
             "test_fluid_flow0d_nonc_taylorhood_cylinder_condensed.py",
+        ]
+    )
+    errs["test_fluid_flow0d_cons_p1p1_stabr_pipe_CRLinoutlink 2"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_fluid_flow0d_cons_p1p1_stabr_pipe_CRLinoutlink.py",
+        ]
+    )
+    errs["test_fluid_flow0d_cons_p1p1_stabr_pipe_CRLinoutlink 2 restart"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_fluid_flow0d_cons_p1p1_stabr_pipe_CRLinoutlink.py", str(9),
         ]
     )
 

@@ -2,13 +2,13 @@
   <Domain>
     <Grid Name="Grid">
       <Geometry GeometryType="XYZ">
-        <DataItem Dimensions="730 3" Format="HDF">pipe_fluid_boundary.h5:/nodes</DataItem>
+        <DataItem Dimensions="713 3" Format="HDF">pipe_fluid_boundary.h5:/nodes</DataItem>
       </Geometry>
-      <Topology NodesPerElement="3" NumberOfElements="1159" TopologyType="triangle">
-        <DataItem DataType="Int" Dimensions="1159 3" Format="HDF">pipe_fluid_boundary.h5:/cells</DataItem>
+      <Topology NodesPerElement="3" NumberOfElements="1149" TopologyType="triangle">
+        <DataItem DataType="Int" Dimensions="1149 3" Format="HDF">pipe_fluid_boundary.h5:/cells</DataItem>
       </Topology>
       <Attribute AttributeType="Scalar" Center="Cell" Name="id">
-        <DataItem DataType="Int" Dimensions="1159" Format="HDF">pipe_fluid_boundary.h5:/id</DataItem>
+        <DataItem DataType="Int" Dimensions="1149" Format="HDF">pipe_fluid_boundary.h5:/id</DataItem>
       </Attribute>
     </Grid>
   </Domain>

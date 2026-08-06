@@ -85,9 +85,9 @@ def test_main():
             return -pmax
 
     BC_DICT = {
-        "dirichlet": [{"id": [1,4,6], "dir": "all", "val": 0.0}],
+        "dirichlet": [{"id": [1,4,5,7], "dir": "all", "val": 0.0}],
         "neumann": [
-            {"id": [5], "dir": "normal_ref", "curve": 1},
+            {"id": [6], "dir": "normal_ref", "curve": 1},
             {"id": [2], "dir": "normal_ref", "curve": 2},
         ],
         "robin_valve": [
@@ -128,9 +128,9 @@ def test_main():
     v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    v_corr[0] = -5.7854767383221191E+00  # x
-    v_corr[1] = -9.4618563192940925E+01  # y
-    v_corr[2] = -5.1459961922212631E+02  # z
+    v_corr[0] = 1.4932671187027871E+00  # x
+    v_corr[1] = -9.3889178222147507E+01  # y
+    v_corr[2] = -4.8307647367126270E+02  # z
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.v,
