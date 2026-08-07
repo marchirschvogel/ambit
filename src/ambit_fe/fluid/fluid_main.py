@@ -604,9 +604,9 @@ class FluidmechanicsProblem(problem_base):
             rho_veryold = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_veryold"])
             # ALE metrics
             if self.is_ale:
-                J, J_old, J_veryold, J_mid = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"]), ufl.det(self.alevar["Fale_veryold"]), ufl.det(self.alevar["Fale_mid"])
+                J, J_old, J_veryold = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"]), ufl.det(self.alevar["Fale_veryold"])
             else:
-                J, J_old, J_veryold, J_mid = 1.0, 1.0, 1.0, 1.0
+                J, J_old, J_veryold = 1.0, 1.0, 1.0
             if self.ti.discretely_conservative:
                 # set form for time derivative of momentum
                 if self.fluid_formulation == "nonconservative":
@@ -1264,9 +1264,7 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p_prestr,
         ) = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), []
         if self.prestress_initial or self.prestress_initial_only:
-            self.acc_prestr = (
-                self.v - self.v_old
-            ) / self.prestress_dt  # in case acceleration is used (for kinetic prestress option)
+            self.acc_prestr = (self.v - self.v_old) / self.prestress_dt  # in case acceleration is used (for kinetic prestress option)
             for n, M in enumerate(self.domain_ids):
                 if self.num_dupl == 1:
                     j = 0
@@ -1293,7 +1291,7 @@ class FluidmechanicsProblem(problem_base):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 if self.prestress_kinetic == "navierstokes_transient":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(
-                        self.acc_prestr,
+                        self.rho[n]*self.acc_prestr,
                         self.v,
                         self.rho[n],
                         self.dx(M),
@@ -1313,7 +1311,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                 elif self.prestress_kinetic == "stokes_transient":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(
-                        self.acc_prestr,
+                        self.rho[n]*self.acc_prestr,
                         self.v,
                         self.rho[n],
                         self.dx(M),

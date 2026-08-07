@@ -39,7 +39,7 @@ def test_main():
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
-        "direct_solver": "superlu_dist",
+        "direct_solver": "mumps",
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,
     }
