@@ -55,8 +55,14 @@ def test_main():
         "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
-    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
+    TIME_PARAMS_SOLID = {"timint": "genalpha",
+                         "rho_inf_genalpha": 0.8,
+                         "eval_nonlin_terms":"midpoint"}
+
+    TIME_PARAMS_FLUID = {"timint": "genalpha",
+                         "rho_inf_genalpha": 0.8,
+                         "eval_nonlin_terms":"midpoint",
+                         "discretely_conservative": True}
 
     TIME_PARAMS_FLOW0D = {
         "timint": "ost",

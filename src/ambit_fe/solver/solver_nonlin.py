@@ -630,7 +630,7 @@ class solver_nonlinear:
                 raise NameError("Unknown solvetype!")
 
     # solve for consistent initial state x_old
-    def solve_consistent_init(self, res_a, jac_aa, a_old):
+    def solve_consistent_init(self, res_a, jac_aa, a_old, dbcs=[]):
         # create solver
         ksp = PETSc.KSP().create(self.comm)
 
@@ -646,7 +646,7 @@ class solver_nonlinear:
             raise NameError("Unknown solvetype!")
 
         # solve for consistent x_old
-        M_a = fem.petsc.assemble_matrix(jac_aa, [])
+        M_a = fem.petsc.assemble_matrix(jac_aa, dbcs)
         M_a.assemble()
 
         r_a = fem.petsc.assemble_vector(res_a)

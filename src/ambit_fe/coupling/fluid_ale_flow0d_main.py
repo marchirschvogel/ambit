@@ -556,15 +556,21 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
                 - self.pb.pbf.deltaW_ext_old
                 - self.pb.pbf0.power_coupling_old
             )
-
-            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv)  # actually linear in a_old
+            res_a = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps)
 
             # solve for consistent initial acceleration a_old
-            res_a, jac_aa = (
-                fem.form(weakform_a, entity_maps=self.pb.io.entity_maps),
-                fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps),
-            )
-            self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.pbf.a_old)
+            if self.pb.pbf.ti.discretely_conservative:
+                weakform_lin_aa = ufl.as_ufl(0)
+                for n in range(self.pb.pbf.num_domains):
+                    weakform_lin_aa += ufl.derivative(weakform_a, self.pb.pbf.amom_old[n], self.pb.pbf.dv)  # actually linear in amom_old
+
+                jac_aa = fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+                for n in range(self.pb.pbf.num_domains):
+                    self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.pbf.amom_old[n])
+            else:
+                weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv)  # actually linear in a_old
+                jac_aa = fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+                self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)

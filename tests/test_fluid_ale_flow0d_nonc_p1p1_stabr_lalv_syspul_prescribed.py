@@ -60,7 +60,9 @@ def test_main():
         "subsolver_params": {"tol_res": 1.0e-6, "tol_inc": 1.0e-6},
     }
 
-    TIME_PARAMS = {"timint": "ost", "theta_ost": 1.0}
+    TIME_PARAMS = {"timint": "ost",
+                   "theta_ost": 1.0,
+                   "discretely_conservative": True}  # same for nonconservative fluid formulation
 
     TIME_PARAMS_FLOW0D = {
         "timint": "ost",

@@ -196,6 +196,7 @@ def check_params_time_solid(params):
         "alpha_m",
         "alpha_f",
         "beta",
+        "discretely_conservative",
         "eval_nonlin_terms",
         "gamma",
         "rho_inf_genalpha",
@@ -213,6 +214,7 @@ def check_params_time_fluid(params):
         "alpha_m",
         "alpha_f",
         "continuity_at_midpoint",
+        "discretely_conservative",
         "eval_nonlin_terms",
         "fluid_governing_type",
         "gamma",
@@ -228,6 +230,7 @@ def check_params_time_fluid(params):
 
 def check_params_time_phasefield(params):
     valid_params = [
+        "discretely_conservative",
         "eval_nonlin_terms",
         "potential_at_midpoint",
         "timint",
@@ -240,7 +243,7 @@ def check_params_time_phasefield(params):
 
 
 def check_params_time_electrophysiology(params):
-    valid_params = ["eval_nonlin_terms", "timint", "theta_ost"]
+    valid_params = ["discretely_conservative", "eval_nonlin_terms", "timint", "theta_ost"]
 
     for k in params.keys():
         if k not in valid_params:

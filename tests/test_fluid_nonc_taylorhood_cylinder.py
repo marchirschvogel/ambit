@@ -39,7 +39,7 @@ def test_main():
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
-        "direct_solver": "superlu_dist",  # no idea why, but mumps does not seem to like this system in parallel...
+        "direct_solver": "superlu_dist",
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,
     }
@@ -48,6 +48,7 @@ def test_main():
         "timint": "ost",
         "eval_nonlin_terms": "midpoint",
         "theta_ost": 0.5,
+        "discretely_conservative": True,
     }
 
     FEM_PARAMS = {"order_vel": 2, "order_pres": 1, "quad_degree": 5}

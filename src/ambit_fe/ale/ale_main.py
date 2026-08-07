@@ -215,6 +215,8 @@ class AleProblem(problem_base):
 
         # set form for domain velocity
         self.wel = self.ti.set_wel(self.d, self.d_old, self.d_veryold, self.w_old)
+        # compile expression for later update
+        self.wel_expr = fem.Expression(self.wel, self.ti.w_work.function_space.element.interpolation_points)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
@@ -376,7 +378,7 @@ class AleProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.w_old)
+        self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.wel_expr, self.w_old)
 
     def print_to_screen(self):
         pass

@@ -224,6 +224,10 @@ class ScatraProblem(problem_base):
         self.cdot = []
         for i in range(self.num_species):
             self.cdot.append(self.ti[i].set_cdot(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i]))
+        # compile expressions for later updates
+        self.cdot_expr = []
+        for i in range(self.num_species):
+            self.cdot_expr.append(fem.Expression(self.cdot[i], self.ti[i].cdot_work.function_space.element.interpolation_points))
 
         # set mid-point representations
         self.c_mid, self.cdot_mid = {}, []
@@ -502,7 +506,7 @@ class ScatraProblem(problem_base):
 
     def update(self):
         for i in range(self.num_species):
-            self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_old[i])
+            self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_expr[i], self.cdot_old[i])
 
     def print_to_screen(self):
         pass

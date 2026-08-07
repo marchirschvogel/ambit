@@ -752,6 +752,15 @@ class SolidmechanicsProblem(problem_base):
     def set_variational_forms_residual(self):
         # set forms for acceleration and velocity
         self.acc, self.vel = self.ti.set_acc_vel(self.u, self.u_old, self.v_old, self.a_old)
+        # compile expressions for later updates
+        if not isinstance(self.acc, ufl.constantvalue.Zero):
+            self.acc_expr = fem.Expression(self.acc, self.ti.a_work.function_space.element.interpolation_points)
+        else:
+            self.acc_expr = None
+        if not isinstance(self.vel, ufl.constantvalue.Zero):
+            self.vel_expr = fem.Expression(self.vel, self.ti.v_work.function_space.element.interpolation_points)
+        else:
+            self.vel_expr = None
 
         # set mid-point representations (if needed...)
         self.acc_mid = self.timefac_m * self.acc + (1.0 - self.timefac_m) * self.a_old
@@ -2106,7 +2115,9 @@ class SolidmechanicsProblem(problem_base):
         self.ti.update_timestep(
             self.u,
             self.u_old,
+            self.vel_expr,
             self.v_old,
+            self.acc_expr,
             self.a_old,
             self.p,
             self.p_old,

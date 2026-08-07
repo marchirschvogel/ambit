@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 """
-transient incompressible Navier-Stokes flow in a pipe with two separate regions connected via a 0D model
+Transient incompressible Navier-Stokes flow in a pipe with two separate regions connected via a 0D model
 - stabilized P1P1 elements for velocity and pressure (reduced SUPF/PSPG, G2 scheme)
 - 2 material domains in fluid with different densities and viscosities
 - Generalized-alpha time-integration for fluid
+- Conservative Navier-Stokes
 """
 
 import ambit_fe
@@ -55,6 +56,8 @@ def test_main():
         "timint": "genalpha",
         "rho_inf_genalpha": 0.8,
         "fluid_governing_type": "navierstokes_transient",
+        "eval_nonlin_terms": "midpoint",
+        "discretely_conservative": True,  # both time scheme variants equal for constant density and Eulerian frame (would matter in ALE frame)!
     }
 
     TIME_PARAMS_FLOW0D   = {"timint"                : "ost",
@@ -113,11 +116,12 @@ def test_main():
                      np.full(x.shape[1], val_t) )
 
     BC_DICT = {
-        # ids: 1,5: lateral wall - 2: inflow, 5: axial outflow, 6: top outflow, 3: valve
+        # ids: 1,5: lateral wall - 2: inflow, 5: axial outflow, 6: top outflow, 7: bottom outflow, 3: valve
         "dirichlet" : [{"id" : [2], "dir" : "all", "expression" : expression1}, # inflow
                                             {"id" : [1,5], "dir" : "all", "val" : 0.}, # lateral wall
                                             {"id" : [3], "dir" : "all", "val" : 0.}], # inner (valve) plane
-                             'stabilized_neumann' : [{'id' : [4,6,7], 'beta' : 0.2e-6, 'gamma' : 1.}],
+                             "stabilized_neumann" : [{"id" : [4,6,7], "beta" : 0.2e-6, "gamma" : 1.}],
+                             "neumann" : [{"id" : [7], "dir" : "normal_cur", "val" : 0.1}],  # constant Neumann pressure that produces an initial acceleration != 0 for testing purposes (relevant in gen-alpha for rho_inf < 1)
         "dp_monitor": [{"id": [3], "upstream_domain": 2, "downstream_domain": 1}],
         "flux_monitor": [{"id": [3], "on_subdomain": True, "internal": False, "domain": 2}],
     }
@@ -146,9 +150,9 @@ def test_main():
     v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    v_corr[0] = 3.3759092085945319E+00  # x
-    v_corr[1] = 9.2053661296197234E+01 # y
-    v_corr[2] = -2.4098391407353979E+01  # z
+    v_corr[0] = 3.4097479289218411E+00  # x
+    v_corr[1] = 9.1986656828994683E+01  # y
+    v_corr[2] = -2.4095044371396881E+01  # z
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

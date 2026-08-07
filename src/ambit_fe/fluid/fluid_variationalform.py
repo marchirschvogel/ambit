@@ -32,7 +32,7 @@ class variationalform(variationalform_base):
         self.I = ufl.Identity(len(self.var_v))
 
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
-    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
+    def deltaW_kin_navierstokes_transient(self, amom, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         rho_ = self.get_density(rho, chi=phi[1])
         # standard Eulerian fluid
         if self.formulation == "nonconservative":
@@ -40,16 +40,12 @@ class variationalform(variationalform_base):
             """ TeX:
             \int\limits_{\mathit{\Omega}} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
-            return rho_ * ufl.dot(a + ufl.grad(v) * v, self.var_v) * ddomain
+            return ufl.dot(amom + rho_*ufl.grad(v) * v, self.var_v) * ddomain
         elif self.formulation == "conservative":
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
             """ TeX:
             \int\limits_{\mathit{\Omega}} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
-            return ufl.dot(rho_*a + rhodot_*v + ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
+            return ufl.dot(amom + ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
         else:
             raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
@@ -69,13 +65,11 @@ class variationalform(variationalform_base):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
-        rho_ = self.get_density(rho, chi=phi[1])
-        if phi[0] is not None:
-            rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-        else:
-            rhodot_ = ufl.as_ufl(0)
-        return ufl.dot(rho_*a + rhodot_*v, self.var_v) * ddomain
+    def deltaW_kin_stokes_transient(self, amom, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
+        """ TeX:
+        \int\limits_{\mathit{\Omega}} \rho \frac{\partial\boldsymbol{v}}{\partial t} \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+        """
+        return ufl.dot(amom, self.var_v) * ddomain
 
     # Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
     def deltaW_int(self, sig, ddomain, F=None):
@@ -119,29 +113,25 @@ class variationalform(variationalform_base):
         """
         return ufl.inner(alpha*Jflux, ufl.grad(var_p)) * ddomain
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
+    def res_v_strong_navierstokes_transient(self, amom, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_transient(amom, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
         return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_stokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None]):
-        return self.f_inert_strong_stokes_transient(a, rho, phi=phi) - self.f_stress_strong(sig, F=F) - fbody
+    def res_v_strong_stokes_transient(self, amom, v, rho, sig, fbody, w=None, F=None, phi=[None,None]):
+        return self.f_inert_strong_stokes_transient(amom, rho, phi=phi) - self.f_stress_strong(sig, F=F) - fbody
 
     def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
         return -self.f_stress_strong(sig, F=F) - fbody
 
-    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
+    def f_inert_strong_navierstokes_transient(self, amom, v, rho, w=None, F=None, phi=[None,None], phidot=None):
         rho_ = self.get_density(rho, chi=phi[1])
         if self.formulation == "nonconservative":
             assert(phi[0] is None)
-            return rho_ * (a + ufl.grad(v) * v)
+            return amom + rho_*ufl.grad(v) * v
         elif self.formulation == "conservative":
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
-            return rho_*a + rhodot_*v + ufl.div(rho_*ufl.outer(v, v))
+            return amom + ufl.div(rho_*ufl.outer(v, v))
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -155,13 +145,8 @@ class variationalform(variationalform_base):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_stokes_transient(self, a, rho, phi=[None,None], phidot=None):
-        rho_ = self.get_density(rho, chi=phi[1])
-        if phi[0] is not None:
-            rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-        else:
-            rhodot_ = ufl.as_ufl(0)
-        return rho_*a + rhodot_*v
+    def f_inert_strong_stokes_transient(self, amom, rho, phi=[None,None], phidot=None):
+        return amom
 
     def f_stress_strong(self, sig, F=None):
         return ufl.div(sig)
@@ -257,6 +242,14 @@ class variationalform(variationalform_base):
         rho_ = self.get_density(rho, chi=phi[1])
         return rho_ * ufl.dot(ufl.grad(v) * v, ufl.grad(self.var_v) * v) * ddomain
 
+    def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
+        rho_ = self.get_density(rho, chi=phi[1])
+        if phi[0] is not None:
+            rhodot_ = ufl.diff(rho_,phi[0]) * phidot
+        else:
+            rhodot_ = ufl.as_ufl(0)
+        return rho_*a + rhodot_*v
+
     ### Flux coupling conditions
 
     # flux
@@ -311,7 +304,7 @@ class variationalform(variationalform_base):
 
 class variationalform_ale(variationalform):
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
-    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
+    def deltaW_kin_navierstokes_transient(self, amom, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=phi[1])
         if self.formulation == "nonconservative":
@@ -319,17 +312,12 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return J*rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
+            return ufl.dot(J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
         elif self.formulation == "conservative":
-            Jdot = ufl.div(J*ufl.inv(F)*w)
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T), self.var_v) * ddomain
+            return ufl.dot(amom + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T), self.var_v) * ddomain  # NOTE: amom already scaled with correct J!
         else:
             raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
@@ -350,7 +338,7 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
+    def deltaW_kin_stokes_transient(self, amom, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=phi[1])
         if self.formulation == "nonconservative":
@@ -358,17 +346,12 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return J*rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * ddomain
+            return ufl.dot(J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * ddomain
         elif self.formulation == "conservative":
-            Jdot = ufl.div(J*ufl.inv(F)*w)
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T), self.var_v) * ddomain
+            return ufl.dot(amom + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T), self.var_v) * ddomain  # NOTE: amom already scaled with correct J!
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -385,17 +368,17 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         if self.mass_formulation=="conservative_mass":
             rho_ = self.get_density(rho, chi=phi[1])
-            Jdot = ufl.div(J*ufl.inv(F)*w)
             if phi[0] is not None:
                 rhodot_ = ufl.diff(rho_,phi[0]) * phidot
             else:
                 rhodot_ = ufl.as_ufl(0)
             if self.formulation == "nonconservative":
                 """ TeX:
-                \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-1}\nabla_0\rho\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V = 0
+                \int\limits_{\mathit{\Omega}_0}\left(\widehat{J}\left.\frac{\partial\rho}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\rho\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right)\right)\delta p\,\mathrm{d}V = 0
                 """
-                return (J*rhodot_ + rho_*Jdot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain
+                return (J*rhodot_ + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)) * var_p * ddomain
             elif self.formulation == "conservative":
+                Jdot = ufl.div(J*ufl.inv(F)*w)
                 """ TeX:
                 \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V = 0
                 """
@@ -418,8 +401,8 @@ class variationalform_ale(variationalform):
         """
         return J*ufl.dot(alpha*ufl.inv(F)*Jflux, ufl.grad(var_p)) * ddomain
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
+    def res_v_strong_navierstokes_transient(self, amom, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_transient(amom, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
         return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
@@ -430,19 +413,14 @@ class variationalform_ale(variationalform):
     def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
         return -self.f_stress_strong(sig, F=F) - fbody
 
-    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
+    def f_inert_strong_navierstokes_transient(self, amom, v, rho, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=phi[1])
         if self.formulation == "nonconservative":
             assert(phi[0] is None)
-            return J*rho_ * (a + ufl.grad(v) * ufl.inv(F) * (v - w))
+            return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w)
         elif self.formulation == "conservative":
-            Jdot = ufl.div(J*ufl.inv(F)*w)
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
-            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T)
+            return amom + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -457,19 +435,14 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_stokes_transient(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
+    def f_inert_strong_stokes_transient(self, amom, v, rho, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=phi[1])
         if self.formulation == "nonconservative":
             assert(phi[0] is None)
-            return J*rho_ * (a + ufl.grad(v) * ufl.inv(F) * (-w))
+            return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w)
         elif self.formulation == "conservative":
-            Jdot = ufl.div(J*ufl.inv(F)*w)
-            if phi[0] is not None:
-                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
-            else:
-                rhodot_ = ufl.as_ufl(0)
-            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T)
+            return amom + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -586,6 +559,22 @@ class variationalform_ale(variationalform):
             * J
             * ddomain
         )
+
+    def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
+        rho_ = self.get_density(rho, chi=phi[1])
+        J = ufl.det(F)
+        if self.formulation == "nonconservative":
+            assert(phi[0] is None)
+            return rho_*a  # NOTE: J-scaling is done in NS momentum form!
+        elif self.formulation == "conservative":
+            Jdot = ufl.div(J*ufl.inv(F)*w)
+            if phi[0] is not None:
+                rhodot_ = ufl.diff(rho_,phi[0]) * phidot
+            else:
+                rhodot_ = ufl.as_ufl(0)
+            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a
+        else:
+            raise ValueError("Unknown fluid formulation!")
 
     ### Flux coupling conditions
 

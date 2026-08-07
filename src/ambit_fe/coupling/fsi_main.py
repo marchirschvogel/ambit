@@ -739,7 +739,7 @@ class FSIProblem(problem_base):
 
     def evaluate_residual_dbc_coupling(self):
         # interpolate into uf vector from expression
-        self.pbf.uf.interpolate(self.pbf.ti.uf_expr)
+        self.pbf.uf.interpolate(self.pbf.ufluid_expr)
         self.pbf.uf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # now overwrite interface dofs with uf
         self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
@@ -1141,17 +1141,21 @@ class FSISolver(solver_base):
                     - self.pb.pbf.deltaW_ext_old
                     + self.pb.power_coupling_fluid_old
                 )
-
-            weakform_lin_aa_fluid = ufl.derivative(
-                weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv
-            )  # actually linear in a_old
+            res_a_fluid = fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps)
 
             # solve for consistent initial acceleration a_old
-            res_a_fluid, jac_aa_fluid = (
-                fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps),
-                fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps),
-            )
-            self.solnln.solve_consistent_init(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
+            if self.pb.pbf.ti.discretely_conservative:
+                weakform_lin_aa_fluid = ufl.as_ufl(0)
+                for n in range(self.pb.pbf.num_domains):
+                    weakform_lin_aa_fluid += ufl.derivative(weakform_a_fluid, self.pb.pbf.amom_old[n], self.pb.pbf.dv)  # actually linear in amom_old
+
+                jac_aa_fluid = fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps)
+                for n in range(self.pb.pbf.num_domains):
+                    self.solnln.solve_consistent_init(res_a_fluid, jac_aa_fluid, self.pb.pbf.amom_old[n])
+            else:
+                weakform_lin_aa_fluid = ufl.derivative(weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv)  # actually linear in a_old
+                jac_aa_fluid = fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps)
+                self.solnln.solve_consistent_init(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)

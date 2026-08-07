@@ -28,6 +28,7 @@ class timeintegration:
         time_curves=None,
         t_init=0.0,
         dim=3,
+        num_dom=1,
         comm=None,
     ):
         self.timint = time_params.get("timint", "static")
@@ -38,6 +39,8 @@ class timeintegration:
         self.time_curves = time_curves
         self.V = V
         self.t_init = t_init
+
+        self.discretely_conservative = time_params.get("discretely_conservative", False)
 
         self.eval_nonlin_terms = time_params.get("eval_nonlin_terms", "trapezoidal")
         if self.eval_nonlin_terms == "midpoint":
@@ -52,6 +55,8 @@ class timeintegration:
             self.res_eval = "back"
 
         self.dim = dim
+
+        self.num_dom = num_dom  # number of domains - needed if material parameters (e.g., density, which can vary per domain) is included in d(.)/dt term
 
         self.comm = comm
 
@@ -433,6 +438,7 @@ class timeintegration_solid(timeintegration):
         time_curves=None,
         t_init=0.0,
         dim=3,
+        num_dom=1,
         comm=None,
     ):
         timeintegration.__init__(
@@ -506,7 +512,9 @@ class timeintegration_solid(timeintegration):
         self,
         u,
         u_old,
+        vel_expr,
         v_old,
+        acc_expr,
         a_old,
         p,
         p_old,
@@ -516,7 +524,7 @@ class timeintegration_solid(timeintegration):
         internalvars_old,
     ):
         # now update old kinematic fields with new quantities
-        self.update_fields(u, u_old, v_old, a_old)
+        self.update_fields(u, u_old, vel_expr, v_old, acc_expr, a_old)
 
         # update pressure variable
         if p is not None:
@@ -540,14 +548,14 @@ class timeintegration_solid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, u, u_old, v_old, a_old):
+    def update_fields(self, u, u_old, vel_expr, v_old, acc_expr, a_old):
         # update work vectors - interpolate expressions
         if self.vel_expr is not None:
-            self.v_work.interpolate(self.vel_expr)
+            self.v_work.interpolate(vel_expr)
             self.v_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.acc_expr is not None:
-            self.a_work.interpolate(self.acc_expr)
+            self.a_work.interpolate(acc_expr)
             self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         self.update_a_v_u_old(a_old, v_old, u_old, u)
@@ -649,6 +657,7 @@ class timeintegration_fluid(timeintegration):
         time_curves=None,
         t_init=0.0,
         dim=3,
+        num_dom=1,
         comm=None,
     ):
         timeintegration.__init__(
@@ -659,6 +668,7 @@ class timeintegration_fluid(timeintegration):
             V=V,
             time_curves=time_curves,
             t_init=t_init,
+            num_dom=num_dom,
             dim=dim,
             comm=comm,
         )
@@ -669,6 +679,10 @@ class timeintegration_fluid(timeintegration):
 
         # work vector for mesh velocity - needed for ALE fluid
         self.w_work = fem.Function(self.V)
+
+        # work vectors for full momentum term (for discretely conservative time-integration) - can vary per domain (densities!)
+        if self.discretely_conservative:
+            self.amom_work = [fem.Function(self.V) for _ in range(self.num_dom)]
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -692,21 +706,11 @@ class timeintegration_fluid(timeintegration):
 
     def set_acc(self, v, v_old, v_veryold, a_old):
         # set form for acceleration
-        acc = self.update_dvar(v, v_old, a_old, self.dt, var_veryold=v_veryold)
-
-        # compiled expression for acceleration - for updates of old states
-        self.acc_expr = fem.Expression(acc, self.a_work.function_space.element.interpolation_points)
-
-        return acc
+        return self.update_dvar(v, v_old, a_old, self.dt, var_veryold=v_veryold)
 
     def set_uf(self, v, v_old, uf_old, uf_veryold):
         # set form for fluid displacement
-        uf = self.update_varint(v, v_old, uf_old, self.dt, varint_veryold=uf_veryold)
-
-        # compiled expression for fluid displacement - for updates of old states
-        self.uf_expr = fem.Expression(uf, self.uf_work.function_space.element.interpolation_points)
-
-        return uf
+        return self.update_varint(v, v_old, uf_old, self.dt, varint_veryold=uf_veryold)
 
     def timefactors(self):
         if self.timint == "ost":
@@ -728,16 +732,20 @@ class timeintegration_fluid(timeintegration):
         v,
         v_old,
         v_veryold,
+        acc_expr,
         a_old,
         p,
         p_old,
         internalvars,
         internalvars_old,
+        uf_expr=None,
         uf_old=None,
         uf_veryold=None,
+        accmom_expr=[None],
+        amom_old=[None],
     ):
         # update old fields with new quantities
-        self.update_fields(v, v_old, v_veryold, a_old, uf_old=uf_old, uf_veryold=uf_veryold)
+        self.update_fields(v, v_old, v_veryold, acc_expr, a_old, uf_expr=uf_expr, uf_old=uf_old, uf_veryold=uf_veryold, accmom_expr=accmom_expr, amom_old=amom_old)
 
         # update pressure variable
         p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
@@ -760,15 +768,20 @@ class timeintegration_fluid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, v, v_old, v_veryold, a_old, uf_old=None, uf_veryold=None):
-        self.a_work.interpolate(self.acc_expr)
+    def update_fields(self, v, v_old, v_veryold, acc_expr, a_old, uf_expr=None, uf_old=None, uf_veryold=None, accmom_expr=[None], amom_old=[None]):
+        self.a_work.interpolate(acc_expr)
         self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        if None not in accmom_expr:
+            for n in range(self.num_dom):
+                self.amom_work[n].interpolate(accmom_expr[n])
+                self.amom_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         if uf_old is not None:
-            self.uf_work.interpolate(self.uf_expr)
+            self.uf_work.interpolate(uf_expr)
             self.uf_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old)
+        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old, amom_old=amom_old)
 
     def update_dvar(self, var, var_old, dvar_old, dt, var_veryold=None):
         if self.timint == "ost":
@@ -807,10 +820,16 @@ class timeintegration_fluid(timeintegration):
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None):
+    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None, amom_old=[None]):
         # update acceleration: a_old <- a
         a_old.x.petsc_vec.axpby(1.0, 0.0, self.a_work.x.petsc_vec)
         a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if None not in amom_old:
+            for n in range(self.num_dom):
+                if isinstance(amom_old[n], fem.function.Function):
+                    amom_old[n].x.petsc_vec.axpby(1.0, 0.0, self.amom_work[n].x.petsc_vec)
+                    amom_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_veryold <- v_old
         v_veryold.x.petsc_vec.axpby(1.0, 0.0, v_old.x.petsc_vec)
@@ -862,24 +881,19 @@ class timeintegration_fluid(timeintegration):
 
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
-    def update_timestep(self, d, d_old, d_veryold, w_old):
+    def update_timestep(self, d, d_old, d_veryold, wel_expr, w_old):
         # update old fields with new quantities
-        self.update_fields(d, d_old, d_veryold, w_old)
+        self.update_fields(d, d_old, d_veryold, wel_expr, w_old)
 
         # no old time-dependent load curves to update - ALE is quasi-static
 
     def set_wel(self, d, d_old, d_veryold, w_old):
         # set form for domain velocity wel
-        wel = self.update_dvar(d, d_old, w_old, self.dt, var_veryold=d_veryold)
+        return self.update_dvar(d, d_old, w_old, self.dt, var_veryold=d_veryold)
 
-        # compiled expression for mesh velocity - for updates of old states
-        self.wel_expr = fem.Expression(wel, self.w_work.function_space.element.interpolation_points)
-
-        return wel
-
-    def update_fields(self, d, d_old, d_veryold, w_old):
+    def update_fields(self, d, d_old, d_veryold, wel_expr, w_old):
         # update work vector - interpolate expression
-        self.w_work.interpolate(self.wel_expr)
+        self.w_work.interpolate(wel_expr)
         self.w_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         self.update_w_d_old(w_old, d_veryold, d_old, d)
@@ -908,6 +922,7 @@ class timeintegration_phasefield(timeintegration_fluid):
         time_curves=None,
         t_init=0.0,
         dim=3,
+        num_dom=1,
         comm=None,
     ):
         timeintegration.__init__(
@@ -932,23 +947,19 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
-    def update_timestep(self, phi, phi_old, phi_veryold, phidot_old, mu, mu_old):
+    def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old):
         # update old fields with new quantities
-        self.update_fields(phi, phi_old, phi_veryold, phidot_old, mu, mu_old)
+        self.update_fields(phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
     def set_phidot(self, phi, phi_old, phi_veryold, phidot_old):
-        phidot = self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold)
+        # set form for rate of phi
+        return self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold)
 
-        # compiled expression for time derivative of phase field - for updates of old states
-        self.phidot_expr = fem.Expression(phidot, self.phidot_work.function_space.element.interpolation_points)
-
-        return phidot
-
-    def update_fields(self, phi, phi_old, phi_veryold, phidot_old, mu, mu_old):
+    def update_fields(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old):
         # update work vector - interpolate expression
-        self.phidot_work.interpolate(self.phidot_expr)
+        self.phidot_work.interpolate(phidot_expr)
         self.phidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu)
@@ -991,6 +1002,7 @@ class timeintegration_scatra(timeintegration_fluid):
         time_curves=None,
         t_init=0.0,
         dim=3,
+        num_dom=1,
         comm=None,
     ):
         timeintegration.__init__(
@@ -1015,26 +1027,24 @@ class timeintegration_scatra(timeintegration_fluid):
         if self.timint == "static":
             self.res_eval = "back"
 
-    def update_timestep(self, c, c_old, c_veryold, cdot_old):
+    def update_timestep(self, c, c_old, c_veryold, cdot_expr, cdot_old):
         # update old fields with new quantities
-        self.update_fields(c, c_old, c_veryold, cdot_old)
+        self.update_fields(c, c_old, c_veryold, cdot_expr, cdot_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
     def set_cdot(self, c, c_old, c_veryold, cdot_old):
+        # set form for rate of concentration
         if self.timint == "static":
             cdot = ufl.as_ufl(0)
         else:
             cdot = self.update_dvar(c, c_old, cdot_old, self.dt, var_veryold=c_veryold)
 
-        # compiled expression for time derivative of concentration - for updates of old states
-        self.cdot_expr = fem.Expression(cdot, self.cdot_work.function_space.element.interpolation_points)
-
         return cdot
 
-    def update_fields(self, c, c_old, c_veryold, cdot_old):
+    def update_fields(self, c, c_old, c_veryold, cdot_expr, cdot_old):
         # update work vector - interpolate expression
-        self.cdot_work.interpolate(self.cdot_expr)
+        self.cdot_work.interpolate(cdot_expr)
         self.cdot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         self.update_cdot_c_old(cdot_old, c_veryold, c_old, c)

@@ -199,6 +199,8 @@ class PhasefieldProblem(problem_base):
 
         # set form for phidot
         self.phidot = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
+        # compile expression for later update
+        self.phidot_expr = fem.Expression(self.phidot, self.ti.phidot_work.function_space.element.interpolation_points)
 
         # set mid-point representations
         self.phi_mid = self.timefac * self.phi + (1.0 - self.timefac) * self.phi_old
@@ -746,7 +748,7 @@ class PhasefieldProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_old, self.mu, self.mu_old)
+        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_expr, self.phidot_old, self.mu, self.mu_old)
 
     def print_to_screen(self):
         pass

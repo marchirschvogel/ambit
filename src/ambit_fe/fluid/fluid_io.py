@@ -260,7 +260,11 @@ class IO_fluid(IO_field):
         vecs_to_read[self.pb.v] = "v"
         vecs_to_read[self.pb.v_old] = "v_old"
         vecs_to_read[self.pb.v_veryold] = "v_veryold" # for BDF2 scheme
-        vecs_to_read[self.pb.a_old] = "a_old"
+        if self.pb.ti.discretely_conservative:
+            for n in range(self.pb.num_domains):
+                vecs_to_read[self.pb.amom_old[n]] = "amom_old" + str(n+1)
+        else:
+            vecs_to_read[self.pb.a_old] = "a_old"
         vecs_to_read[self.pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
         vecs_to_read[self.pb.uf_veryold] = "uf_veryold"  # for BDF2 scheme
         if any(self.pb.mem_active_stress):  # for active membrane model (FrSI)
@@ -325,7 +329,11 @@ class IO_fluid(IO_field):
         vecs_to_write[self.pb.v] = "v"
         vecs_to_write[self.pb.v_old] = "v_old"
         vecs_to_write[self.pb.v_veryold] = "v_veryold" # for BDF2 scheme
-        vecs_to_write[self.pb.a_old] = "a_old"
+        if self.pb.ti.discretely_conservative:
+            for n in range(self.pb.num_domains):
+                vecs_to_write[self.pb.amom_old[n]] = "amom_old" + str(n+1)
+        else:
+            vecs_to_write[self.pb.a_old] = "a_old"
         vecs_to_write[self.pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
         vecs_to_write[self.pb.uf_veryold] = "uf_veryold" # for BDF2 scheme
         if any(self.pb.mem_active_stress):
