@@ -1291,7 +1291,7 @@ class FluidmechanicsProblem(problem_base):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 if self.prestress_kinetic == "navierstokes_transient":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(
-                        self.rho[n]*self.acc_prestr,
+                        self.rho[n][0]*self.acc_prestr,
                         self.v,
                         self.rho[n],
                         self.dx(M),
@@ -1311,7 +1311,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                 elif self.prestress_kinetic == "stokes_transient":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(
-                        self.rho[n]*self.acc_prestr,
+                        self.rho[n][0]*self.acc_prestr,
                         self.v,
                         self.rho[n],
                         self.dx(M),
