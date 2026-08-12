@@ -181,7 +181,7 @@ class AleProblem(problem_base):
         # values of previous time step(s)
         self.d_old = fem.Function(self.V_d)
         self.w_old = fem.Function(self.V_d)
-        self.d_veryold = fem.Function(self.V_d) # for FSI: if BDF2 is used in fluid, we want a BDF2-like wel
+        self.d_veryold = fem.Function(self.V_d)  # for FSI: if BDF2 is used in fluid, we want a BDF2-like wel
 
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.mesh)
@@ -193,7 +193,7 @@ class AleProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
-            V=self.V_d,
+            V=[self.V_d],
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,

@@ -63,7 +63,7 @@ def test_main():
 
     TIME_PARAMS = {"timint": "ost",
                    "theta_ost": 1.0,
-                   "discretely_conservative": True}  # makes minor difference for conservative fluid formulation
+                   "discretely_conservative": False}  # makes minor difference for conservative fluid formulation
 
     TIME_PARAMS_FLOW0D = {
         "timint": "ost",
@@ -198,14 +198,14 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 3.5845472695442222E+04
-    s_corr[1] = 5.2526036097636505E+04
-    s_corr[2] = -5.2526986014312795E+04
-    s_corr[3] = -9.4991667628830934E-01
-    s_corr[4] = 1.0924979636510203E+01
-    s_corr[5] = -9.4991667628830934E-01
-    s_corr[6] = 1.0924985336010259E+01
-    s_corr[7] = 2.1047096618333391E+04
+    s_corr[0] = 3.5846367998863810E+04
+    s_corr[1] = 5.2526931401029222E+04
+    s_corr[2] = -5.2527881317734376E+04
+    s_corr[3] = -9.4991670515551829E-01
+    s_corr[4] = 1.0924979636510196E+01
+    s_corr[5] = -9.4991670515551829E-01
+    s_corr[6] = 1.0924985336010430E+01
+    s_corr[7] = 2.1047096618333704E+04
     s_corr[8] = 2.2871777634299053E+00
     s_corr[9] = 9.5236185798506864E+04
     s_corr[10] = 1.4906158530701107E+03
@@ -213,12 +213,12 @@ def test_main():
     s_corr[12] = -2.2265151472646849E-01
     s_corr[13] = 1.8688412672419699E-05
     s_corr[14] = 2.2265338356773574E+00
-    s_corr[15] = 3.5951841419052958E+04
-    s_corr[16] = 1.6872562143915637E+00
-    s_corr[17] = 2.6079763214866957E+03
-    s_corr[18] = 3.2280227541193617E+03
-    s_corr[19] = 2.1508783756157295E+03
-    s_corr[20] = 8.6936859509724964E+03
+    s_corr[15] = 3.5951841419056058E+04
+    s_corr[16] = 1.6872562143915173E+00
+    s_corr[17] = 2.6083269793972836E+03
+    s_corr[18] = 3.2282435475473253E+03
+    s_corr[19] = 2.1512937530904460E+03
+    s_corr[20] = 8.6926991221303542E+03
 
     check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
 

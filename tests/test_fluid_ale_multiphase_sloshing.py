@@ -71,12 +71,14 @@ def test_main():
                          "theta_ost": 0.5,
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
-                         "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved...}
+                         "continuity_at_midpoint": True, # Should use midpoint if time derivative (drho/dt) is involved...}
+                         "discretely_conservative": False}
 
     TIME_PARAMS_PF = {"timint": "ost",
                       "theta_ost": 0.5,
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
-                      "potential_at_midpoint": True}
+                      "potential_at_midpoint": True,
+                      "discretely_conservative": False}
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,

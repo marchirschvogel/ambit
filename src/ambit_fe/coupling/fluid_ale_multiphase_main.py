@@ -104,6 +104,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         # set ALE variables for phase field
         self.pbp.alevar["Fale"] = self.pba.ki.F(self.pba.d)
         self.pbp.alevar["Fale_old"] = self.pba.ki.F(self.pba.d_old)
+        self.pbp.alevar["Fale_veryold"] = self.pba.ki.F(self.pba.d_veryold)
         self.pbp.alevar["w"] = self.pba.wel
         self.pbp.alevar["w_old"] = self.pba.w_old
 

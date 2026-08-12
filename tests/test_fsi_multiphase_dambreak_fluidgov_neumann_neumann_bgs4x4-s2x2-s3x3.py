@@ -100,11 +100,13 @@ def test_main():
     TIME_PARAMS_FLUID = {"timint": "bdf2",
                          "theta_ost": 1., # Not used: only for OST scheme
                          "fluid_governing_type": "navierstokes_transient",
-                         "continuity_at_midpoint": True} # Not relevant when using BDF2 scheme
+                         "continuity_at_midpoint": True, # Not relevant when using BDF2 scheme
+                         "discretely_conservative": False}
 
     TIME_PARAMS_PF = {"timint": "bdf2",
                       "theta_ost": 1., # Not used: only for OST scheme
-                      "potential_at_midpoint": False} # Not relevant when using BDF2 scheme
+                      "potential_at_midpoint": False, # Not relevant when using BDF2 scheme
+                      "discretely_conservative": False}
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,

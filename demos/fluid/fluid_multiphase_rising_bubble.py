@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
-    case = 1
+    case = 2
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
@@ -23,10 +23,11 @@ def main():
         "write_results_every": 1,
         "write_restart_every": -1,
         "restart_step": 0,
+        "indicate_results_by": "step0",
         # where to write the output to
         "output_path": basepath + "/tmp/",
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]}, # 32,64   64,128   128,256
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
         # which results to write
         "results_to_write": {"fluid": ["velocity", "pressure", "density"], "phasefield": ["phase", "potential"]},
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
@@ -40,7 +41,7 @@ def main():
     }
 
     # add elements in x direction to output name for distinction of results...
-    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0]) + "_PREC"
+    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0]) + "_rm_ndc"
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
     eps = 0.64*h # 1.28*h (ten Eikelder et al. (2024)), 0.64*h (Brunk and ten Eikelder (2026))
@@ -110,7 +111,8 @@ def main():
                          "theta_ost": 0.5, # not used (only for OST timint)
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
-                         "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved... irrelevant for BDF2 scheme
+                         "continuity_at_midpoint": True, # Should use midpoint if time derivative (drho/dt) is involved... irrelevant for BDF2 scheme
+                         "discretely_conservative": False}
 
     """
     Parameters for the Cahn-Hilliard time integration scheme
@@ -128,7 +130,7 @@ def main():
                         "order_pres": 1,
                         "quad_degree": 9,
                         "fluid_formulation": "conservative",
-                        "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
+                        "mass_formulation": "reduced_mass",  # conservative_mass, reduced_mass
                        }
 
     """

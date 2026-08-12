@@ -408,7 +408,7 @@ class SolidmechanicsProblem(problem_base):
             self.time_params,
             self.pbase.dt,
             self.pbase.numstep,
-            V=self.V_u,
+            V=[self.V_u],
             time_curves=time_curves,
             t_init=self.pbase.t_init,
             dim=self.dim,

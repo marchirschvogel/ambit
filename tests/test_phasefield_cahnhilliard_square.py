@@ -49,7 +49,8 @@ def test_main():
         "tol_inc": 1.0e-8,
     }
 
-    TIME_PARAMS = {"timint": "ost", "theta_ost": 0.5}
+    TIME_PARAMS = {"timint": "ost", "theta_ost": 0.5,
+                   "discretely_conservative": False}  # Same if True or False - no moving domain here...
 
     FEM_PARAMS = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [0.0, 1.0]}
 

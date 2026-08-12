@@ -24,7 +24,7 @@ class timeintegration:
         time_params,
         dt,
         Nmax,
-        V=None,
+        V=[None],
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -434,7 +434,7 @@ class timeintegration_solid(timeintegration):
         time_params,
         dt,
         Nmax,
-        V=None,
+        V=[None],
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -454,8 +454,8 @@ class timeintegration_solid(timeintegration):
         )
 
         # work vectors for velocity and acceleration
-        self.v_work = fem.Function(self.V)
-        self.a_work = fem.Function(self.V)
+        self.v_work = fem.Function(self.V[0])
+        self.a_work = fem.Function(self.V[0])
 
         if self.timint == "genalpha":
             # if the spectral radius, rho_inf_genalpha, is specified, the parameters are computed from it
@@ -653,7 +653,7 @@ class timeintegration_fluid(timeintegration):
         time_params,
         dt,
         Nmax,
-        V=None,
+        V=[None],
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -674,15 +674,17 @@ class timeintegration_fluid(timeintegration):
         )
 
         # work vectors for acceleration and fluid displacement
-        self.a_work = fem.Function(self.V)
-        self.uf_work = fem.Function(self.V)
+        self.a_work = fem.Function(self.V[0])
+        self.uf_work = fem.Function(self.V[0])
 
         # work vector for mesh velocity - needed for ALE fluid
-        self.w_work = fem.Function(self.V)
+        self.w_work = fem.Function(self.V[0])
 
         # work vectors for full momentum term (for discretely conservative time-integration) - can vary per domain (densities!)
         if self.discretely_conservative:
-            self.amom_work = [fem.Function(self.V) for _ in range(self.num_dom)]
+            self.amom_work = [fem.Function(self.V[0]) for _ in range(self.num_dom)]
+            if len(V) > 1:  # not so nice...
+                self.rhodot_work = [fem.Function(self.V[1]) for _ in range(self.num_dom)]
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -743,9 +745,11 @@ class timeintegration_fluid(timeintegration):
         uf_veryold=None,
         accmom_expr=[None],
         amom_old=[None],
+        rhodot_expr=[None],
+        rhodot_old=[None],
     ):
         # update old fields with new quantities
-        self.update_fields(v, v_old, v_veryold, acc_expr, a_old, uf_expr=uf_expr, uf_old=uf_old, uf_veryold=uf_veryold, accmom_expr=accmom_expr, amom_old=amom_old)
+        self.update_fields(v, v_old, v_veryold, acc_expr, a_old, uf_expr=uf_expr, uf_old=uf_old, uf_veryold=uf_veryold, accmom_expr=accmom_expr, amom_old=amom_old, rhodot_expr=rhodot_expr, rhodot_old=rhodot_old)
 
         # update pressure variable
         p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
@@ -768,7 +772,7 @@ class timeintegration_fluid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, v, v_old, v_veryold, acc_expr, a_old, uf_expr=None, uf_old=None, uf_veryold=None, accmom_expr=[None], amom_old=[None]):
+    def update_fields(self, v, v_old, v_veryold, acc_expr, a_old, uf_expr=None, uf_old=None, uf_veryold=None, accmom_expr=[None], amom_old=[None], rhodot_expr=[None], rhodot_old=[None]):
         self.a_work.interpolate(acc_expr)
         self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
@@ -777,11 +781,16 @@ class timeintegration_fluid(timeintegration):
                 self.amom_work[n].interpolate(accmom_expr[n])
                 self.amom_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        if None not in rhodot_expr:
+            for n in range(self.num_dom):
+                self.rhodot_work[n].interpolate(rhodot_expr[n])
+                self.rhodot_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         if uf_old is not None:
             self.uf_work.interpolate(uf_expr)
             self.uf_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old, amom_old=amom_old)
+        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old, amom_old=amom_old, rhodot_old=rhodot_old)
 
     def update_dvar(self, var, var_old, dvar_old, dt, var_veryold=None):
         if self.timint == "ost":
@@ -820,7 +829,7 @@ class timeintegration_fluid(timeintegration):
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None, amom_old=[None]):
+    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None, amom_old=[None], rhodot_old=[None]):
         # update acceleration: a_old <- a
         a_old.x.petsc_vec.axpby(1.0, 0.0, self.a_work.x.petsc_vec)
         a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -830,6 +839,12 @@ class timeintegration_fluid(timeintegration):
                 if isinstance(amom_old[n], fem.function.Function):
                     amom_old[n].x.petsc_vec.axpby(1.0, 0.0, self.amom_work[n].x.petsc_vec)
                     amom_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if None not in rhodot_old:
+            for n in range(self.num_dom):
+                if isinstance(rhodot_old[n], fem.function.Function):
+                    rhodot_old[n].x.petsc_vec.axpby(1.0, 0.0, self.rhodot_work[n].x.petsc_vec)
+                    rhodot_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_veryold <- v_old
         v_veryold.x.petsc_vec.axpby(1.0, 0.0, v_old.x.petsc_vec)
@@ -918,7 +933,7 @@ class timeintegration_phasefield(timeintegration_fluid):
         time_params,
         dt,
         Nmax,
-        V=None,
+        V=[None],
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -938,7 +953,8 @@ class timeintegration_phasefield(timeintegration_fluid):
         )
 
         # work vector for time derivative of phase field
-        self.phidot_work = fem.Function(self.V)
+        self.phidot_work = fem.Function(self.V[0])
+        self.jphidot_work = fem.Function(self.V[0])
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -947,9 +963,9 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
-    def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old):
+    def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=None, jphidot_old=None):
         # update old fields with new quantities
-        self.update_fields(phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old)
+        self.update_fields(phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=jphidot_expr, jphidot_old=jphidot_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
@@ -957,17 +973,26 @@ class timeintegration_phasefield(timeintegration_fluid):
         # set form for rate of phi
         return self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold)
 
-    def update_fields(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old):
+    def update_fields(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=None, jphidot_old=None):
         # update work vector - interpolate expression
         self.phidot_work.interpolate(phidot_expr)
         self.phidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu)
+        if jphidot_expr is not None:
+            self.jphidot_work.interpolate(jphidot_expr)
+            self.jphidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phi, mu):
+        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu, jphidot_old=jphidot_old)
+
+    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phi, mu, jphidot_old=None):
         # update time derivative of phase field: phidot_old <- phidot
         phidot_old.x.petsc_vec.axpby(1.0, 0.0, self.phidot_work.x.petsc_vec)
         phidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if jphidot_old is not None:
+            if isinstance(jphidot_old, fem.function.Function):
+                jphidot_old.x.petsc_vec.axpby(1.0, 0.0, self.jphidot_work.x.petsc_vec)
+                jphidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update phase field: phi_veryold <- phi_old
         phi_veryold.x.petsc_vec.axpby(1.0, 0.0, phi_old.x.petsc_vec)
@@ -998,7 +1023,7 @@ class timeintegration_scatra(timeintegration_fluid):
         time_params,
         dt,
         Nmax,
-        V=None,
+        V=[None],
         time_curves=None,
         t_init=0.0,
         dim=3,
@@ -1018,7 +1043,7 @@ class timeintegration_scatra(timeintegration_fluid):
         )
 
         # work vector for time derivative of concentration
-        self.cdot_work = fem.Function(self.V)
+        self.cdot_work = fem.Function(self.V[0])
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]

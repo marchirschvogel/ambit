@@ -22,7 +22,7 @@ class variationalform(variationalform_base):
         self.var_mu = tstfncs[1]
         variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
 
-    def cahnhilliard_phase(self, phidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
+    def cahnhilliard_phase(self, jphidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow
         if v is not None:
             # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
@@ -32,7 +32,7 @@ class variationalform(variationalform_base):
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}V - \int\limits_{\mathit{\Omega}} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}V = 0
         """
-        return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, kappa, ddomain, F=None):
         """ TeX:
@@ -65,13 +65,15 @@ class variationalform(variationalform_base):
         else:
             raise ValueError("Unknown return type.")
 
+    def cahnhilliard_phidot(self, phidot, phi, w=None, F=None):
+        return phidot
+
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)
 
 class variationalform_ale(variationalform):
-    def cahnhilliard_phase(self, phidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
+    def cahnhilliard_phase(self, jphidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
         J = ufl.det(F)
-        Jdot = ufl.div(J*ufl.inv(F)*w)
         # advection term if coupled to fluid flow
         if v is not None:
             # NOTE: We should use the conservative form, NOT "ufl.dot(v-w, ufl.inv(F).T*ufl.grad(phi))"
@@ -81,7 +83,7 @@ class variationalform_ale(variationalform):
         """ TeX:
         \int\limits_{\mathit{\Omega}_0} \left(\left.\frac{\partial (\widehat{J}\phi)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\phi\,(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\right) \delta \phi \, \mathrm{d}V - \int\limits_{\mathit{\Omega}_0} \widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{J} \cdot \nabla_0 \delta \phi \, \mathrm{d}V = 0
         """
-        return ( ufl.inner(J*phidot + phi*Jdot, self.var_phi) + ufl.inner(advec, self.var_phi) - J*ufl.inner(ufl.inv(F)*Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - J*ufl.inner(ufl.inv(F)*Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, kappa, ddomain, F=None):
         J = ufl.det(F)
@@ -124,3 +126,8 @@ class variationalform_ale(variationalform):
             return source
         else:
             raise ValueError("Unknown return type.")
+
+    def cahnhilliard_phidot(self, phidot, phi, w=None, F=None):
+        J = ufl.det(F)
+        Jdot = ufl.div(J*ufl.inv(F)*w)
+        return J*phidot + phi*Jdot
