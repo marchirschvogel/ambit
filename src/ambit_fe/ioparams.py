@@ -230,9 +230,13 @@ def check_params_time_fluid(params):
 
 def check_params_time_phasefield(params):
     valid_params = [
+        "alpha_m",
+        "alpha_f",
         "discretely_conservative",
         "eval_nonlin_terms",
+        "gamma",
         "potential_at_midpoint",
+        "rho_inf_genalpha",
         "timint",
         "theta_ost",
     ]

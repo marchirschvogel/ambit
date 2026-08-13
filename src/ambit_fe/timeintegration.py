@@ -961,6 +961,17 @@ class timeintegration_phasefield(timeintegration_fluid):
             if np.isclose(self.theta_ost,1.0): # Backward-Euler
                 self.res_eval = "back"
 
+        if self.timint == "genalpha":
+            # if the spectral radius, rho_inf_genalpha, is specified, the parameters are computed from it
+            try:
+                self.rho_inf_genalpha = time_params["rho_inf_genalpha"]
+                self.alpha_m, self.alpha_f, self.gamma = self.compute_genalpha_params(self.rho_inf_genalpha)
+            # otherwise, user can specify each parameter individually
+            except:
+                self.alpha_m = time_params["alpha_m"]
+                self.alpha_f = time_params["alpha_f"]
+                self.gamma = time_params["gamma"]
+
         self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
     def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=None, jphidot_old=None):
@@ -1005,16 +1016,6 @@ class timeintegration_phasefield(timeintegration_fluid):
         # update potential: mu_old <- mu
         mu_old.x.petsc_vec.axpby(1.0, 0.0, mu.x.petsc_vec)
         mu_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-    def timefactors(self):
-        if self.timint == "ost":
-            timefac_m, timefac = self.theta_ost, self.theta_ost
-        elif self.timint == "bdf2":
-            timefac_m, timefac = 1.0, 1.0
-        else:
-            raise NameError("Unknown time-integration scheme.")
-
-        return timefac_m, timefac
 
 
 class timeintegration_scatra(timeintegration_fluid):
