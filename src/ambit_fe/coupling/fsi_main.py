@@ -1098,7 +1098,7 @@ class FSISolver(solver_base):
                     self.pb.pbs.deltaW_kin_old
                     + self.pb.pbs.deltaW_int_old
                     - self.pb.pbs.deltaW_ext_old
-                    + self.pb.work_coupling_solid_old
+                    + self.pb.work_coupling_solid_old  # TODO: Should this be there if loads are always at t_{n+1} ?!
                 )
 
             weakform_lin_aa_solid = ufl.derivative(
@@ -1139,7 +1139,7 @@ class FSISolver(solver_base):
                     self.pb.pbf.deltaW_kin_old
                     + self.pb.pbf.deltaW_int_old
                     - self.pb.pbf.deltaW_ext_old
-                    + self.pb.power_coupling_fluid_old
+                    + self.pb.power_coupling_fluid_old  # TODO: Should this be there if loads are always at t_{n+1} ?!
                 )
             res_a_fluid = fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps)
 
