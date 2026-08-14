@@ -282,56 +282,56 @@ if __name__ == "__main__":
 
 \textbf{Displacement-based}\\
 
--- Primary variable: displacement $\bs{u}$
+-- Primary variable: displacement $\boldsymbol{u}$
 \begin{equation}
 \label{equation-solid-strong-form}
 \begin{aligned}
-\nabla_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T],\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},
+\nabla_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+\boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
+\boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T],\\
+\boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},\\
+\boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},
 \end{aligned}
 \end{equation}
 
 \textbf{Incompressible mechanics}\\
 
--- Primary variables: displacement $\bs{u}$ and pressure $p$
+-- Primary variables: displacement $\boldsymbol{u}$ and pressure $p$
 \begin{equation}
 \label{equation-solid-strong-form-inc}
 \begin{aligned}
-\nabla_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T],\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0},\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0},
+\nabla_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+\boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
+\boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T],\\
+\boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Om}_{0},\\
+\boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Om}_{0},
 \end{aligned}
 \end{equation}
 
 \subsubsection{Weak form}
 
 \textbf{Displacement-based}\\
-Find $\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h,D}$ such that
+Find $\boldsymbol{u}\in\boldsymbol{\mathcal{V}}_{u}^{h,D}$ such that
 \begin{equation}
 \label{equation-solid-weak-form}
 \begin{aligned}
-r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \end{aligned}
+r(\boldsymbol{u};\delta\boldsymbol{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \end{aligned}
 \end{equation}
-for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
+for all $\delta\boldsymbol{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
 
 -- Kinetic virtual work:
 \begin{equation}
 \label{equation-deltaw-kin}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \rho_{0}\,\bs{a}(\bs{u}) \cdot \delta\bs{u} \,\mathrm{d}V
+\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\Om_{0}} \rho_{0}\,\boldsymbol{a}(\boldsymbol{u}) \cdot \delta\boldsymbol{u} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual work:
 \begin{equation}
 \label{equation-deltaw-int}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \nabla_{0} \delta\bs{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \bs{S}(\bs{u},\bs{v}(\bs{u})) : \frac{1}{2}\delta\bs{C}(\bs{u}) \,\mathrm{d}V
+\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\Om_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \nabla_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \boldsymbol{S}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- External virtual work:\\
@@ -340,7 +340,7 @@ for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
 \begin{equation}
 \label{equation-deltaw-ext-pk1}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\bs{t}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A
 \end{aligned}
 \end{equation}
 %-- add to the dict of boundary conditions:\\
@@ -351,20 +351,20 @@ for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
 \begin{equation}
 \label{equation-deltaw-ext-cur-p}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \end{aligned}
+\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A \end{aligned}
 \end{equation}
 \item general Neumann load in current direction:
 \begin{equation}
 \label{equation-deltaw-ext-cur}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A
 \end{aligned}
 \end{equation}
 \item body force:
 \begin{equation}
 \label{equation-deltaw-ext-body}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Om_{0}} \hat{\bs{b}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}V
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\Om_{0}} \hat{\boldsymbol{b}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -372,14 +372,14 @@ for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
 \begin{equation}
 \label{equation-deltaw-ext-robin}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} \left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} \left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 \item generalized Robin condition in reference surface normal direction:
 \begin{equation}
 \label{equation-deltaw-ext-robin-n}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} (\bs{n}_0 \otimes \bs{n}_0)\left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
@@ -387,29 +387,29 @@ for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
 
 \textbf{Incompressible mechanics: 2-field displacement and pressure variables}\\
 
-Find $(\bs{u},p) \in \boldsymbol{\mathcal{V}}_{u}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
+Find $(\boldsymbol{u},p) \in \boldsymbol{\mathcal{V}}_{u}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
 \begin{equation}
 \label{equation-solid-weak-form-inc}
 \begin{aligned}
-r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \\
-r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0,
+r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \\
+r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0,
 \end{aligned}
 \end{equation}
-for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \mathcal{V}_{p}^{h}$\\
+for all $(\delta\boldsymbol{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \mathcal{V}_{p}^{h}$\\
 
 -- Kinetic virtual work: (\ref{equation-deltaw-kin})\\
 -- Internal virtual work:
 \begin{equation}
 \label{equation-deltaw-int-inc}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \nabla_{0} \delta\bs{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \bs{S}(\bs{u},p,\bs{v}(\bs{u})) : \frac{1}{2}\delta\bs{C}(\bs{u}) \,\mathrm{d}V
+\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\Om_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \nabla_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \boldsymbol{S}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure virtual work:
 \begin{equation}
 \label{equation-deltaw-p}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V 
+\delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\Om_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V 
 \end{aligned}
 \end{equation}
 
@@ -418,7 +418,7 @@ for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \ma
 -- hyperelastic material models
 \begin{equation}
 \begin{aligned}
-\bs{S} = 2\frac{\partial\mathit{\Psi}}{\partial \bs{C}}
+\boldsymbol{S} = 2\frac{\partial\mathit{\Psi}}{\partial \boldsymbol{C}}
 \end{aligned}
 \end{equation}
 
@@ -434,14 +434,14 @@ for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \ma
 - MAT \verb."holzapfelogden_dev".\\
 \begin{equation}
 \begin{aligned}
-\mathit{\Psi} &= \frac{a_0}{2b_0}\left(e^{b_0(\bar{I}_C - 3)} - 1\right) + \sum\limits_{i\in\{f,s\}}\frac{a_i}{2b_i}\left(e^{b_i(I_{4,i}-1)^2}-1\right) + \frac{a_{fs}}{2b_{fs}}\left(e^{b_{fs}I_{8}^2} - 1\right), \\ & I_{4,f} = \bs{f}_0 \cdot \bs{C}\bs{f}_0, \quad I_{4,s} = \bs{s}_0 \cdot \bs{C}\bs{s}_0, \quad I_8 = \bs{f}_0 \cdot \bs{C}\bs{s}_0
+\mathit{\Psi} &= \frac{a_0}{2b_0}\left(e^{b_0(\bar{I}_C - 3)} - 1\right) + \sum\limits_{i\in\{f,s\}}\frac{a_i}{2b_i}\left(e^{b_i(I_{4,i}-1)^2}-1\right) + \frac{a_{fs}}{2b_{fs}}\left(e^{b_{fs}I_{8}^2} - 1\right), \\ & I_{4,f} = \boldsymbol{f}_0 \cdot \boldsymbol{C}\boldsymbol{f}_0, \quad I_{4,s} = \boldsymbol{s}_0 \cdot \boldsymbol{C}\boldsymbol{s}_0, \quad I_8 = \boldsymbol{f}_0 \cdot \boldsymbol{C}\boldsymbol{s}_0
 \end{aligned}
 \end{equation}
 
 -- viscous material models
 \begin{equation}
 \begin{aligned}
-\bs{S} = 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}}{\partial \dot{\bs{C}}}
+\boldsymbol{S} = 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}}{\partial \dot{\boldsymbol{C}}}
 \end{aligned}
 \end{equation}
 
@@ -450,62 +450,62 @@ for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \ma
 -- time scheme \verb.timint : "static".\\
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 \end{equation}
 -- Generalized-alpha time scheme \verb.timint : "genalpha".
 \begin{equation}
 \begin{aligned}
-\bs{v}_{n+1} &= \frac{\gamma}{\beta\Delta t}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{\gamma-\beta}{\beta} \bs{v}_{n} - \frac{\gamma-2\beta}{2\beta}\Delta t\,\bs{a}_{n} \\
-\bs{a}_{n+1} &= \frac{1}{\beta\Delta t^2}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1}{\beta\Delta t} \bs{v}_{n} - \frac{1-2\beta}{2\beta}\bs{a}_{n}
+\boldsymbol{v}_{n+1} &= \frac{\gamma}{\beta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{\gamma-\beta}{\beta} \boldsymbol{v}_{n} - \frac{\gamma-2\beta}{2\beta}\Delta t\,\boldsymbol{a}_{n} \\
+\boldsymbol{a}_{n+1} &= \frac{1}{\beta\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\beta\Delta t} \boldsymbol{v}_{n} - \frac{1-2\beta}{2\beta}\boldsymbol{a}_{n}
 \end{aligned}
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "midpoint".:
 \begin{equation}
 \label{equation-solid-midpoint-genalpha}
 \begin{aligned}
-\bs{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{u}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
-\bs{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{v}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
-\bs{a}_{n+1-\alpha_{\mathrm{m}}} &= (1-\alpha_{\mathrm{m}})\bs{a}_{n+1} + \alpha_{\mathrm{m}} \bs{a}_{n}
+\boldsymbol{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{u}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
+\boldsymbol{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{v}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
+\boldsymbol{a}_{n+1-\alpha_{\mathrm{m}}} &= (1-\alpha_{\mathrm{m}})\boldsymbol{a}_{n+1} + \alpha_{\mathrm{m}} \boldsymbol{a}_{n}
 \end{aligned}
 \end{equation}
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1-\alpha_{m}};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1-\alpha_{f}};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1-\alpha_{f}};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1-\alpha_{m}};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1-\alpha_{f}};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1-\alpha_{f}};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "trapezoidal".:
 \begin{equation}
 \begin{aligned}
-&(1-\alpha_{\mathrm{m}})\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1};\delta\bs{u}) + \alpha_{\mathrm{m}}\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n};\delta\bs{u}) + \\
-& (1-\alpha_{\mathrm{f}})\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) + \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n};\delta\bs{u}) - \\
-& (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+&(1-\alpha_{\mathrm{m}})\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + \alpha_{\mathrm{m}}\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
+& (1-\alpha_{\mathrm{f}})\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
+& (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 \end{equation}
 
 -- One-Step-theta time scheme \verb.timint : "ost".
 \begin{equation}
 \begin{aligned}
-\bs{v}_{n+1} &= \frac{1}{\theta\Delta t}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1-\theta}{\theta} \bs{v}_{n} \\
-\bs{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1}{\theta^2\Delta t} \bs{v}_{n} - \frac{1-\theta}{\theta}\bs{a}_{n}
+\boldsymbol{v}_{n+1} &= \frac{1}{\theta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1-\theta}{\theta} \boldsymbol{v}_{n} \\
+\boldsymbol{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\theta^2\Delta t} \boldsymbol{v}_{n} - \frac{1-\theta}{\theta}\boldsymbol{a}_{n}
 \end{aligned}
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "midpoint".:
 \begin{equation}
 \label{equation-solid-midpoint-ost}
 \begin{aligned}
-\bs{u}_{n+\theta} &= \theta \bs{u}_{n+1} + (1-\theta) \bs{u}_{n} \\
-\bs{v}_{n+\theta} &= \theta \bs{v}_{n+1} + (1-\theta) \bs{v}_{n} \\
-\bs{a}_{n+\theta} &= \theta \bs{a}_{n+1} + (1-\theta) \bs{a}_{n}
+\boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{u}_{n} \\
+\boldsymbol{v}_{n+\theta} &= \theta \boldsymbol{v}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
+\boldsymbol{a}_{n+\theta} &= \theta \boldsymbol{a}_{n+1} + (1-\theta) \boldsymbol{a}_{n}
 \end{aligned}
 \end{equation}
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+\theta};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+\theta};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+\theta};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+\theta};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "trapezoidal".:
 \begin{equation}
 \begin{aligned}
-&\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1};\delta\bs{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n};\delta\bs{u}) + \\
-& \theta\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n};\delta\bs{u}) - \\
-& \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}
+&\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
+& \theta\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
+& \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}
 \end{aligned}
 \end{equation}
 
@@ -514,7 +514,7 @@ Note the equivalence of \verb."midpoint". and \verb."trapezoidal". for all linea
 Note that, for incompressible mechanics, the pressure kinematic constraint is always evaluated at $t_{n+1}$:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{pres}}(\bs{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
+\delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
 \end{aligned}
 \end{equation}
 and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\ref{equation-solid-midpoint-genalpha}) or (\ref{equation-solid-midpoint-ost}), respectively.
@@ -525,7 +525,7 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 \begin{equation}
 \label{equation-nonlin-sys-solid}
 \begin{aligned}
-\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}
+\left.\ROP_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -533,7 +533,7 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 \begin{equation}
 \label{equation-lin-sys-solid}
 \begin{aligned}
-\left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k}
+\left. \boldsymbol{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\boldsymbol{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -541,7 +541,7 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 \begin{equation}
 \label{equation-nonlin-sys-solid-inc}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}) \\ \ROP_{p}(\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -549,7 +549,7 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 \begin{equation}
 \label{equation-lin-sys-solid-inc}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -568,48 +568,48 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 
 \textbf{Strong Form}\\
 
--- Primary variables: velocity $\bs{v}$ and pressure $p$
+-- Primary variables: velocity $\boldsymbol{v}$ and pressure $p$
 \begin{equation}
 \label{equation-fluid-strong-form}
 \begin{aligned}
-\rho\left(\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) &= \nabla \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
-\nabla\cdot \bs{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
+\rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) &= \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
+\nabla\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
+\boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
+\boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
+\boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\Om}_t,
 \end{aligned}
 \end{equation}
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right)
+\boldsymbol{\sigma} = -p \boldsymbol{I} + \eta \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right)
 \end{align}
 where $\eta$ is the dynamic viscosity
 
 \textbf{Weak Form}\\
-Find $(\bs{v},p) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
+Find $(\boldsymbol{v},p) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
 \begin{equation}
 \label{equation-fluid-weak-form}
 \begin{aligned}
-r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v};\delta\bs{v}) = 0, \quad \\
-r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p) = 0,
+r_v(\boldsymbol{v},p;\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \quad \\
+r_p(\boldsymbol{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p) = 0,
 \end{aligned}
 \end{equation}
-for all $(\delta\bs{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h}$
+for all $(\delta\boldsymbol{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h}$
 
 -- Kinetic virtual power:
 \begin{equation}
 \label{equation-deltap-kin}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) = \int\limits_{\Om_t} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}v
+\delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) = \int\limits_{\Om_t} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
 \begin{equation}
 \label{equation-deltap-int}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) = 
-\int\limits_{\Om_t} \bs{\sigma}(\bs{v},p) : \nabla \delta\bs{v} \,\mathrm{d}v 
+\delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) = 
+\int\limits_{\Om_t} \boldsymbol{\sigma}(\boldsymbol{v},p) : \nabla \delta\boldsymbol{v} \,\mathrm{d}v 
 \end{aligned}
 \end{equation}
 
@@ -617,8 +617,8 @@ for all $(\delta\bs{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \ma
 \begin{equation}
 \label{equation-deltap-p}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p) = 
-\int\limits_{\Om_t} (\nabla\cdot\bs{v})\,\delta p\,\mathrm{d}v
+\delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p) = 
+\int\limits_{\Om_t} (\nabla\cdot\boldsymbol{v})\,\delta p\,\mathrm{d}v
 \end{aligned}
 \end{equation}
 
@@ -628,21 +628,21 @@ for all $(\delta\bs{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \ma
 \begin{equation}
 \label{equation-deltap-ext-cur}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_t^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}a
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\Gm_t^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}a
 \end{aligned}
 \end{equation}
 \item pressure Neumann load:
 \begin{equation}
 \label{equation-deltap-ext-cur-p}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\boldsymbol{n} \cdot \delta\boldsymbol{v} \,\mathrm{d}a
 \end{aligned}
 \end{equation}
 \item body force:
 \begin{equation}
 \label{equation-deltap-ext-body}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Om_t} \hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\Om_t} \hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 \end{itemize}
@@ -662,14 +662,14 @@ Full scheme according to \cite{tezduyar2000}: \verb."supg_pspg".:\\
 -- Velocity residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\bs{v})\,\bs{v} \cdot \left(\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right)\,\mathrm{d}v \\
-& + \int\limits_{\Om_t} \tau_{\mathrm{LSIC}}\,\rho\,(\nabla\cdot\delta\bs{v})(\nabla\cdot\bs{v})\,\mathrm{d}v
+r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left(\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right)\,\mathrm{d}v \\
+& + \int\limits_{\Om_t} \tau_{\mathrm{LSIC}}\,\rho\,(\nabla\cdot\delta\boldsymbol{v})(\nabla\cdot\boldsymbol{v})\,\mathrm{d}v
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left(\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right)\,\mathrm{d}v 
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left(\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right)\,\mathrm{d}v 
 \end{aligned}
 \end{equation}
 
@@ -677,7 +677,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 \begin{equation}
 \label{equation-nonlin-sys-fluid}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}}) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -685,10 +685,10 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 \begin{equation}
 \label{equation-lin-sys-fluid}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
--- Note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
+-- Note that $\boldsymbol{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
 \subsubsection{ALE reference frame}\label{ale-reference-frame}
 
@@ -696,38 +696,38 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 
 -- Incompressible Navier-Stokes equations in Arbitrary Lagrangian Eulerian (ALE) reference frame\\
 
--- ALE domain problem deformation governed by linear-elastic, nonlinear hyperelastic solid, or a diffusion problem, displacement field $\bs{d}$\\
+-- ALE domain problem deformation governed by linear-elastic, nonlinear hyperelastic solid, or a diffusion problem, displacement field $\boldsymbol{d}$\\
 
--- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widehat{\bs{F}}(\bs{d}) = \bs{I} + \nabla_0\bs{d}$ and its determinant, $\widehat{J}(\bs{d})=\det \widehat{\bs{F}}(\bs{d})$\\
+-- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widehat{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \nabla_0\boldsymbol{d}$ and its determinant, $\widehat{J}(\boldsymbol{d})=\det \widehat{\boldsymbol{F}}(\boldsymbol{d})$\\
 
 \textbf{ALE problem}\\
 
--- Primary variable: domain displacement $\bs{d}$\\
+-- Primary variable: domain displacement $\boldsymbol{d}$\\
 
 -- Strong form:
 \begin{equation}
 \label{equation-ale-strong-form}
 \begin{aligned}
-\nabla_{0} \cdot \bs{\sigma}^{\mathrm{G}}(\bs{d}) &= \bs{0} &&\text{in} \; \mathit{\Om}_0, \\
-\bs{d} &= \hat{\bs{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}},
+\nabla_{0} \cdot \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) &= \boldsymbol{0} &&\text{in} \; \mathit{\Om}_0, \\
+\boldsymbol{d} &= \hat{\boldsymbol{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}},
 \end{aligned}
 \end{equation}
 -- ALE material \verb.linelast.:
 \begin{equation}
 \begin{aligned}
-\bs{\sigma}^{\mathrm{G}}(\bs{d}) = 2\mu \,\bs{\varepsilon} + \lambda \,\mathrm{tr}\bs{\varepsilon}\,\bs{I}, \qquad \text{with}\quad \bs{\varepsilon} = \frac{1}{2}\left(\nabla_0\bs{d} + (\nabla_0\bs{d})^{\mathrm{T}}\right)
+\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = 2\mu \,\boldsymbol{\varepsilon} + \lambda \,\mathrm{tr}\boldsymbol{\varepsilon}\,\boldsymbol{I}, \qquad \text{with}\quad \boldsymbol{\varepsilon} = \frac{1}{2}\left(\nabla_0\boldsymbol{d} + (\nabla_0\boldsymbol{d})^{\mathrm{T}}\right)
 \end{aligned}
 \end{equation}
 -- ALE material \verb.diffusion.:
 \begin{equation}
 \begin{aligned}
-\bs{\sigma}^{\mathrm{G}}(\bs{d}) = D \,\nabla_0\bs{d}
+\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = D \,\nabla_0\boldsymbol{d}
 \end{aligned}
 \end{equation}
 -- ALE material \verb.neohooke. (fully nonlinear model):
 \begin{equation}
 \begin{aligned}
-\bs{\sigma}^{\mathrm{G}}(\bs{d}) = \frac{\partial \mathit{\Psi}}{\partial \widehat{\bs{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widehat{\bs{F}}^{\mathrm{T}}\widehat{\bs{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widehat{J}^{-2\beta} - 1\right)
+\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = \frac{\partial \mathit{\Psi}}{\partial \widehat{\boldsymbol{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widehat{\boldsymbol{F}}^{\mathrm{T}}\widehat{\boldsymbol{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widehat{J}^{-2\beta} - 1\right)
 \end{aligned}
 \end{equation}
 
@@ -735,61 +735,61 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 \begin{equation}
 \label{equation-ale-weak-form}
 \begin{aligned}
-r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}) : \nabla_{0}\delta\bs{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\bs{d}
+r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\Om_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \nabla_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d}
 \end{aligned}
 \end{equation}
 
 
 \textbf{Strong form (ALE)}\\
 
--- Primary variables: velocity $\bs{v}$, pressure $p$, and domain displacement $\bs{d}$
+-- Primary variables: velocity $\boldsymbol{v}$, pressure $p$, and domain displacement $\boldsymbol{d}$
 \begin{equation}
 \label{equation-fluid-ale-strong-form}
 \begin{aligned}
-\widehat{J}\rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) &= \nabla_{0} \cdot\left(\widehat{J}\bs{\sigma} \widehat{\bs{F}}^{-\mathrm{T}}\right) + \widehat{J}\hat{\bs{b}} &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
-\nabla_{0}\cdot\left(\widehat{J}\widehat{\bs{F}}^{-1}\bs{v}\right) &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0,
+\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) &= \nabla_{0} \cdot\left(\widehat{J}\boldsymbol{\sigma} \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right) + \widehat{J}\hat{\boldsymbol{b}} &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\nabla_{0}\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right) &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \\
+\boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \\
+\boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\Om}_0,
 \end{aligned}
 \end{equation}
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + \mu \left(\nabla_0 \bs{v}\,\widehat{\bs{F}}^{-1} + \widehat{\bs{F}}^{-\mathrm{T}}(\nabla_0 \bs{v})^{\mathrm{T}}\right)
+\boldsymbol{\sigma} = -p \boldsymbol{I} + \mu \left(\nabla_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\nabla_0 \boldsymbol{v})^{\mathrm{T}}\right)
 \end{align}
 
 \textbf{Weak form (ALE)}\\
-Find $(\bs{v},p,\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \boldsymbol{\mathcal{V}}_{d}^{h,D}$ such that
+Find $(\boldsymbol{v},p,\boldsymbol{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \boldsymbol{\mathcal{V}}_{d}^{h,D}$ such that
 \begin{equation}
 \label{equation-fluid-ale-weak-form}
 \begin{aligned}
-r_v(\bs{v},p,\bs{d};\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v},\bs{d};\delta\bs{v}) = 0, \\
-r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 0, \\
-r_{d}(\bs{d};\delta\bs{d}) &= 0,
+r_v(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = 0, \\
+r_p(\boldsymbol{v},\boldsymbol{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 0, \\
+r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) &= 0,
 \end{aligned}
 \end{equation}
-for all $(\delta\bs{v},\delta p,\delta\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \boldsymbol{\mathcal{V}}_{d}^{h}$
+for all $(\delta\boldsymbol{v},\delta p,\delta\boldsymbol{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \boldsymbol{\mathcal{V}}_{d}^{h}$
 
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) = 
-\int\limits_{\Om_0} \widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}} : \nabla_{0} \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) = 
+\int\limits_{\Om_0} \widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}} : \nabla_{0} \delta\boldsymbol{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
 -- Pressure virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 
-\int\limits_{\Om_0} \nabla_{0}\cdot\left(\widehat{J}\widehat{\bs{F}}^{-1}\bs{v}\right) \delta p\,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 
+\int\limits_{\Om_0} \nabla_{0}\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right) \delta p\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -798,19 +798,19 @@ for all $(\delta\bs{v},\delta p,\delta\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{
 \item conservative Neumann load:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}A
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}A
 \end{aligned}
 \end{equation}
 \item pressure Neumann load:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,\widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A 
+\delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,\widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{v} \,\mathrm{d}A 
 \end{aligned}
 \end{equation}
 \item body force:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} \widehat{J}\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\Om_0} \widehat{J}\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 \end{itemize}
@@ -821,16 +821,16 @@ for all $(\delta\bs{v},\delta p,\delta\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\nabla_0\delta\bs{v}\,\widehat{\bs{F}}^{-1})\,\bs{v}\;\cdot \\
-& \qquad\quad \cdot\left(\widehat{J}\rho\left(\left.\frac{\partial \bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V \\
-& + \int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\nabla_{0}\delta\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})(\nabla_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V
+r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\nabla_0\delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
+& \qquad\quad \cdot\left(\widehat{J}\rho\left(\left.\frac{\partial \boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V \\
+& + \int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\nabla_{0}\delta\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})(\nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\bs{F}}^{-\mathrm{T}}\nabla_{0}\delta p) \;\cdot \\
-& \qquad\quad \cdot \left(\widehat{J}\rho\left(\left.\frac{\partial \bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\delta p) \;\cdot \\
+& \qquad\quad \cdot \left(\widehat{J}\rho\left(\left.\frac{\partial \boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -838,7 +838,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\math
 \begin{equation}
 \label{equation-nonlin-sys-fluid-ale}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{d}}) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -846,10 +846,10 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\math
 \begin{equation}
 \label{equation-lin-sys-fluid-ale}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} 
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} 
 \end{aligned}
 \end{equation}
--- note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
+-- note that $\boldsymbol{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
 
 \subsection{0D flow: Lumped parameter models}\label{d-flow-lumped-parameter-models}
@@ -1177,23 +1177,20 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t}
 -- solid momentum in (\ref{equation-solid-weak-form}) or in (\ref{equation-solid-weak-form-inc}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fS\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_0\cdot\delta\bs{u}\,\mathrm{d}A
+r_{\delta u} \leftarrow r_{\delta u} + \sum\limits_{i=1}^{{n}_{\text{0d}}^{\text{b}}}\mathit{\Lambda}_{i}\int\limits_{\mathit{\Gamma}_{0,i}^{\text{s-0d}}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
 -- Multiplier constraint
-
 \begin{equation}
-\begin{aligned}
-r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fS\text{-}0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\bs{v}(\bs{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
-\end{aligned}
+r_{\delta\mathit{\Lambda}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}},\boldsymbol{u};\{\delta\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right) := \sum\limits_{i=1}^{n_{\text{0d}}^{\text{b}}}\left(\int\limits_{\mathit{\Gamma}_{0,i}^{\text{s-0d}}} \boldsymbol{v}(\boldsymbol{u})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\,\mathrm{d}A - \alpha_{i} \,\boldsymbol{\mathsf{y}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right)\cdot\boldsymbol{\mathsf{e}}_{i}\right)\delta\mathit{\Lambda}_{i} \quad \forall \; \delta\mathit{\Lambda}_i
 \end{equation}
 
 -- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
 \begin{equation}
 \label{equation-nonlin-sys-solid-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\LMZ) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\boldsymbol{\mathsf{u}},\LMZ) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1201,7 +1198,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \begin{equation}
 \label{equation-lin-sys-solid-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{\lmzi u} & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{u\lmzi} \\ \\ \boldsymbol{\mathsf{K}}_{\lmzi u} & \boldsymbol{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1209,7 +1206,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \begin{equation}
 \label{equation-nonlin-sys-solid-inc-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{u}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}},\LMZ) \\ \ROP_{p}(\boldsymbol{\mathsf{u}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1217,7 +1214,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \begin{equation}
 \label{equation-lin-sys-solid-inc-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi u} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\lmzi} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \boldsymbol{\mathsf{K}}_{\lmzi u} & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1225,7 +1222,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \begin{equation}
 \label{equation-nonlin-lin-sys-0d}
 \begin{aligned}
-\left.\bs{\mathsf{r}}^{0\mathrm{D}}(\bs{\mathsf{\Lambda}})\right|_{k} = \bs{\mathsf{0}}, \qquad \rightsquigarrow \bs{\mathsf{K}}_{k}^{0\mathrm{D},j}\Delta\bs{\mathsf{q}}_{k}^{j+1} = -\bs{\mathsf{r}}_{k}^{0\mathrm{D},j}
+\left.\boldsymbol{\mathsf{r}}^{0\mathrm{D}}(\boldsymbol{\mathsf{\Lambda}})\right|_{k} = \boldsymbol{\mathsf{0}}, \qquad \rightsquigarrow \boldsymbol{\mathsf{K}}_{k}^{0\mathrm{D},j}\Delta\boldsymbol{\mathsf{q}}_{k}^{j+1} = -\boldsymbol{\mathsf{r}}_{k}^{0\mathrm{D},j}
 \end{aligned}
 \end{equation}
 
@@ -1238,23 +1235,20 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 -- fluid momentum in (\ref{equation-fluid-weak-form}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v + \int\limits_{\Gm_t^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\bs{n}\cdot\delta\bs{v}\,\mathrm{d}a
+r_{\delta v} \leftarrow r_{\delta v} + \sum\limits_{i=1}^{{n}_{\text{0d}}^{\text{b}}}\mathit{\Lambda}_{i}\int\limits_{\mathit{\Gamma}_{i}^{\text{f-0d}}} \boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
 -- Multiplier constraint
-
 \begin{equation}
-\begin{aligned}
-r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_t^{\mathrm{\fF\text{-}0d}}}\! \bs{n}\cdot\bs{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
-\end{aligned}
+r_{\delta\mathit{\Lambda}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}},\boldsymbol{v};\{\delta\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right) := \sum\limits_{i=1}^{n_{\text{0d}}^{\text{b}}}\left(\int\limits_{\mathit{\Gamma}_{i}^{\text{f-0d}}} \boldsymbol{v}\cdot\boldsymbol{n}\,\mathrm{d}A - \alpha_{i} \,\boldsymbol{\mathsf{y}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right)\cdot\boldsymbol{\mathsf{e}}_{i}\right)\delta\mathit{\Lambda}_{i} \quad \forall \; \delta\mathit{\Lambda}_i
 \end{equation}
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{equation}
 \label{equation-nonlin-sys-fluid-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LMZ) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1262,7 +1256,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\in
 \begin{equation}
 \label{equation-lin-sys-fluid-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmzi} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom \\ \\  \boldsymbol{\mathsf{K}}_{\lmzi v} & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1272,25 +1266,22 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\in
 -- fluid momentum in (\ref{equation-fluid-ale-weak-form}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
+r_{\delta v} \leftarrow r_{\delta v} + \sum\limits_{i=1}^{{n}_{\text{0d}}^{\text{b}}}\mathit{\Lambda}_{i}\int\limits_{\Gm_{0,i}^{\fF\text{-}\mathrm{0d}}}\widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
 -- Multiplier constraint
-
 \begin{equation}
-\begin{aligned}
-r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! \widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\widehat{\bs{w}}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
-\end{aligned}
+r_{\delta\mathit{\Lambda}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}},\boldsymbol{v},\boldsymbol{d};\{\delta\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right) := \sum\limits_{i=1}^{n_{\text{0d}}^{\text{b}}}\left(\int\limits_{\mathit{\Gamma}_{i}^{\text{f-0d}}} (\boldsymbol{v}-\widehat{\boldsymbol{w}})\cdot\widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\,\mathrm{d}A - \alpha_{i} \,\boldsymbol{\mathsf{y}}\left(\{\mathit{\Lambda}\}_{n_{\text{0d}}^{\text{b}}}\right)\cdot\boldsymbol{\mathsf{e}}_{i}\right)\delta\mathit{\Lambda}_{i} \quad \forall \; \delta\mathit{\Lambda}_i
 \end{equation}
 
-with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
+with $\boldsymbol{w}(\boldsymbol{d})=\frac{\partial\boldsymbol{d}}{\partial t}$\\
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{equation}
 \label{equation-nonlin-sys-fluid-ale-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LMZ,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1298,7 +1289,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 \begin{equation}
 \label{equation-lin-sys-fluid-ale-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmzi} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmzi v} & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi \lmzi} & \boldsymbol{\mathsf{K}}_{\lmzi d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1312,13 +1303,13 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 -- Solid momentum in (\ref{equation-solid-weak-form}) or (\ref{equation-solid-weak-form-inc}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fF\text{-}\fS}}\bs{\lambda}\cdot\delta\bs{u}\,\mathrm{d}A
+r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fF\text{-}\fS}}\boldsymbol{\lambda}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 -- Fluid momentum in (\ref{equation-fluid-ale-weak-form}) is augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v - \int\limits_{\Gm_0^{\fF\text{-}\fS}}\bs{\lambda}\cdot\delta\bs{v}\,\mathrm{d}A
+r_v \leftarrow r_v - \int\limits_{\Gm_0^{\fF\text{-}\fS}}\boldsymbol{\lambda}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
@@ -1331,14 +1322,14 @@ Note the different signs (actio=reactio!)\\
 \item ``solid-governed'':
 \begin{equation}
 \begin{aligned}
-r_{\lambda}(\bs{u},\bs{v};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{u} - \bs{u}_{\mathrm{f}}(\bs{v})\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
+r_{\lambda}(\boldsymbol{u},\boldsymbol{v};\delta\boldsymbol{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\boldsymbol{u} - \boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v})\right)\cdot\delta\boldsymbol{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\boldsymbol{\lambda}
 \end{aligned}
 \end{equation}
 
 \item ``fluid-governed'':
 \begin{equation}
 \begin{aligned}
-r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{v} - \frac{\mathrm{d} \bs{u}}{\mathrm{d} t}\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
+r_{\lambda}(\boldsymbol{v},\boldsymbol{u};\delta\boldsymbol{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\boldsymbol{v} - \frac{\mathrm{d} \boldsymbol{u}}{\mathrm{d} t}\right)\cdot\delta\boldsymbol{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\boldsymbol{\lambda}
 \end{aligned}
 \end{equation}
 
@@ -1349,7 +1340,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-nonlin-sys-fsi}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LM,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\lambda}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1357,7 +1348,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-nonlin-sys-fsi-inc}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\boldsymbol{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LM,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\lambda}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1366,7 +1357,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-lin-sys-fsi}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \zerom & \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmi} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \zerom & \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmi u} & \boldsymbol{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1375,7 +1366,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-lin-sys-fsi-inc}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \zerom & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \zerom & \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmi} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmi u} & \zerom & \boldsymbol{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \zerom & \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1388,7 +1379,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-nonlin-sys-fsi-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LM,\LMZ,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\lambda}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1396,7 +1387,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-nonlin-sys-fsi-0d-inc}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\boldsymbol{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\LM,\LMZ,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\lambda}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1405,7 +1396,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-lin-sys-fsi-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \zerom & \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmi} & \boldsymbol{\mathsf{K}}_{v\lmzi} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \zerom & \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmi u} & \boldsymbol{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \boldsymbol{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi \lmzi} & \boldsymbol{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1413,7 +1404,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-lin-sys-fsi-0d-inc}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \zerom & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \zerom & \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lmi} & \boldsymbol{\mathsf{K}}_{v\lmzi} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmi u} & \zerom & \boldsymbol{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi \lmzi} & \boldsymbol{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \zerom & \boldsymbol{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1423,7 +1414,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 -- Boundary term:
 
 \begin{align}
-	r_{\fSr} := \int\limits_{\Gm_{0}^{\fF\text{-}\fSr}} h_{0} \left[\rho_{0,s}\frac{\partial\bs{v}}{\partial t}\cdot\delta\bs{v} + \tilde{\bs{P}}(\bs{u}_{\fF}(\bs{v}) + \tilde{\bs{u}}_{\mathrm{pre}},\bs{v}) : \tilde{\nabla}_{0}\delta\bs{v}\right]\mathrm{d}A
+	r_{\fSr} := \int\limits_{\Gm_{0}^{\fF\text{-}\fSr}} h_{0} \left[\rho_{0,s}\frac{\partial\boldsymbol{v}}{\partial t}\cdot\delta\boldsymbol{v} + \tilde{\boldsymbol{P}}(\boldsymbol{u}_{\fF}(\boldsymbol{v}) + \tilde{\boldsymbol{u}}_{\mathrm{pre}},\boldsymbol{v}) : \tilde{\nabla}_{0}\delta\boldsymbol{v}\right]\mathrm{d}A
 \end{align}
 
 
@@ -1431,7 +1422,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-nonlin-sys-frsi-0d}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}(\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}},\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}(\boldsymbol{\mathsf{V}}_{v}^{\Gm}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{p}},\LMZ,\boldsymbol{\mathsf{d}}) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{V}}_{v}^{\Gm}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\boldsymbol{\mathsf{V}}_{v}^{\Gm}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{d}}) \\ \ROP_{d}(\boldsymbol{\mathsf{d}},\boldsymbol{\mathsf{V}}_{v}^{\Gm}\tilde{\boldsymbol{\mathsf{v}}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1439,29 +1430,29 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \begin{equation}
 \label{equation-lin-sys-frsi-0d}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vv}\bs{\mathsf{V}}_{v}^{\Gm} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vp} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\bs{\mathsf{V}}_{v}^{\Gm} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v}\bs{\mathsf{V}}_{v}^{\Gm} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}\bs{\mathsf{V}}_{v}^{\Gm}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vv}\boldsymbol{\mathsf{V}}_{v}^{\Gm} & \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\boldsymbol{\mathsf{K}}_{v\lmzi} & \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv}\boldsymbol{\mathsf{V}}_{v}^{\Gm} & \boldsymbol{\mathsf{K}}_{pp} & \zerom & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lmzi v}\boldsymbol{\mathsf{V}}_{v}^{\Gm} & \zerom & \boldsymbol{\mathsf{K}}_{\lmzi \lmzi} & \boldsymbol{\mathsf{K}}_{\lmzi d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}\boldsymbol{\mathsf{V}}_{v}^{\Gm}  & \zerom & \zerom & \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\boldsymbol{\mathsf{v}}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
 \clearpage
 \subsubsection{Multiphase Fluid}\label{fluid-multiphase}
--- Primary variables: velocity $\bs{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
+-- Primary variables: velocity $\boldsymbol{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
 
 -- conservative form of Navier-Stokes, with capillary force term:
 \begin{equation}
 \label{equation-fluid-multi-strong-form}
 \begin{aligned}
-\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) &= \nabla \cdot \bs{\sigma} -\phi\nabla\mu + \hat{\bs{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
+\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) &= \nabla \cdot \boldsymbol{\sigma} -\phi\nabla\mu + \hat{\boldsymbol{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
 \frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v}) &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
+\boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
+\boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
+\boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\Om}_t,
 \end{aligned}
 \end{equation}
 
 with the constitutive equation for the Cauchy stress tensor given by
 \begin{align}
-\bs{\sigma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right) + \left(\zeta - \frac{2}{d}\eta\right)\nabla\cdot\bs{v}
+\boldsymbol{\sigma} = -p \boldsymbol{I} + \eta \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right) + \left(\zeta - \frac{2}{d}\eta\right)\nabla\cdot\boldsymbol{v}
 \end{align}
 
 -- conservative form of the Cahn-Hilliard equations:
@@ -1471,12 +1462,12 @@ with the constitutive equation for the Cauchy stress tensor given by
 \begin{aligned}
 \frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v}) &= - \nabla\cdot\boldsymbol{J} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
 \mu - \frac{\mathrm{d}\psi}{\mathrm{d}\phi} + \nabla\cdot(\kappa \nabla \phi) &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
-\phi(\bs{x},0) &= \hat{\phi}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
+\phi(\boldsymbol{x},0) &= \hat{\phi}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\Om}_t,
 \end{aligned}
 \end{equation}
 with the constitutive equation for the diffusive flux
 \begin{align}
-\bs{J} = -M(\phi)\nabla(\mu + \alpha p)
+\boldsymbol{J} = -M(\phi)\nabla(\mu + \alpha p)
 \end{align}
 where $\alpha=\frac{\rho_1-\rho_2}{\rho_1+\rho_2}$\\
 
@@ -1504,7 +1495,7 @@ M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}| \label{equation-mobility}
 
 Variational form:\\
 
-Find $(\bs{v},p,\phi,\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \mathcal{V}_{\phi}^{h,D} \times \mathcal{V}_{\mu}^{h,D}$ such that
+Find $(\boldsymbol{v},p,\phi,\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \mathcal{V}_{\phi}^{h,D} \times \mathcal{V}_{\mu}^{h,D}$ such that
 \begin{equation}
 \begin{aligned}
 &\int\limits_{\Om} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v + \int\limits_{\Omega}\boldsymbol{\sigma} : \nabla\delta\boldsymbol{v}\,\mathrm{d}v + \int\limits_{\Omega}\phi \nabla\mu\cdot\delta\boldsymbol{v}\,\mathrm{d}v - \delta\mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \\
@@ -1514,7 +1505,7 @@ Find $(\bs{v},p,\phi,\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal
 \end{aligned}
 \end{equation}
 
-for all $(\delta\bs{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \mathcal{V}_{\phi}^{h} \times \mathcal{V}_{\mu}^{h}$, with
+for all $(\delta\boldsymbol{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \mathcal{V}_{\phi}^{h} \times \mathcal{V}_{\mu}^{h}$, with
 \begin{align}
 \frac{\partial\rho}{\partial t} = \rho^{\prime}(\phi)\frac{\partial\phi}{\partial t}
 \end{align}
@@ -1523,7 +1514,7 @@ for all $(\delta\bs{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V
 \begin{equation}
 \label{equation-nonlin-sys-multiphase}
 \begin{aligned}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\upphi},\bs{\upmu}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\upphi}) \\ \ROP_{\phi}(\bs{\upphi},\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\upmu}) \\ \ROP_{\mu}(\bs{\upmu},\bs{\upphi}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\upphi},\boldsymbol{\upmu}) \\ \ROP_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\upphi}) \\ \ROP_{\phi}(\boldsymbol{\upphi},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\upmu}) \\ \ROP_{\mu}(\boldsymbol{\upmu},\boldsymbol{\upphi}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
 \end{aligned}
 \end{equation}
 
@@ -1531,7 +1522,7 @@ for all $(\delta\bs{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V
 \begin{equation}
 \label{equation-lin-sys-multiphase}
 \begin{aligned}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\phi} & \bs{\mathsf{K}}_{v\mu} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{p\phi} & \zerom \\ \\ \bs{\mathsf{K}}_{\phi v} & \bs{\mathsf{K}}_{\phi p} & \bs{\mathsf{K}}_{\phi \phi} & \bs{\mathsf{K}}_{\phi \mu} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\mu\phi} & \bs{\mathsf{K}}_{\mu\mu} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\upphi} \\ \\ \Delta\bs{\upmu}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\phi} \\ \\ \ROP_{\mu}\end{bmatrix}_{n+1}^{k}
+\begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\phi} & \boldsymbol{\mathsf{K}}_{v\mu} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \boldsymbol{\mathsf{K}}_{p\phi} & \zerom \\ \\ \boldsymbol{\mathsf{K}}_{\phi v} & \boldsymbol{\mathsf{K}}_{\phi p} & \boldsymbol{\mathsf{K}}_{\phi \phi} & \boldsymbol{\mathsf{K}}_{\phi \mu} \\ \\ \zerom & \zerom & \boldsymbol{\mathsf{K}}_{\mu\phi} & \boldsymbol{\mathsf{K}}_{\mu\mu} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\upphi} \\ \\ \Delta\boldsymbol{\upmu}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\phi} \\ \\ \ROP_{\mu}\end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
 
@@ -1771,7 +1762,7 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 Incompressible fluid flow in a 2D channel around an elastic flag is studied. The setup corresponds to the well-known Turek benchmark \cite{turek2006}. Here, the two cases FSI2 and FSI3 from the original setup are investigated. A prescribed inflow velocity with parabolic inflow profile is used:\\
 \begin{equation}
 \begin{aligned}
-    \vf = \bar{v}(t,y) \bs{e}_{x}
+    \vf = \bar{v}(t,y) \boldsymbol{e}_{x}
     \quad &  
     \text{on}\; \Gm_{t,\mathrm{in}}^{D,\fF} \times [0,T],
     \label{eq:flag_dbc_in}
@@ -1917,27 +1908,27 @@ Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as
 \begin{aligned}
 &\Om_0,\Om &&: \text{reference, current domain} \\
 &\Gm_0,\Gm &&: \text{reference, current boundary} \\
-&\bs{x}_0, \bs{x} &&: \text{coordinates of the reference, current frame} \\
-&\bs{e}_x, \bs{e}_y, \bs{e}_z &&: \text{unit vectors of the cartesian reference frame} \\
-&\bs{n}_0, \bs{n} &&: \text{unit outward normal defined in the reference, current frame} \\
+&\boldsymbol{x}_0, \boldsymbol{x} &&: \text{coordinates of the reference, current frame} \\
+&\boldsymbol{e}_x, \boldsymbol{e}_y, \boldsymbol{e}_z &&: \text{unit vectors of the cartesian reference frame} \\
+&\boldsymbol{n}_0, \boldsymbol{n} &&: \text{unit outward normal defined in the reference, current frame} \\
 &\nabla_{0},\nabla &&: \text{Nabla operator with respect to the reference, current frame} \\
-&\nabla\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \otimes\bs{e}_{j} &&: \text{Gradient of a vector field} \\
-&\nabla\cdot\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \cdot\bs{e}_{j} &&: \text{Divergence of a vector field} \\
-&\bs{e}_{i} &&: \text{Basis vectors}, i\in \{1,2,3\} \\
+&\nabla\boldsymbol{v} := \frac{\partial v_i}{\partial x_j} \boldsymbol{e}_{i} \otimes\boldsymbol{e}_{j} &&: \text{Gradient of a vector field} \\
+&\nabla\cdot\boldsymbol{v} := \frac{\partial v_i}{\partial x_j} \boldsymbol{e}_{i} \cdot\boldsymbol{e}_{j} &&: \text{Divergence of a vector field} \\
+&\boldsymbol{e}_{i} &&: \text{Basis vectors}, i\in \{1,2,3\} \\
 &t, T &&: \text{current, end time of an initial (boundary) value problem} \\
-&\bs{u}, \hat{\bs{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
-&\delta\bs{u}, \Delta\bs{u} &&: \text{solid mechanics displacement test, trial function} \\
+&\boldsymbol{u}, \hat{\boldsymbol{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
+&\delta\boldsymbol{u}, \Delta\boldsymbol{u} &&: \text{solid mechanics displacement test, trial function} \\
 & p &&: \text{solid mechanics hydrostatic pressure, or fluid mechanics pressure} \\
 & \delta p, \Delta p &&: \text{solid or fluid mechanics pressure test, trial function} \\
-&\bs{v}=\frac{\partial\bs{u}}{\partial t}, \hat{\bs{v}}_{0} &&: \text{solid mechanics velocity, and prescribed initial value} \\
-&\bs{a}=\frac{\partial^2\bs{u}}{\partial t^2} &&: \text{solid mechanics acceleration} \\
-&\bs{v}, \hat{\bs{v}}_{0} &&: \text{fluid mechanics velocity, and prescribed initial value} \\
-&\delta\bs{v}, \Delta\bs{v} &&: \text{fluid mechanics velocity test, trial function} \\
-&\bs{a}=\frac{\partial\bs{v}}{\partial t} &&: \text{fluid mechanics acceleration} \\
-&\bs{d} &&: \text{ALE domain displacement} \\
-&\delta\bs{d}, \Delta\bs{d} &&: \text{ALE domain displacement test, trial function} \\
-&\hat{\bs{b}}_0, \hat{\bs{b}} &&: \text{body force vector defined in the reference, current frame} \\
-&\widehat{\bs{w}}=\frac{\partial\bs{d}}{\partial t} &&: \text{ALE domain velocity} \\
+&\boldsymbol{v}=\frac{\partial\boldsymbol{u}}{\partial t}, \hat{\boldsymbol{v}}_{0} &&: \text{solid mechanics velocity, and prescribed initial value} \\
+&\boldsymbol{a}=\frac{\partial^2\boldsymbol{u}}{\partial t^2} &&: \text{solid mechanics acceleration} \\
+&\boldsymbol{v}, \hat{\boldsymbol{v}}_{0} &&: \text{fluid mechanics velocity, and prescribed initial value} \\
+&\delta\boldsymbol{v}, \Delta\boldsymbol{v} &&: \text{fluid mechanics velocity test, trial function} \\
+&\boldsymbol{a}=\frac{\partial\boldsymbol{v}}{\partial t} &&: \text{fluid mechanics acceleration} \\
+&\boldsymbol{d} &&: \text{ALE domain displacement} \\
+&\delta\boldsymbol{d}, \Delta\boldsymbol{d} &&: \text{ALE domain displacement test, trial function} \\
+&\hat{\boldsymbol{b}}_0, \hat{\boldsymbol{b}} &&: \text{body force vector defined in the reference, current frame} \\
+&\widehat{\boldsymbol{w}}=\frac{\partial\boldsymbol{d}}{\partial t} &&: \text{ALE domain velocity} \\
 &\rho_0, \rho &&: \text{reference, current density} \\
 &\phi, \mu &&: \text{phase field, potential in Cahn-Hilliard equations}
 \end{aligned}
@@ -1946,15 +1937,15 @@ Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as
 \begin{equation}
 \nonumber
 \begin{aligned}
-&\bs{P}=\bs{F}\bs{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
-&\bs{F}=\bs{I}+\nabla_{0}\bs{u} &&: \text{solid deformation gradient} \\
-&\widehat{\bs{F}}=\bs{I}+\nabla_{0}\bs{d} &&: \text{ALE deformation gradient} \\
-&J=\det \bs{F} &&: \text{determinant of solid deformation gradient} \\
-&\widehat{J}=\det \widehat{\bs{F}} &&: \text{determinant of ALE deformation gradient} \\
-&\bs{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
-&\bs{\sigma} &&: \text{Cauchy stress tensor} \\
-&\bs{t}_0, \hat{\bs{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\
-&\bs{t}, \hat{\bs{t}} &&: \text{Cauchy traction, prescribed Cauchy traction}
+&\boldsymbol{P}=\boldsymbol{F}\boldsymbol{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
+&\boldsymbol{F}=\boldsymbol{I}+\nabla_{0}\boldsymbol{u} &&: \text{solid deformation gradient} \\
+&\widehat{\boldsymbol{F}}=\boldsymbol{I}+\nabla_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
+&J=\det \boldsymbol{F} &&: \text{determinant of solid deformation gradient} \\
+&\widehat{J}=\det \widehat{\boldsymbol{F}} &&: \text{determinant of ALE deformation gradient} \\
+&\boldsymbol{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
+&\boldsymbol{\sigma} &&: \text{Cauchy stress tensor} \\
+&\boldsymbol{t}_0, \hat{\boldsymbol{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\
+&\boldsymbol{t}, \hat{\boldsymbol{t}} &&: \text{Cauchy traction, prescribed Cauchy traction}
 \end{aligned}
 \end{equation}
 

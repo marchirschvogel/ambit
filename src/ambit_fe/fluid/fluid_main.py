@@ -1470,9 +1470,9 @@ class FluidmechanicsProblem(problem_base):
 
                     dscales = self.stabilization["dscales"]
 
-                    tau_supg = dscales[0] * h / vscale_max
-                    tau_lsic = dscales[1] * h * vscale_max
-                    tau_pspg = dscales[2] * h / vscale_max
+                    self.tau_supg = dscales[0] * h / vscale_max
+                    self.tau_lsic = dscales[1] * h * vscale_max
+                    self.tau_pspg = dscales[2] * h / vscale_max
 
                     # strong momentum residuals
                     if self.fluid_governing_type == "navierstokes_transient":
@@ -1730,7 +1730,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int += self.vf.stab_supg(
                             self.v,
                             residual_v_strong,
-                            tau_supg,
+                            self.tau_supg,
                             self.dx(M),
                             w=self.alevar["w"],
                             F=self.alevar["Fale"],
@@ -1739,7 +1739,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_old += self.vf.stab_supg(
                             self.v_old,
                             residual_v_strong_old,
-                            tau_supg,
+                            self.tau_supg,
                             self.dx(M),
                             w=self.alevar["w_old"],
                             F=self.alevar["Fale_old"],
@@ -1748,7 +1748,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_mid += self.vf.stab_supg(
                             self.vel_mid,
                             residual_v_strong_mid,
-                            tau_supg,
+                            self.tau_supg,
                             self.dx(M),
                             w=self.alevar["w_mid"],
                             F=self.alevar["Fale_mid"],
@@ -1757,7 +1757,7 @@ class FluidmechanicsProblem(problem_base):
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
                     self.deltaW_int += self.vf.stab_lsic(
                         self.v,
-                        tau_lsic,
+                        self.tau_lsic,
                         self.rho[n],
                         self.dx(M),
                         w=self.alevar["w"],
@@ -1768,7 +1768,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
                         self.v_old,
-                        tau_lsic,
+                        self.tau_lsic,
                         self.rho[n],
                         self.dx(M),
                         w=self.alevar["w_old"],
@@ -1779,7 +1779,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         self.vel_mid,
-                        tau_lsic,
+                        self.tau_lsic,
                         self.rho[n],
                         self.dx(M),
                         w=self.alevar["w_mid"],
@@ -1792,7 +1792,7 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong,
-                        tau_pspg,
+                        self.tau_pspg,
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale"],
@@ -1801,7 +1801,7 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_old,
-                        tau_pspg,
+                        self.tau_pspg,
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
@@ -1810,7 +1810,7 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_mid,
-                        tau_pspg,
+                        self.tau_pspg,
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
@@ -1822,7 +1822,7 @@ class FluidmechanicsProblem(problem_base):
                         # LSIC term
                         self.deltaW_prestr_int += self.vf.stab_lsic(
                             self.v,
-                            tau_lsic,
+                            self.tau_lsic,
                             self.rho[n],
                             self.dx(M),
                             w=self.alevar["w"],
@@ -1922,7 +1922,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_p_prestr[n] += self.vf.stab_pspg(
                             self.var_p_[j],
                             residual_v_strong_prestr,
-                            tau_pspg,
+                            self.tau_pspg,
                             self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
@@ -1936,7 +1936,7 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_prestr_int += self.vf.stab_supg(
                                 self.v,
                                 residual_v_strong_prestr,
-                                tau_supg,
+                                self.tau_supg,
                                 self.dx(M),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],

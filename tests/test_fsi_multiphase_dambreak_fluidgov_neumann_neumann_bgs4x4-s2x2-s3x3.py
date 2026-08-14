@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Two-phase flow FSI simulation of a collapsing water column against an elastic obstacle
+Two-phase flow FSI simulation of a collapsing water column against an elastic obstacle, surrounded by air
 Neumann-Neumann formulation (with Lagrange multiplier)
 BDF2 time-integration scheme for both fluid and phasefield
-Outer BGS4x4(S2x2-S3x3) preconditioner
+Full SUPG/PSPG stabilization scheme
+Outer BGS4x4(S2x2-S3x3) preconditioner - direct solver used so far... TODO: Tune for better convergence!
+TODO: reduced_mass formulation seems to have some issues regarding mass convervation in fluid!
 """
 
 import ambit_fe
@@ -62,20 +64,20 @@ def test_main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "iterative",  # direct, iterative
+        "solve_type": "direct",  # direct, iterative
         "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "petsc_options_ksp": {"ksp_gmres_modifiedgramschmidt": True, "ksp_gmres_restart": 1000},
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": "amg", "blocks": [0]},  # solid-u
-                           {"prec": "amg", "blocks": [6]},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},
-                                              {"prec": "amg"}]},
+        "precond_fields": [{"prec": "direct", "blocks": [0]},  # solid-u
+                           {"prec": "direct", "blocks": [6]},  # ale-d
+                           {"prec": {"s2x2": [{"prec": "direct"},
+                                              {"prec": "direct"}]},
                                               "blocks": [4,3]},  # CH-phi,mu
-                           {"prec": {"s3x3": [{"prec": "amg"},
-                                              {"prec": "amg"},
-                                              {"prec": "amg"}]},
+                           {"prec": {"s3x3": [{"prec": "direct"},
+                                              {"prec": "direct"},
+                                              {"prec": "direct"}]},
                                                "blocks": [1,2,5]},  # fluid-v,p,lm
                            ],
         "indexset_options": {"merge_prec_mat": True},  # currently needed, if index sets do not align with the nested mat structure (e.g. if requesting [1,2,5] blocks in s3x3)
@@ -101,12 +103,12 @@ def test_main():
                          "theta_ost": 1., # Not used: only for OST scheme
                          "fluid_governing_type": "navierstokes_transient",
                          "continuity_at_midpoint": True, # Not relevant when using BDF2 scheme
-                         "discretely_conservative": False}
+                         "discretely_conservative": True}
 
     TIME_PARAMS_PF = {"timint": "bdf2",
                       "theta_ost": 1., # Not used: only for OST scheme
                       "potential_at_midpoint": False, # Not relevant when using BDF2 scheme
-                      "discretely_conservative": False}
+                      "discretely_conservative": True}
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -119,11 +121,11 @@ def test_main():
                         "order_pres": 1,
                         "quad_degree": 5,
                         "fluid_formulation": "conservative",
-                        "mass_formulation": "reduced_mass",  # conservative_mass, reduced_mass
+                        "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
                         "stabilization": {"scheme": "supg_pspg",
-                                          "vscale": 1e1, # increasing this cranks up LSIC ("grad/div") stab, while lowers SUPG/PSPG - too high breaks interface!!
+                                          "vscale": 1e1, # increasing this cranks up LSIC ("grad/div") stab, while lowers SUPG/PSPG - too high breaks interface
                                           "dscales": [1.0, 1.0, 1.0],
-                                          "reduced_scheme": True,
+                                          "reduced_scheme": False,
                                           "symmetric": False,
                                         }}
 
@@ -141,8 +143,8 @@ def test_main():
                                   "smooth_clip": "cubic", # cubic, quintic, cos
                                   "epsilon_clip": 1e-1} # 1e-2
 
-    # fluid1 is air (density x 100), fluid2 is water
-    rho1 = 1e2
+    # fluid1 is air, fluid2 is water
+    rho1 = 1e0
     rho2 = 1e3
     eta1 = 1.81e-5
     eta2 = 1e-3
@@ -187,13 +189,12 @@ def test_main():
         "dirichlet" : [
                        {"id": [2,6], "dir": "y", "val": 0.0},  # slip
                        {"id": [1,7], "dir": "x", "val": 0.0},  # slip
+                       {"id": [8], "dir": "y", "val": 0.0},  # slip
                        {"id": [locate_fluid_solid_corner()], "dir": "all", "val": 0.0},  # needed if walls are slip
                        ],
-        "stabilized_neumann" : [{"id": [8], "beta": 0.2*rho1, "gamma": 1.}]
     }
 
-    theta_wall_b = np.pi/2.
-    BC_DICT_PF = { "robin_flux" : [{"id": [8], "phi0": -1.0, "c1": 1e3}]}  # always air at top
+    BC_DICT_PF = { }
 
     BC_DICT_ALE = {
         "dirichlet" : [{"id": [1,2,6,7,8], "dir": "all", "val": 0.0}]
@@ -230,11 +231,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = 6.7821621543757800E-06  # x
-    u_corr[1] = -6.2847293228190552E-05  # y
+    u_corr[0] = -2.6448144241500264E-06  # x
+    u_corr[1] = -3.5459547407234139E-05  # y
 
-    v_corr[0] = 6.5011753141286453E-04  # x
-    v_corr[1] = -3.9252357028610879E-02  # y
+    v_corr[0] = -1.6295934127313488E-03  # x
+    v_corr[1] = -2.1966667751608455E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

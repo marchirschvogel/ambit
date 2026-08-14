@@ -155,11 +155,9 @@ class variationalform(variationalform_base):
         if self.mass_formulation=="conservative_mass":
             rho_ = self.get_density(rho, chi=chi)
             if self.formulation == "nonconservative":
-                # return rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)
-                return rho_*ufl.div(v)
+                return rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)
             elif self.formulation == "conservative":
-                # return rhodot + ufl.div(rho_*v)
-                return rho_*ufl.div(v)
+                return rhodot + ufl.div(rho_*v)
             else:
                 raise ValueError("Unknown fluid formulation!")
         elif self.mass_formulation=="reduced_mass":
@@ -219,8 +217,7 @@ class variationalform(variationalform_base):
         if self.mass_formulation=="conservative_mass":
             return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
         elif self.mass_formulation=="reduced_mass":
-            # rho_ = self.get_density(rho, chi=chi)
-            rho_ = sum(rho) / len(rho)  # let's use the average here so far...
+            rho_ = self.get_density(rho, chi=chi)
             return tau_lsic * ufl.div(self.var_v) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
@@ -265,14 +262,26 @@ class variationalform(variationalform_base):
         """ TeX:
         \int\limits_{\mathit{\Omega}}\phi\nabla\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
-        return ufl.dot(phi * ufl.grad(mu), self.var_v) * ddomain
+        cap = phi * ufl.grad(mu)
+        if return_type=="weak":
+            return ufl.dot(cap, self.var_v) * ddomain
+        elif return_type=="strong":
+            return cap
+        else:
+            raise ValueError("Unknown return type.")
 
     # Generalized form of Korteweg stress in multiphase flow
     def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="weak"):
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\kappa\nabla\phi\otimes\nabla\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\nabla\phi\cdot\nabla\phi\right)\boldsymbol{I}\right) : \nabla\delta\boldsymbol{v}\,\mathrm{d}V
         """
-        return ufl.inner( (kappa*ufl.outer(ufl.grad(phi),ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.grad(phi),ufl.grad(phi)))*self.I), ufl.grad(self.var_v)) * ddomain
+        kort = kappa*ufl.outer(ufl.grad(phi),ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.grad(phi),ufl.grad(phi)))*self.I
+        if return_type=="weak":
+            return ufl.inner(kort, ufl.grad(self.var_v)) * ddomain
+        elif return_type=="strong":
+            return ufl.div(kort)
+        else:
+            raise ValueError("Unknown return type.")
 
     # alpha for consistent mass-averaged CH-NS
     def get_alpha_chns(self, rho, phi):
@@ -451,11 +460,9 @@ class variationalform_ale(variationalform):
         if self.mass_formulation=="conservative_mass":
             rho_ = self.get_density(rho, chi=chi)
             if self.formulation == "nonconservative":
-                # return J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)
-                return rho_*ufl.div(J*ufl.inv(F)*v)
+                return J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)
             elif self.formulation == "conservative":
-                # return rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w))
-                return rho_*ufl.div(J*ufl.inv(F)*v)
+                return rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w))
             else:
                 raise ValueError("Unknown fluid formulation!")
         elif self.mass_formulation=="reduced_mass":
@@ -595,7 +602,13 @@ class variationalform_ale(variationalform):
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\phi\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
         J = ufl.det(F)
-        return J * ufl.dot(phi * ufl.inv(F).T*ufl.grad(mu), self.var_v) * ddomain
+        cap = J * phi * ufl.inv(F).T*ufl.grad(mu)
+        if return_type=="weak":
+            return ufl.dot(cap, self.var_v) * ddomain
+        elif return_type=="strong":
+            return cap
+        else:
+            raise ValueError("Unknown return type.")
 
     # Generalized form of Korteweg stress in multiphase flow
     def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="weak"):
@@ -603,4 +616,10 @@ class variationalform_ale(variationalform):
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\left(\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\otimes\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\cdot\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\right)\boldsymbol{I}\right)\widehat{\boldsymbol{F}}^{-\mathrm{T}} : \nabla_0\delta\boldsymbol{v}\,\mathrm{d}V
         """
         J = ufl.det(F)
-        return J * ufl.inner( (kappa*ufl.outer(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)))*self.I), ufl.grad(self.var_v)*ufl.inv(F)) * ddomain
+        kort = J * (kappa*ufl.outer(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)))*self.I) * ufl.inv(F).T
+        if return_type=="weak":
+            return ufl.inner(kort, ufl.grad(self.var_v)) * ddomain
+        elif return_type=="strong":
+            return ufl.div(kort)
+        else:
+            raise ValueError("Unknown return type.")

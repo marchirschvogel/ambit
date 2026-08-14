@@ -185,6 +185,82 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                 self.capillary_force_old += self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
                 self.capillary_force_mid += self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
 
+        # in case fluid uses stabilization, collect the strong capillary forms to add later to SUPG/PSPG
+        if self.pbf.stabilization is not None:
+            self.deltaW_int_stabcap, self.deltaW_int_stabcap_old, self.deltaW_int_stabcap_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            self.deltaW_p_stabcap, self.deltaW_p_stabcap_old, self.deltaW_p_stabcap_mid = [None]*self.pbf.num_domains, [None]*self.pbf.num_domains, [None]*self.pbf.num_domains
+            for n, M in enumerate(self.pbf.domain_ids):
+                if self.capillary_force_from_korteweg_stress:
+                    kappa = self.pbp.ma[n].materials["mat_cahnhilliard"]["kappa"]
+                    f_cap = -self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
+                    f_cap_old = -self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
+                    f_cap_mid = -self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+                else:
+                    f_cap = self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
+                    f_cap_old = self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
+                    f_cap_mid = self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+
+                    self.deltaW_int_stabcap += self.pbf.vf.stab_supg(
+                        self.pbf.v,
+                        f_cap,
+                        self.pbf.tau_supg,
+                        self.pbf.dx(M),
+                        w=self.pbf.alevar["w"],
+                        F=self.pbf.alevar["Fale"],
+                        # symmetric=symm,
+                    )
+                    self.deltaW_int_stabcap_old += self.pbf.vf.stab_supg(
+                        self.pbf.v_old,
+                        f_cap_old,
+                        self.pbf.tau_supg,
+                        self.pbf.dx(M),
+                        w=self.pbf.alevar["w_old"],
+                        F=self.pbf.alevar["Fale_old"],
+                        # symmetric=symm,
+                    )
+                    self.deltaW_int_stabcap_mid += self.pbf.vf.stab_supg(
+                        self.pbf.vel_mid,
+                        f_cap_mid,
+                        self.pbf.tau_supg,
+                        self.pbf.dx(M),
+                        w=self.pbf.alevar["w_mid"],
+                        F=self.pbf.alevar["Fale_mid"],
+                        # symmetric=symm,
+                    )
+
+                if self.pbf.num_dupl == 1:
+                    j = 0
+                else:
+                    j = n
+                # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
+                self.deltaW_p_stabcap[n] = self.pbf.vf.stab_pspg(
+                    self.pbf.var_p_[j],
+                    f_cap,
+                    self.pbf.tau_pspg,
+                    self.pbf.rho[n],
+                    self.pbf.dx_p[j](M),
+                    F=self.pbf.alevar["Fale"],
+                    chi=self.pbf.phasevar["chi"],
+                )
+                self.deltaW_p_stabcap_old[n] = self.pbf.vf.stab_pspg(
+                    self.pbf.var_p_[j],
+                    f_cap_old,
+                    self.pbf.tau_pspg,
+                    self.pbf.rho[n],
+                    self.pbf.dx_p[j](M),
+                    F=self.pbf.alevar["Fale_old"],
+                    chi=self.pbf.phasevar["chi_old"],
+                )
+                self.deltaW_p_stabcap_mid[n] = self.pbf.vf.stab_pspg(
+                    self.pbf.var_p_[j],
+                    f_cap_mid,
+                    self.pbf.tau_pspg,
+                    self.pbf.rho[n],
+                    self.pbf.dx_p[j](M),
+                    F=self.pbf.alevar["Fale_mid"],
+                    chi=self.pbf.phasevar["chi_mid"],
+                )
+
         # add to fluid momentum
         if self.pbf.ti.res_eval == "trap":
             self.pbf.weakform_v += self.pbf.timefac * self.capillary_force + (1.0 - self.pbf.timefac) * self.capillary_force_old
@@ -192,6 +268,26 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             self.pbf.weakform_v += self.capillary_force_mid
         if self.pbf.ti.res_eval == "back":
             self.pbf.weakform_v += self.capillary_force
+
+        # add missing residual-based stabilization terms
+        if self.pbf.stabilization is not None:
+            if self.pbf.ti.res_eval == "trap":
+                self.pbf.weakform_v += self.pbf.timefac * self.deltaW_int_stabcap + (1.0 - self.pbf.timefac) * self.deltaW_int_stabcap_old
+            if self.pbf.ti.res_eval == "midp":
+                self.pbf.weakform_v += self.deltaW_int_stabcap_mid
+            if self.pbf.ti.res_eval == "back":
+                self.pbf.weakform_v += self.deltaW_int_stabcap
+
+            for n, M in enumerate(self.pbf.domain_ids):
+                if not self.pbf.ti.continuity_at_midpoint:
+                    self.pbf.weakform_p[n] += self.deltaW_p_stabcap[n]
+                else:
+                    if self.pbf.ti.res_eval == "trap":
+                        self.pbf.weakform_p[n] += (self.pbf.timefac * self.deltaW_p_stabcap[n] + (1.0 - self.pbf.timefac) * self.deltaW_p_stabcap_old[n])
+                    if self.pbf.ti.res_eval == "midp":
+                        self.pbf.weakform_p[n] += self.deltaW_p_stabcap_mid[n]
+                    if self.pbf.ti.res_eval == "back":
+                        self.pbf.weakform_p[n] += self.deltaW_p_stabcap[n]
 
         if self.pbf.mass_formulation=="reduced_mass":
             self.deltaW_p_ch, self.deltaW_p_ch_old, self.deltaW_p_ch_mid = [], [], []
