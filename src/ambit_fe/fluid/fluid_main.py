@@ -626,12 +626,20 @@ class FluidmechanicsProblem(problem_base):
                 # set mid-point representation
                 self.accmom_mid[n] = self.timefac_m * self.accmom[n] + (1.0 - self.timefac_m) * self.amom_old[n]
                 # set form for time derivative of density - for conservative mass formulation
-                if self.fluid_formulation == "nonconservative":
-                    self.rhodot[n] = self.ti.update_dvar(rhoU, rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=rhoU_veryold)
-                elif self.fluid_formulation == "conservative":
-                    self.rhodot[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=J_veryold*rhoU_veryold)
+                if self.mass_formulation=="conservative_mass":
+                    if self.fluid_formulation == "nonconservative":
+                        self.rhodot[n] = self.ti.update_dvar(rhoU, rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=rhoU_veryold)
+                    elif self.fluid_formulation == "conservative":
+                        self.rhodot[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=J_veryold*rhoU_veryold)
+                    else:
+                        raise ValueError("Unknown fluid formulation!")
+                elif self.mass_formulation=="reduced_mass":
+                    if self.is_ale:  # NOTE: This is time-evolved Jdot
+                        self.rhodot[n] = self.ti.update_dvar(J, J_old, self.rhodot_old[n], self.pbase.dt, var_veryold=J_veryold)
+                    else:
+                        self.rhodot[n] = fem.Constant(self.ti.rhodot_work[n].function_space.mesh, 0.0)
                 else:
-                    raise ValueError("Unknown fluid formulation!")
+                    raise ValueError("Unknown fluid mass formulation!")
                 # compile expression for later update
                 self.rhodot_expr[n] = fem.Expression(self.rhodot[n], self.ti.rhodot_work[n].function_space.element.interpolation_points)
                 # set mid-point representation
@@ -642,9 +650,16 @@ class FluidmechanicsProblem(problem_base):
                 self.amom_old[n] = self.vf.acc_momentum_dt(self.a_old, self.v_old, self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chi_old"], phidot=self.phasevar["phidot_old"])
                 self.accmom_mid[n] = self.vf.acc_momentum_dt(self.acc_mid, self.vel_mid, self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chi_mid"], phidot=self.phasevar["phidot_mid"])
                 # time derivative of density (for multiphase fluid) using chain rule
-                self.rhodot[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chiU"], phidot=self.phasevar["phidot"])
-                self.rhodot_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chiU_old"], phidot=self.phasevar["phidot_old"])
-                self.rhodot_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chiU_mid"], phidot=self.phasevar["phidot_mid"])
+                if self.mass_formulation=="conservative_mass":
+                    self.rhodot[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chiU"], phidot=self.phasevar["phidot"])
+                    self.rhodot_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chiU_old"], phidot=self.phasevar["phidot_old"])
+                    self.rhodot_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chiU_mid"], phidot=self.phasevar["phidot_mid"])
+                elif self.mass_formulation=="reduced_mass":
+                    self.rhodot[n] = self.vf.dj_dt(w=self.alevar["w"], F=self.alevar["Fale"])
+                    self.rhodot_old[n] = self.vf.dj_dt(w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                    self.rhodot_mid[n] = self.vf.dj_dt(w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                else:
+                    raise ValueError("Unknown fluid mass formulation!")
 
         if self.pbase.have_rom:
             self.xdtr_expr, self.xintr_expr = self.acc_expr, self.ufluid_expr
@@ -2145,6 +2160,19 @@ class FluidmechanicsProblem(problem_base):
         self.mass_total = abs(sum(mst))
 
         utilities.print_status("Total fluid mass change: %.4e" % (self.mass_total), self.comm)
+
+    def compute_geometric_conservation_law(self, N, t):  # Not used so far...
+        geocons, geocons2 = ufl.as_ufl(0), ufl.as_ufl(0)
+        J, J_old, J_mid = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"]), ufl.det(self.alevar["Fale_mid"])
+
+        for n, M in enumerate(self.domain_ids):
+            geocons += ((J - J_old) / (self.pbase.dt) - ufl.div(J_mid*ufl.inv(self.alevar["Fale_mid"])*self.alevar["w_mid"])) * self.dx(M)
+
+        geocons_form = fem.assemble_scalar(fem.form(geocons, entity_maps=self.io.entity_maps))
+        geocons_form = self.comm.allgather(geocons_form)
+        geocons_total = abs(sum(geocons_form))
+
+        utilities.print_status("Geometric conservation law: %.4e" % (geocons_total), self.comm)
 
     # rate equations
     def evaluate_rate_equations(self, t_abs):

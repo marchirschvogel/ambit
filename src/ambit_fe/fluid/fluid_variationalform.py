@@ -243,6 +243,9 @@ class variationalform(variationalform_base):
         else:
             return ufl.as_ufl(0)
 
+    def dj_dt(self, w=None, F=None):
+        return ufl.as_ufl(0)
+
     ### Flux coupling conditions
 
     # flux
@@ -389,7 +392,8 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\nabla_0\cdot(\widehat{J}\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V = 0
             """
-            return ufl.div(J*ufl.inv(F)*v) * var_p * ddomain
+            # NOTE: If dicretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
+            return (rhodot + ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain  # NOTE: rhodot here is is dJ/dt
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
@@ -578,6 +582,10 @@ class variationalform_ale(variationalform):
             return J*rhodot_ + rho_*Jdot
         else:
             raise ValueError("Unknown fluid formulation!")
+
+    def dj_dt(self, w=None, F=None):
+        J = ufl.det(F)
+        return ufl.div(J*ufl.inv(F)*w)
 
     ### Flux coupling conditions
 

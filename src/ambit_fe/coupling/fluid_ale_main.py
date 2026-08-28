@@ -92,6 +92,9 @@ class FluidmechanicsAleProblem(problem_base):
         self.pbf.alevar["w"] = self.pba.wel
         self.pbf.alevar["w_old"] = self.pba.w_old
 
+        self.pbf.alevar["d"] = self.pba.d
+        self.pbf.alevar["d_old"] = self.pba.d_old
+
         self.coupling_params = coupling_params
         self.set_coupling_parameters()
 
