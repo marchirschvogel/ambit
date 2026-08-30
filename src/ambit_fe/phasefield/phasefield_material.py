@@ -37,16 +37,16 @@ class materiallaw_flux:
         if mobility=="constant":
             M = M0
         elif mobility=="degenerate":
-            eps = params.get("epsilon", 0.0)
             exp = params.get("exponent", 1.0)
             # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
-            M = M0 * abs((self.a-self.phi)**exp * (self.b-self.phi)**exp + eps)
+            M = M0 * abs((self.a-self.phi)**exp * (self.b-self.phi)**exp)
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
 
         # fluid pressure proportional term (needed for consistency of mass-averged velocity formulation!)
         if p is not None:
-            ap = alpha * p
+            beta = params.get("beta", 1.0)  # experimental: to tune pressure gradient-driven diffusive flux...
+            ap = beta * alpha * p
         else:
             ap = ufl.as_ufl(0)
 

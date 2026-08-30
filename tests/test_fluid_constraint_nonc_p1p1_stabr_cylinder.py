@@ -62,8 +62,8 @@ def test_main():
         "stabilization": {
             "scheme": "supg_pspg",
             "vscale": 1e3,
-            "dscales": [1.0, 1.0, 1.0],
-            "reduced_scheme": True,
+            "dscales": {"supg": 1.0, "lsic": 1.0, "pspg": 1.0},
+            "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
         },
     }
 

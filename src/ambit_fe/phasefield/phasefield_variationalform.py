@@ -22,7 +22,7 @@ class variationalform(variationalform_base):
         self.var_mu = tstfncs[1]
         variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
 
-    def cahnhilliard_phase(self, jphidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
+    def cahnhilliard_phase(self, jphidot, phi, Jflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow
         if v is not None:
             # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
@@ -72,7 +72,7 @@ class variationalform(variationalform_base):
 # grad(phi) = F^(-T) * Grad(phi)
 
 class variationalform_ale(variationalform):
-    def cahnhilliard_phase(self, jphidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
+    def cahnhilliard_phase(self, jphidot, phi, Jflux, ddomain, v=None, w=None, F=None):
         J = ufl.det(F)
         # advection term if coupled to fluid flow
         if v is not None:

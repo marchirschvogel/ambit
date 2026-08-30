@@ -150,8 +150,7 @@ class variationalform(variationalform_base):
     def f_gradp_strong(self, p, F=None):
         return ufl.grad(p)
 
-    # NOTE: For grad/div stabilization, we only use the "reduced mass" residual version here! However, needs investigation...!
-    def res_p_strong(self, v, rho, w=None, F=None, phi=None, chi=None, rhodot=None):
+    def res_p_strong(self, v, rho, w=None, F=None, chi=None, rhodot=None):
         if self.mass_formulation=="conservative_mass":
             rho_ = self.get_density(rho, chi=chi)
             if self.formulation == "nonconservative":
@@ -164,6 +163,9 @@ class variationalform(variationalform_base):
             return ufl.div(v)
         else:
             raise ValueError("Unknown fluid mass formulation!")
+
+    def res_p_strong_reduced_ch(self, alpha, Jflux, F=None):
+        return ufl.div(alpha*Jflux)
 
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
     def deltaW_ext_stabilized_neumann(self, v, beta, dboundary, w=None, F=None):
@@ -197,28 +199,42 @@ class variationalform(variationalform_base):
         ddomain,
         w=None,
         F=None,
+        chi=None,
         symmetric=False,
+        mask_bulk=False,
     ):
-        if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
         else:
-            return ufl.dot(tau_supg * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
+            msk = 1.0
+        if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
+            return msk * ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
+        else:
+            return msk * ufl.dot(tau_supg * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None, mask_bulk=False):
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
+        else:
+            msk = 1.0
         if self.mass_formulation=="conservative_mass":
-            return ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
+            return msk * ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return (1./rho_)*ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
+            return msk * (1./rho_)*ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    def stab_lsic(self, v, tau_lsic, rho, ddomain, w=None, F=None, phi=None, chi=None, rhodot=None):
+    def stab_lsic(self, res_p_strong, tau_lsic, rho, ddomain, F=None, chi=None, mask_bulk=False):
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
+        else:
+            msk = 1.0
         if self.mass_formulation=="conservative_mass":
-            return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
+            return msk * tau_lsic * ufl.div(self.var_v) * res_p_strong * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return tau_lsic * ufl.div(self.var_v) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
+            return msk * tau_lsic * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
@@ -392,7 +408,7 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\nabla_0\cdot(\widehat{J}\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V = 0
             """
-            # NOTE: If dicretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
+            # NOTE: If discretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
             return (rhodot + ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain  # NOTE: rhodot here is is dJ/dt
         else:
             raise ValueError("Unknown fluid mass formulation!")
@@ -458,8 +474,7 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         return J*ufl.inv(F).T * ufl.grad(p)
 
-    # NOTE: For grad/div stabilization, we only use the "reduced mass" residual version here! However, needs investigation...!
-    def res_p_strong(self, v, rho, w=None, F=None, phi=None, chi=None, rhodot=None):
+    def res_p_strong(self, v, rho, w=None, F=None, chi=None, rhodot=None):
         J = ufl.det(F)
         if self.mass_formulation=="conservative_mass":
             rho_ = self.get_density(rho, chi=chi)
@@ -470,9 +485,15 @@ class variationalform_ale(variationalform):
             else:
                 raise ValueError("Unknown fluid formulation!")
         elif self.mass_formulation=="reduced_mass":
-            return ufl.div(J*ufl.inv(F)*v)
+            # return ufl.div(J*ufl.inv(F)*v)
+            # NOTE: If discretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
+            return rhodot + ufl.div(J*ufl.inv(F)*(v-w))  # NOTE: rhodot here is is dJ/dt
         else:
             raise ValueError("Unknown fluid mass formulation!")
+
+    def res_p_strong_reduced_ch(self, alpha, Jflux, F=None):
+        J = ufl.det(F)
+        return ufl.div(J*ufl.inv(F)*alpha*Jflux)
 
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
     def deltaW_ext_stabilized_neumann(self, v, beta, dboundary, w=None, F=None):
@@ -508,32 +529,46 @@ class variationalform_ale(variationalform):
         ddomain,
         w=None,
         F=None,
+        chi=None,
         symmetric=False,
+        mask_bulk=False,
     ):
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
+        else:
+            msk = 1.0
         vel = v - w # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
+            return msk * ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
-            return ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
+            return msk * ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None, mask_bulk=False):
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
+        else:
+            msk = 1.0
         # NOTE: J=det(F) already included in res_v_strong
         if self.mass_formulation=="conservative_mass":
-            return ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return msk * ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return (1./rho_)*ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return msk * (1./rho_)*ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    def stab_lsic(self, v, tau_lsic, rho, ddomain, w=None, F=None, phi=None, chi=None, rhodot=None):
+    def stab_lsic(self, res_p_strong, tau_lsic, rho, ddomain, F=None, chi=None, mask_bulk=False):
+        if mask_bulk and chi is not None:
+            msk = (2.0*chi - 1.0)**2.0
+        else:
+            msk = 1.0
         # NOTE: J=det(F) already included in res_p_strong
         if self.mass_formulation=="conservative_mass":
-            return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
+            return msk * tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, chi=chi, rhodot=rhodot) * ddomain
+            return msk * tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 

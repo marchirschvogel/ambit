@@ -98,9 +98,9 @@ def test_main():
         "stabilization": {
             "scheme": "supg_pspg",
             "vscale": 1e3,
-            "dscales": [1.0, 1.0, 1.0],
+            "dscales": {"supg": 1.0, "lsic": 1.0, "pspg": 1.0},
             "symmetric": False,
-            "reduced_scheme": False,
+            "scheme_type": {"res_v": "full", "res_p": "full"},
         },
         "fluid_formulation": "conservative",
     }

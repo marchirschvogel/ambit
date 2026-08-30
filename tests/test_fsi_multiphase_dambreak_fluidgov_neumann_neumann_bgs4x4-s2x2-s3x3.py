@@ -123,9 +123,10 @@ def test_main():
                         "fluid_formulation": "conservative",
                         "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
                         "stabilization": {"scheme": "supg_pspg",
-                                          "vscale": 1e1, # increasing this cranks up LSIC ("grad/div") stab, while lowers SUPG/PSPG - too high breaks interface
-                                          "dscales": [1.0, 1.0, 1.0],
-                                          "reduced_scheme": False,
+                                          "dscales": {"supg": 1.0, "lsic": 0.0, "pspg": 1.0},  # no LSIC!
+                                          "cscales": {"ct": 2.0, "cv": 2.0, "cnu": 4.0},
+                                          "stab_params": "dt_vel_visc",
+                                          "scheme_type": {"res_v": "full", "res_p": "full"},
                                           "symmetric": False,
                                         }}
 
@@ -231,11 +232,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -2.6448144241500264E-06  # x
-    u_corr[1] = -3.5459547407234139E-05  # y
+    u_corr[0] = -2.6730452542804841E-06  # x
+    u_corr[1] = -3.5478699865555891E-05  # y
 
-    v_corr[0] = -1.6295934127313488E-03  # x
-    v_corr[1] = -2.1966667751608455E-02  # y
+    v_corr[0] = -1.6469618447123118E-03  # x
+    v_corr[1] = -2.1974274758394193E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,
