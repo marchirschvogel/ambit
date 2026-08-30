@@ -196,18 +196,15 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         j = 0
                     else:
                         j = n
-                    # if self.capillary_force_from_korteweg_stress:  # NOTE: Sign is positive, since non-integrated by parts div(sigma_korteweg) is added!
-                    #     kappa = self.pbp.ma[n].materials["mat_cahnhilliard"]["kappa"]
-                    #     f_cap = self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
-                    #     f_cap_old = self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
-                    #     f_cap_mid = self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
-                    # else:
-                    #     f_cap = self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
-                    #     f_cap_old = self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
-                    #     f_cap_mid = self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
-                    f_cap = self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
-                    f_cap_old = self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
-                    f_cap_mid = self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+                    if self.capillary_force_from_korteweg_stress:  # NOTE: Sign is positive, since non-integrated by parts div(sigma_korteweg) is added!
+                        kappa = self.pbp.ma[n].materials["mat_cahnhilliard"]["kappa"]
+                        f_cap = self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
+                        f_cap_old = self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
+                        f_cap_mid = self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+                    else:
+                        f_cap = self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
+                        f_cap_old = self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
+                        f_cap_mid = self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
 
                     if self.pbf.scheme_type["res_v"] == "full":
                         # SUPG

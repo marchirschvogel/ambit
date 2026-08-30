@@ -1523,7 +1523,7 @@ class FluidmechanicsProblem(problem_base):
 
                     # strong momentum residuals
                     if self.fluid_governing_type == "navierstokes_transient":
-                        if self.scheme_type["res_v"] == "full":
+                        if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
                             residual_v_strong = self.vf.res_v_strong_navierstokes_transient(
                                 self.accmom[n],
                                 self.v,
@@ -1592,7 +1592,7 @@ class FluidmechanicsProblem(problem_base):
                         else:
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "navierstokes_steady":
-                        if self.scheme_type["res_v"] == "full":
+                        if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
                             residual_v_strong = self.vf.res_v_strong_navierstokes_steady(
                                 self.v,
                                 self.rho[n],
@@ -1660,7 +1660,7 @@ class FluidmechanicsProblem(problem_base):
                         else:
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "stokes_transient":
-                        if self.scheme_type["res_v"] == "full":
+                        if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
                             residual_v_strong = self.vf.res_v_strong_stokes_transient(
                                 self.accmom[n],
                                 self.v,
@@ -1734,7 +1734,7 @@ class FluidmechanicsProblem(problem_base):
                         else:
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "stokes_steady":
-                        if self.scheme_type["res_v"] == "full":
+                        if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
                             residual_v_strong = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
                                 self.ma[n].sigma(
