@@ -94,6 +94,8 @@ class PhasefieldProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             self.kappa.append(self.constitutive_models["MAT" + str(n + 1)]["mat_cahnhilliard"]["kappa"])
 
+        self.stabilization = self.fem_params.get("stabilization", None)
+
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
         self.incompressible_2field = False  # always False here...
@@ -512,6 +514,85 @@ class PhasefieldProblem(problem_base):
                 w_source += ufl.dot(f_source[n], self.var_phi) * self.dx(M)
                 w_source_old += ufl.dot(f_source_old[n], self.var_phi) * self.dx(M)
                 w_source_mid += ufl.dot(f_source_mid[n], self.var_phi) * self.dx(M)
+
+        # advection stabilization for the phase field
+        if self.stabilization is not None:
+            self.scheme_type = self.stabilization.get("scheme_type", {"res_phi": "full"})
+            # how to choose stabilization parameters: spatially constant, or depending on v, dt, eta
+            stab_params = self.stabilization.get("stab_params", "const")
+            if stab_params=="const":
+                vscale = self.stabilization["vscale"]
+
+            h = (
+                self.io.hd0
+            )  # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
+
+            dscales = self.stabilization.get("dscales", {"supg": 1.0})
+
+            if self.stabilization["scheme"] == "supg":
+                for n, M in enumerate(self.domain_ids):
+                    if stab_params=="const":
+                        self.tau_supg = dscales["supg"] * h / vscale
+                    elif stab_params=="dt_vel":
+                        if self.is_ale:
+                            v_eff = self.fluidvar["v"] - self.alevar["w"]
+                            v_eff_old = self.fluidvar["v_old"] - self.alevar["w_old"]
+                            v_eff_mid = self.fluidvar["v_mid"] - self.alevar["w_mid"]
+                        else:
+                            v_eff = self.fluidvar["v"]
+                            v_eff_old = self.fluidvar["v_old"]
+                            v_eff_mid = self.fluidvar["v_mid"]
+                        v_eff_norm = ufl.sqrt(ufl.dot(v_eff, v_eff))
+                        v_eff_norm_old = ufl.sqrt(ufl.dot(v_eff_old, v_eff_old))
+                        v_eff_norm_mid = ufl.sqrt(ufl.dot(v_eff_mid, v_eff_mid))
+
+                        cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0})
+                        self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm / h)**2.0 ) ** (-1.0/2.0)
+                        self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_old / h)**2.0 ) ** (-1.0/2.0)
+                        self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_mid / h)**2.0 ) ** (-1.0/2.0)
+
+                        # NOTE: Currently, only the old, known state is used for stabilization parameters!
+                        self.tau_supg = dscales["supg"] * self.tau_base_old
+                    else:
+                        raise ValueError("Unknown value for 'stab_params'. Choose either 'const' or 'dt_vel'.")
+
+                    if self.scheme_type["res_phi"] == "full":
+                        residual_phi_strong = self.vf.res_phi_strong(self.jphidot, self.phi, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+                        residual_phi_strong_old = self.vf.res_phi_strong(self.jphidot_old, self.phi_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                        residual_phi_strong_mid = self.vf.res_phi_strong(self.jphidot_mid, self.phi_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                    elif self.scheme_type["res_phi"] == "reduced":  # only advection term
+                        residual_phi_strong = self.vf.res_phi_strong_advec(self.phi, v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+                        residual_phi_strong_old = self.vf.res_phi_strong_advec(self.phi_old, v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                        residual_phi_strong_mid = self.vf.res_phi_strong_advec(self.phi_mid, v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                    else:
+                        raise ValueError("Unknown scheme type for momentum residual. Choose either 'full' or 'reduced'.")
+
+                    self.phase_field += self.vf.stab_supg(
+                        self.fluidvar["v"],
+                        residual_phi_strong,
+                        self.tau_supg,
+                        self.dx(M),
+                        w=self.alevar["w"],
+                        F=self.alevar["Fale"],
+                    )
+                    self.phase_field_old += self.vf.stab_supg(
+                        self.fluidvar["v_old"],
+                        residual_phi_strong_old,
+                        self.tau_supg,
+                        self.dx(M),
+                        w=self.alevar["w_old"],
+                        F=self.alevar["Fale_old"],
+                    )
+                    self.phase_field_mid += self.vf.stab_supg(
+                        self.fluidvar["v_mid"],
+                        residual_phi_strong_mid,
+                        self.tau_supg,
+                        self.dx(M),
+                        w=self.alevar["w_mid"],
+                        F=self.alevar["Fale_mid"],
+                    )
+            else:
+                raise ValueError("Unknown stabilization scheme!")
 
         if self.ti.res_eval == "trap":
             # phase field residual

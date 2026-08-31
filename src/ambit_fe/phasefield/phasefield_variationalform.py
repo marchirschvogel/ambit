@@ -68,6 +68,30 @@ class variationalform(variationalform_base):
     def cahnhilliard_phidot(self, phidot, phi, w=None, F=None):
         return phidot
 
+    def res_phi_strong(self, jphidot, phi, Jflux, v=None, w=None, F=None):
+        # advection term if coupled to fluid flow
+        if v is not None:
+            # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
+            advec = ufl.div(phi*v)
+        else:
+            advec = ufl.as_ufl(0)
+        return jphidot + advec + ufl.div(Jflux)
+
+    def res_phi_strong_advec(self, phi, v=None, w=None, F=None):
+        return ufl.div(phi*v)
+
+    # SUPG advection stabilization
+    def stab_supg(
+        self,
+        v,
+        res_phi_strong,
+        tau_supg,
+        ddomain,
+        w=None,
+        F=None,
+    ):
+        return ufl.dot(tau_supg * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
+
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)
 
@@ -131,3 +155,30 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         Jdot = ufl.div(J*ufl.inv(F)*w)
         return J*phidot + phi*Jdot
+
+    def res_phi_strong(self, jphidot, phi, Jflux, v=None, w=None, F=None):
+        J = ufl.det(F)
+        # advection term if coupled to fluid flow
+        if v is not None:
+            # NOTE: We should use the conservative form, NOT "ufl.dot(v-w, ufl.inv(F).T*ufl.grad(phi))"
+            advec = ufl.div(J*ufl.inv(F)*phi*(v-w))
+        else:
+            advec = ufl.as_ufl(0)
+        return jphidot + advec + ufl.div(J*ufl.inv(F)*Jflux)
+
+    def res_phi_strong_advec(self, phi, v=None, w=None, F=None):
+        J = ufl.det(F)
+        return ufl.div(J*ufl.inv(F)*phi*(v-w))
+
+    # SUPG advection stabilization
+    def stab_supg(
+        self,
+        v,
+        res_phi_strong,
+        tau_supg,
+        ddomain,
+        w=None,
+        F=None,
+    ):
+        # NOTE: J=det(F) already included in res_phi_strong
+        return ufl.dot(tau_supg * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
