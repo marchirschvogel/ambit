@@ -1484,7 +1484,10 @@ class FluidmechanicsProblem(problem_base):
                         self.tau_supg = dscales["supg"] * h / vscale
                         self.tau_lsic = dscales["lsic"] * h * vscale
                         self.tau_pspg = dscales["pspg"] * h / vscale
-                    elif stab_params=="dt_vel_visc":
+                        self.tau_supg_old, self.tau_supg_mid = self.tau_supg, self.tau_supg
+                        self.tau_lsic_old, self.tau_lsic_mid = self.tau_lsic, self.tau_lsic
+                        self.tau_pspg_old, self.tau_pspg_mid = self.tau_pspg, self.tau_pspg
+                    elif stab_params=="dt_vel_visc" or stab_params=="dt_vel":
                         if self.is_ale:
                             v_eff = self.v - self.alevar["w"]
                             v_eff_old = self.v_old - self.alevar["w_old"]
@@ -1493,33 +1496,47 @@ class FluidmechanicsProblem(problem_base):
                             v_eff = self.v
                             v_eff_old = self.v_old
                             v_eff_mid = self.vel_mid
-                        v_eff_norm = ufl.sqrt(ufl.dot(v_eff, v_eff))
-                        v_eff_norm_old = ufl.sqrt(ufl.dot(v_eff_old, v_eff_old))
-                        v_eff_norm_mid = ufl.sqrt(ufl.dot(v_eff_mid, v_eff_mid))
+                        # directly use squared vel norm since the norm gets squared anyway
+                        v_eff_norm_sq = ufl.dot(v_eff, v_eff)
+                        v_eff_norm_sq_old = ufl.dot(v_eff_old, v_eff_old)
+                        v_eff_norm_sq_mid = ufl.dot(v_eff_mid, v_eff_mid)
 
-                        if self.is_multiphase:
-                            eta_eff = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi"]
-                            eta_eff_old = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi_old"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi_old"]
-                            eta_eff_mid = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi_mid"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi_mid"]
-                        else:
-                            eta_eff = self.ma[n].materials["newtonian"]["eta"]
-                            eta_eff_old = self.ma[n].materials["newtonian"]["eta"]
-                            eta_eff_mid = self.ma[n].materials["newtonian"]["eta"]
-                        rho_eff = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
-                        rho_eff_old = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
-                        rho_eff_mid = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_mid"])
+                        if stab_params=="dt_vel_visc":
+                            if self.is_multiphase:
+                                eta_eff = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi"]
+                                eta_eff_old = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi_old"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi_old"]
+                                eta_eff_mid = self.ma[n].materials["newtonian"]["eta1"] * (1.0 - self.phasevar["chi_mid"]) + self.ma[n].materials["newtonian"]["eta2"] * self.phasevar["chi_mid"]
+                            else:
+                                eta_eff = self.ma[n].materials["newtonian"]["eta"]
+                                eta_eff_old = self.ma[n].materials["newtonian"]["eta"]
+                                eta_eff_mid = self.ma[n].materials["newtonian"]["eta"]
+                            rho_eff = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
+                            rho_eff_old = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
+                            rho_eff_mid = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_mid"])
 
                         cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0, "cnu": 4.0})
-                        self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm / h)**2.0 + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
-                        self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_old / h)**2.0 + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
-                        self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_mid / h)**2.0 + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
+                        if stab_params=="dt_vel":
+                            self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
+                            self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
+                            self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
+                        elif stab_params=="dt_vel_visc":
+                            self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
 
-                        # NOTE: Currently, only the old, known state is used for stabilization parameters!
-                        self.tau_supg = dscales["supg"] * self.tau_base_old
-                        self.tau_lsic = dscales["lsic"] * h**2.0 / self.tau_base_old
-                        self.tau_pspg = dscales["pspg"] * self.tau_base_old
+                        self.tau_supg = dscales["supg"] * self.tau_base
+                        self.tau_lsic = dscales["lsic"] * h**2.0 / self.tau_base
+                        self.tau_pspg = dscales["pspg"] * self.tau_base
+
+                        self.tau_supg_old = dscales["supg"] * self.tau_base_old
+                        self.tau_lsic_old = dscales["lsic"] * h**2.0 / self.tau_base_old
+                        self.tau_pspg_old = dscales["pspg"] * self.tau_base_old
+
+                        self.tau_supg_mid = dscales["supg"] * self.tau_base_mid
+                        self.tau_lsic_mid = dscales["lsic"] * h**2.0 / self.tau_base_mid
+                        self.tau_pspg_mid = dscales["pspg"] * self.tau_base_mid
                     else:
-                        raise ValueError("Unknown value for 'stab_params'. Choose either 'const' or 'dt_vel_visc'.")
+                        raise ValueError("Unknown value for 'stab_params'. Choose either 'const', 'dt_vel', or 'dt_vel_visc'.")
 
                     # strong momentum residuals
                     if self.fluid_governing_type == "navierstokes_transient":
@@ -1575,20 +1592,20 @@ class FluidmechanicsProblem(problem_base):
                                 self.rho[n],
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
-                            ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
+                            ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"]) - f_body[n]
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
                                 F=self.alevar["Fale_old"],
                                 chi=self.phasevar["chi_old"],
-                            ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
+                            ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"]) - f_body_old[n]
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 chi=self.phasevar["chi_mid"],
-                            ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
+                            ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"]) - f_body_mid[n]
                         else:
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "navierstokes_steady":
@@ -1822,7 +1839,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_old += self.vf.stab_supg(
                             self.v_old,
                             residual_v_strong_old,
-                            self.tau_supg,
+                            self.tau_supg_old,
                             self.dx(M),
                             w=self.alevar["w_old"],
                             F=self.alevar["Fale_old"],
@@ -1833,7 +1850,7 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_mid += self.vf.stab_supg(
                             self.vel_mid,
                             residual_v_strong_mid,
-                            self.tau_supg,
+                            self.tau_supg_mid,
                             self.dx(M),
                             w=self.alevar["w_mid"],
                             F=self.alevar["Fale_mid"],
@@ -1853,7 +1870,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
                         residual_p_strong_old,
-                        self.tau_lsic,
+                        self.tau_lsic_old,
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_old"],
@@ -1862,7 +1879,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         residual_p_strong_mid,
-                        self.tau_lsic,
+                        self.tau_lsic_mid,
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_mid"],
@@ -1883,7 +1900,7 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_old,
-                        self.tau_pspg,
+                        self.tau_pspg_old,
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
@@ -1893,7 +1910,7 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_mid,
-                        self.tau_pspg,
+                        self.tau_pspg_mid,
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],

@@ -222,7 +222,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.deltaW_int_stabcap_old += self.pbf.vf.stab_supg(
                             self.pbf.v_old,
                             f_cap_old,
-                            self.pbf.tau_supg,
+                            self.pbf.tau_supg_old,
                             self.pbf.dx(M),
                             w=self.pbf.alevar["w_old"],
                             F=self.pbf.alevar["Fale_old"],
@@ -233,7 +233,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.deltaW_int_stabcap_mid += self.pbf.vf.stab_supg(
                             self.pbf.vel_mid,
                             f_cap_mid,
-                            self.pbf.tau_supg,
+                            self.pbf.tau_supg_mid,
                             self.pbf.dx(M),
                             w=self.pbf.alevar["w_mid"],
                             F=self.pbf.alevar["Fale_mid"],
@@ -255,7 +255,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.deltaW_p_stabcap_old[n] = self.pbf.vf.stab_pspg(
                             self.pbf.var_p_[j],
                             f_cap_old,
-                            self.pbf.tau_pspg,
+                            self.pbf.tau_pspg_old,
                             self.pbf.rho[n],
                             self.pbf.dx_p[j](M),
                             F=self.pbf.alevar["Fale_old"],
@@ -265,7 +265,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.deltaW_p_stabcap_mid[n] = self.pbf.vf.stab_pspg(
                             self.pbf.var_p_[j],
                             f_cap_mid,
-                            self.pbf.tau_pspg,
+                            self.pbf.tau_pspg_mid,
                             self.pbf.rho[n],
                             self.pbf.dx_p[j](M),
                             F=self.pbf.alevar["Fale_mid"],
@@ -289,7 +289,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             )
                             self.deltaW_int_stabredch_old += self.pbf.vf.stab_lsic(
                                 res_p_ch_old,
-                                self.pbf.tau_lsic,
+                                self.pbf.tau_lsic_old,
                                 self.pbf.rho[n],
                                 self.pbf.dx(M),
                                 F=self.pbf.alevar["Fale_old"],
@@ -298,7 +298,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             )
                             self.deltaW_int_stabredch_mid += self.pbf.vf.stab_lsic(
                                 res_p_ch_mid,
-                                self.pbf.tau_lsic,
+                                self.pbf.tau_lsic_mid,
                                 self.pbf.rho[n],
                                 self.pbf.dx(M),
                                 F=self.pbf.alevar["Fale_mid"],

@@ -533,6 +533,7 @@ class PhasefieldProblem(problem_base):
                 for n, M in enumerate(self.domain_ids):
                     if stab_params=="const":
                         self.tau_supg = dscales["supg"] * h / vscale
+                        self.tau_supg_old, self.tau_supg_mid = self.tau_supg, self.tau_supg
                     elif stab_params=="dt_vel":
                         if self.is_ale:
                             v_eff = self.fluidvar["v"] - self.alevar["w"]
@@ -542,17 +543,19 @@ class PhasefieldProblem(problem_base):
                             v_eff = self.fluidvar["v"]
                             v_eff_old = self.fluidvar["v_old"]
                             v_eff_mid = self.fluidvar["v_mid"]
-                        v_eff_norm = ufl.sqrt(ufl.dot(v_eff, v_eff))
-                        v_eff_norm_old = ufl.sqrt(ufl.dot(v_eff_old, v_eff_old))
-                        v_eff_norm_mid = ufl.sqrt(ufl.dot(v_eff_mid, v_eff_mid))
+                        # directly use squared vel norm since the norm gets squared anyway
+                        v_eff_norm_sq = ufl.dot(v_eff, v_eff)
+                        v_eff_norm_sq_old = ufl.dot(v_eff_old, v_eff_old)
+                        v_eff_norm_sq_mid = ufl.dot(v_eff_mid, v_eff_mid)
 
                         cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0})
-                        self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm / h)**2.0 ) ** (-1.0/2.0)
-                        self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_old / h)**2.0 ) ** (-1.0/2.0)
-                        self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]*v_eff_norm_mid / h)**2.0 ) ** (-1.0/2.0)
+                        self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
+                        self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
+                        self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
 
-                        # NOTE: Currently, only the old, known state is used for stabilization parameters!
-                        self.tau_supg = dscales["supg"] * self.tau_base_old
+                        self.tau_supg = dscales["supg"] * self.tau_base
+                        self.tau_supg_old = dscales["supg"] * self.tau_base_old
+                        self.tau_supg_mid = dscales["supg"] * self.tau_base_mid
                     else:
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const' or 'dt_vel'.")
 
@@ -578,7 +581,7 @@ class PhasefieldProblem(problem_base):
                     self.phase_field_old += self.vf.stab_supg(
                         self.fluidvar["v_old"],
                         residual_phi_strong_old,
-                        self.tau_supg,
+                        self.tau_supg_old,
                         self.dx(M),
                         w=self.alevar["w_old"],
                         F=self.alevar["Fale_old"],
@@ -586,7 +589,7 @@ class PhasefieldProblem(problem_base):
                     self.phase_field_mid += self.vf.stab_supg(
                         self.fluidvar["v_mid"],
                         residual_phi_strong_mid,
-                        self.tau_supg,
+                        self.tau_supg_mid,
                         self.dx(M),
                         w=self.alevar["w_mid"],
                         F=self.alevar["Fale_mid"],

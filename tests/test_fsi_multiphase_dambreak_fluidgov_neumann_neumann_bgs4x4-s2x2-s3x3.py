@@ -6,7 +6,6 @@ Neumann-Neumann formulation (with Lagrange multiplier)
 BDF2 time-integration scheme for both fluid and phasefield
 Full SUPG/PSPG stabilization scheme
 Outer BGS4x4(S2x2-S3x3) preconditioner - direct solver used so far... TODO: Tune for better convergence!
-TODO: reduced_mass formulation seems to have some issues regarding mass convervation in fluid!
 """
 
 import ambit_fe
