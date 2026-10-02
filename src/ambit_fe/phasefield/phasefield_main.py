@@ -527,13 +527,13 @@ class PhasefieldProblem(problem_base):
                 self.io.hd0
             )  # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
-            dscales = self.stabilization.get("dscales", {"supg": 1.0})
+            dscales = self.stabilization.get("dscales", {"tau_m": 1.0})
 
             if self.stabilization["scheme"] == "supg":
                 for n, M in enumerate(self.domain_ids):
                     if stab_params=="const":
-                        self.tau_supg = dscales["supg"] * h / vscale
-                        self.tau_supg_old, self.tau_supg_mid = self.tau_supg, self.tau_supg
+                        self.tau_m = dscales["supg"] * h / vscale
+                        self.tau_m_old, self.tau_m_mid = self.tau_m, self.tau_m
                     elif stab_params=="dt_vel":
                         if self.is_ale:
                             v_eff = self.fluidvar["v"] - self.alevar["w"]
@@ -553,9 +553,9 @@ class PhasefieldProblem(problem_base):
                         self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
                         self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
 
-                        self.tau_supg = dscales["supg"] * self.tau_base
-                        self.tau_supg_old = dscales["supg"] * self.tau_base_old
-                        self.tau_supg_mid = dscales["supg"] * self.tau_base_mid
+                        self.tau_m = dscales["tau_m"] * self.tau_base
+                        self.tau_m_old = dscales["tau_m"] * self.tau_base_old
+                        self.tau_m_mid = dscales["tau_m"] * self.tau_base_mid
                     else:
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const' or 'dt_vel'.")
 
@@ -573,7 +573,7 @@ class PhasefieldProblem(problem_base):
                     self.phase_field += self.vf.stab_supg(
                         self.fluidvar["v"],
                         residual_phi_strong,
-                        self.tau_supg,
+                        self.tau_m,
                         self.dx(M),
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
@@ -581,7 +581,7 @@ class PhasefieldProblem(problem_base):
                     self.phase_field_old += self.vf.stab_supg(
                         self.fluidvar["v_old"],
                         residual_phi_strong_old,
-                        self.tau_supg_old,
+                        self.tau_m_old,
                         self.dx(M),
                         w=self.alevar["w_old"],
                         F=self.alevar["Fale_old"],
@@ -589,7 +589,7 @@ class PhasefieldProblem(problem_base):
                     self.phase_field_mid += self.vf.stab_supg(
                         self.fluidvar["v_mid"],
                         residual_phi_strong_mid,
-                        self.tau_supg_mid,
+                        self.tau_m_mid,
                         self.dx(M),
                         w=self.alevar["w_mid"],
                         F=self.alevar["Fale_mid"],

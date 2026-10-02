@@ -284,13 +284,13 @@ if category == "fluid" or category == "all":
         ]
     )
 
-    errs["test_fluid_nonc_p1p1_stabf_pipe_valve 2"] = subprocess.call(
+    errs["test_fluid_nonc_p1p1_stabf_rbvms_pipe_valve 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fluid_nonc_p1p1_stabf_pipe_valve.py",
+            "test_fluid_nonc_p1p1_stabf_rbvms_pipe_valve.py",
         ]
     )
 

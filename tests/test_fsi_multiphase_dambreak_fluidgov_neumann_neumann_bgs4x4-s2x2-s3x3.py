@@ -4,7 +4,7 @@
 Two-phase flow FSI simulation of a collapsing water column against an elastic obstacle, surrounded by air
 Neumann-Neumann formulation (with Lagrange multiplier)
 BDF2 time-integration scheme for both fluid and phasefield
-Full SUPG/PSPG stabilization scheme
+Full RBVMS stabilization scheme
 Outer BGS4x4(S2x2-S3x3) preconditioner - direct solver used so far... TODO: Tune for better convergence!
 """
 
@@ -121,8 +121,8 @@ def test_main():
                         "quad_degree": 5,
                         "fluid_formulation": "conservative",
                         "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
-                        "stabilization": {"scheme": "supg_pspg",
-                                          "dscales": {"supg": 1.0, "lsic": 0.0, "pspg": 1.0},  # no LSIC!
+                        "stabilization": {"scheme": "rbvms",
+                                          "dscales": {"tau_m": 1.0, "tau_c": 0.0},  # no LSIC!
                                           "cscales": {"ct": 2.0, "cv": 2.0, "cnu": 4.0},
                                           "stab_params": "dt_vel_visc",
                                           "scheme_type": {"res_v": "full", "res_p": "full"},
@@ -231,11 +231,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -2.6730452542804841E-06  # x
-    u_corr[1] = -3.5478699865555891E-05  # y
+    u_corr[0] = -2.6730838100194379E-06  # x
+    u_corr[1] = -3.5478716191203505E-05  # y
 
-    v_corr[0] = -1.6469618447123118E-03  # x
-    v_corr[1] = -2.1974274758394193E-02  # y
+    v_corr[0] = -1.6469950695699373E-03  # x
+    v_corr[1] = -2.1974309519855573E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

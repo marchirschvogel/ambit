@@ -77,7 +77,7 @@ def test_main():
             "scheme": "supg_pspg",
             "vscale": 1e3,
             "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
-            "dscales": {"supg": 1.0, "lsic": 1.0, "pspg": 1.0},
+            "dscales": {"tau_m": 1.0, "tau_c": 1.0},
         },
     }
 

@@ -195,57 +195,62 @@ class variationalform(variationalform_base):
         self,
         v,
         res_v_strong,
-        tau_supg,
+        tau_m,
         ddomain,
         w=None,
         F=None,
         chi=None,
         symmetric=False,
-        mask_bulk=False,
     ):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return msk * ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
         else:
-            return msk * ufl.dot(tau_supg * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None, mask_bulk=False):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
+    def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
         if self.mass_formulation=="conservative_mass":
-            return msk * ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return msk * (1./rho_)*ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
+            return (1./rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    def stab_lsic(self, res_p_strong, tau_lsic, rho, ddomain, F=None, chi=None, mask_bulk=False):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
+    def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
         if self.mass_formulation=="conservative_mass":
-            return msk * tau_lsic * ufl.div(self.var_v) * res_p_strong * ddomain
+            return tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return msk * tau_lsic * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
+            return tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000) - not used so far... need to assemble a cell-based vector in order to evaluate these!
-    def re_c(self, rho, v, ddomain, w=None, F=None, phi=None, phidot=None):
-        rho_ = self.get_density(rho, chi=chi)
-        return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
+    # cross-stress from RBVMS stabilization
+    def stab_cross(
+        self,
+        v,
+        res_v_strong,
+        tau_m,
+        ddomain,
+        w=None,
+        F=None,
+        chi=None,
+    ):
+        return ufl.inner(tau_m * ufl.grad(self.var_v), ufl.outer(v, res_v_strong)) * ddomain
 
-    def re_ktilde(self, rho, v, ddomain, w=None, F=None, phi=None, phidot=None):
+    # Reynolds subgrid stress from RBVMS stabilization
+    def stab_reynolds(
+        self,
+        rho,
+        res_v_strong,
+        tau_m,
+        ddomain,
+        w=None,
+        F=None,
+        chi=None,
+    ):
         rho_ = self.get_density(rho, chi=chi)
-        return rho_ * ufl.dot(ufl.grad(v) * v, ufl.grad(self.var_v) * v) * ddomain
+        return -tau_m**2.0 / (rho_) * ufl.inner(ufl.grad(self.var_v), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -525,71 +530,68 @@ class variationalform_ale(variationalform):
         self,
         v,
         res_v_strong,
-        tau_supg,
+        tau_m,
         ddomain,
         w=None,
         F=None,
         chi=None,
         symmetric=False,
-        mask_bulk=False,
     ):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
         vel = v - w # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return msk * ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
-            return msk * ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, chi=None, mask_bulk=False):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
+    def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_v_strong
         if self.mass_formulation=="conservative_mass":
-            return msk * ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return msk * (1./rho_)*ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return (1./rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    def stab_lsic(self, res_p_strong, tau_lsic, rho, ddomain, F=None, chi=None, mask_bulk=False):
-        if mask_bulk and chi is not None:
-            msk = (2.0*chi - 1.0)**2.0
-        else:
-            msk = 1.0
+    def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_p_strong
         if self.mass_formulation=="conservative_mass":
-            return msk * tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
+            return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
         elif self.mass_formulation=="reduced_mass":
             rho_ = self.get_density(rho, chi=chi)
-            return msk * tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
+            return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
 
-    # components of element-level Reynolds number - not used so far... need to assemble a cell-based vector in order to evaluate these!
-    def re_c(self, rho, v, ddomain, w=None, F=None, chi=None, phidot=None):
-        rho_ = self.get_density(rho, chi=chi)
-        J = ufl.det(F)
-        return rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
+    # cross-stress from RBVMS stabilization
+    def stab_cross(
+        self,
+        v,
+        res_v_strong,
+        tau_m,
+        ddomain,
+        w=None,
+        F=None,
+        chi=None,
+    ):
+        vel = v - w # streamline direction should be relavive velocity in ALE
+        return ufl.inner(tau_m * ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(vel, res_v_strong)) * ddomain
 
-    def re_ktilde(self, rho, v, ddomain, w=None, F=None, chi=None, phidot=None):
-        rho_ = self.get_density(rho, chi=chi)
+    # Reynolds subgrid stress from RBVMS stabilization
+    def stab_reynolds(
+        self,
+        rho,
+        res_v_strong,
+        tau_m,
+        ddomain,
+        w=None,
+        F=None,
+        chi=None,
+    ):
         J = ufl.det(F)
-        return (
-            rho_
-            * ufl.dot(
-                ufl.grad(v) * ufl.inv(F) * (v - w),
-                ufl.grad(self.var_v) * ufl.inv(F) * v,
-            )
-            * J
-            * ddomain
-        )
+        rho_ = self.get_density(rho, chi=chi)
+        return -tau_m**2.0 / (J*rho_) * ufl.inner(ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)

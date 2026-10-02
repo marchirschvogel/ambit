@@ -197,6 +197,22 @@ class IO_fluid(IO_field):
                             # dens_out.interpolate(fem.Expression(densfuncs[n], self.pb.V_out_scalar.element.interpolation_points), cells0=cells_n)
                             dens_out.interpolate(fem.Expression(densfuncs[n], self.pb.V_out_scalar.element.interpolation_points))
                         self.pb.resultsfiles[res].write_function(dens_out, indicator)
+                    elif res == "tau_m":  # stabilization parameter tau_m
+                        if self.pb.io.output_midpoint:
+                            tau = self.pb.tau_m_mid
+                        else:
+                            tau = self.pb.tau_m
+                        tau_out = fem.Function(self.pb.V_out_scalar, name="tau_m")
+                        tau_out.interpolate(fem.Expression(tau, self.pb.V_out_scalar.element.interpolation_points))  # TODO: Not working if V_out on submesh! Why?
+                        self.pb.resultsfiles[res].write_function(tau_out, indicator)
+                    elif res == "tau_c":  # stabilization parameter tau_c
+                        if self.pb.io.output_midpoint:
+                            tau = self.pb.tau_c_mid
+                        else:
+                            tau = self.pb.tau_c
+                        tau_out = fem.Function(self.pb.V_out_scalar, name="tau_c")
+                        tau_out.interpolate(fem.Expression(tau, self.pb.V_out_scalar.element.interpolation_points))  # TODO: Not working if V_out on submesh! Why?
+                        self.pb.resultsfiles[res].write_function(tau_out, indicator)
                     elif res == "chi":  # normalized phase field variable for coefficient evaluation - mainly for testing purposes...
                         if self.pb.io.output_midpoint:
                             chi = self.pb.phasevar["chi_mid"]

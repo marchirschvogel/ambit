@@ -68,7 +68,7 @@ def test_main():
                         "quad_degree": 5,
                         "stabilization"  : {"scheme"         : "supg_pspg",
                                             "vscale"         : 1.0e1,
-                                            "dscales"        : {"supg": 1.0, "lsic": 1.0, "pspg": 1.0},
+                                            "dscales"        : {"tau_m": 1.0, "tau_c": 1.0},
                                             "symmetric"      : True,
                                             "scheme_type" : {"res_v": "reduced", "res_p": "reduced"},
                                             "vscale_vel_dep" : False}}

@@ -115,7 +115,7 @@ def main():
                             "prestress_initial_only": False, # OPTIONAL: same as "prestress_initial", but will terminate after prestressing (in case one wants to compute u_pre only once and read it in later using "prestress_from_file" for mutliple different simulations that use the same u_pre) (default: False)
                             "prestress_from_file"   : [basepath+"/input/artseg_uf_pre.xdmf"], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             "prestress_ptc"         : False, # OPTIONAL: whether to use PTC in prestress or not (default: False)
-                            "stabilization"         : {"scheme" : "supg_pspg", "vscale" : 1e3, "dscales" : {"supg": 1.0, "lsic": 1.0, "pspg": 1.0}, "symmetric" : False, "scheme_type": {"res_v": "full", "res_p": "full"}}} # OPTIONAL: stabilization for equal-order fluid mechanics, where "scheme" can only be "supg_pspg" (default: None)
+                            "stabilization"         : {"scheme" : "supg_pspg", "vscale" : 1e3, "dscales" : {"tau_m": 1.0, "tau_c": 1.0}, "symmetric" : False, "scheme_type": {"res_v": "full", "res_p": "full"}}} # OPTIONAL: stabilization for equal-order fluid mechanics, where "scheme" can only be "supg_pspg" (default: None)
 
     # for solid_flow0d or fluid_flow0d problem type
     COUPLING_PARAMS_3D0D = {"surface_ids"           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)

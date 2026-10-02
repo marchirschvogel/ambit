@@ -85,12 +85,12 @@ class variationalform(variationalform_base):
         self,
         v,
         res_phi_strong,
-        tau_supg,
+        tau_m,
         ddomain,
         w=None,
         F=None,
     ):
-        return ufl.dot(tau_supg * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
+        return ufl.dot(tau_m * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
 
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)
@@ -175,10 +175,10 @@ class variationalform_ale(variationalform):
         self,
         v,
         res_phi_strong,
-        tau_supg,
+        tau_m,
         ddomain,
         w=None,
         F=None,
     ):
         # NOTE: J=det(F) already included in res_phi_strong
-        return ufl.dot(tau_supg * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
+        return ufl.dot(tau_m * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain

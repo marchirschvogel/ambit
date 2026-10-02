@@ -51,7 +51,7 @@ def test_main():
                         "quad_degree": 5,
                         'stabilization'  : {'scheme'         : 'supg_pspg',
                                             'vscale'         : 1.0e1,
-                                            'dscales'        : {"supg": 1.0, "lsic": 1.0, "pspg": 1.0}},
+                                            'dscales'        : {"tau_m": 1.0, "tau_c": 1.0}},
                         "fluid_formulation": "conservative"} # irrelevant for steady Stokes
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}

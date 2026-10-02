@@ -112,7 +112,7 @@ def main():
         "stabilization": {
             "scheme": "supg_pspg",  # scheme name
             "vscale": 1e3,  # velocity scale
-            "dscales": {"supg": 1.0, "lsic": 1.0, "pspg": 1.0},  # stabilization parameter scales
+            "dscales": {"tau_m": 1.0, "tau_c": 1.0},  # stabilization parameter scales
             "symmetric": True,  # modification to make the effective stress symmetric
             "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
         },

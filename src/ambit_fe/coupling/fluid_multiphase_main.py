@@ -211,66 +211,60 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.deltaW_int_stabcap += self.pbf.vf.stab_supg(
                             self.pbf.v,
                             f_cap,
-                            self.pbf.tau_supg,
+                            self.pbf.tau_m,
                             self.pbf.dx(M),
                             w=self.pbf.alevar["w"],
                             F=self.pbf.alevar["Fale"],
                             chi=self.pbf.phasevar["chi"],
                             symmetric=self.pbf.stab_symm,
-                            mask_bulk=self.pbf.stab_mask["supg"],
                         )
                         self.deltaW_int_stabcap_old += self.pbf.vf.stab_supg(
                             self.pbf.v_old,
                             f_cap_old,
-                            self.pbf.tau_supg_old,
+                            self.pbf.tau_m_old,
                             self.pbf.dx(M),
                             w=self.pbf.alevar["w_old"],
                             F=self.pbf.alevar["Fale_old"],
                             chi=self.pbf.phasevar["chi_old"],
                             symmetric=self.pbf.stab_symm,
-                            mask_bulk=self.pbf.stab_mask["supg"],
                         )
                         self.deltaW_int_stabcap_mid += self.pbf.vf.stab_supg(
                             self.pbf.vel_mid,
                             f_cap_mid,
-                            self.pbf.tau_supg_mid,
+                            self.pbf.tau_m_mid,
                             self.pbf.dx(M),
                             w=self.pbf.alevar["w_mid"],
                             F=self.pbf.alevar["Fale_mid"],
                             chi=self.pbf.phasevar["chi_mid"],
                             symmetric=self.pbf.stab_symm,
-                            mask_bulk=self.pbf.stab_mask["supg"],
                         )
                         # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                         self.deltaW_p_stabcap[n] = self.pbf.vf.stab_pspg(
                             self.pbf.var_p_[j],
                             f_cap,
-                            self.pbf.tau_pspg,
+                            self.pbf.tau_m,
                             self.pbf.rho[n],
                             self.pbf.dx_p[j](M),
                             F=self.pbf.alevar["Fale"],
                             chi=self.pbf.phasevar["chi"],
-                            mask_bulk=self.pbf.stab_mask["pspg"],
                         )
                         self.deltaW_p_stabcap_old[n] = self.pbf.vf.stab_pspg(
                             self.pbf.var_p_[j],
                             f_cap_old,
-                            self.pbf.tau_pspg_old,
+                            self.pbf.tau_m_old,
                             self.pbf.rho[n],
                             self.pbf.dx_p[j](M),
                             F=self.pbf.alevar["Fale_old"],
                             chi=self.pbf.phasevar["chi_old"],
-                            mask_bulk=self.pbf.stab_mask["pspg"],
                         )
                         self.deltaW_p_stabcap_mid[n] = self.pbf.vf.stab_pspg(
                             self.pbf.var_p_[j],
                             f_cap_mid,
-                            self.pbf.tau_pspg_mid,
+                            self.pbf.tau_m_mid,
                             self.pbf.rho[n],
                             self.pbf.dx_p[j](M),
                             F=self.pbf.alevar["Fale_mid"],
                             chi=self.pbf.phasevar["chi_mid"],
-                            mask_bulk=self.pbf.stab_mask["pspg"],
                         )
 
                     if self.pbf.mass_formulation=="reduced_mass":
@@ -280,30 +274,27 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             res_p_ch_mid = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_mid, self.pbp.phi_mid, p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), F=self.pbf.alevar["Fale_mid"])
                             self.deltaW_int_stabredch += self.pbf.vf.stab_lsic(
                                 res_p_ch,
-                                self.pbf.tau_lsic,
+                                self.pbf.tau_c,
                                 self.pbf.rho[n],
                                 self.pbf.dx(M),
                                 F=self.pbf.alevar["Fale"],
                                 chi=self.pbf.phasevar["chi"],
-                                mask_bulk=self.pbf.stab_mask["lsic"],
                             )
                             self.deltaW_int_stabredch_old += self.pbf.vf.stab_lsic(
                                 res_p_ch_old,
-                                self.pbf.tau_lsic_old,
+                                self.pbf.tau_c_old,
                                 self.pbf.rho[n],
                                 self.pbf.dx(M),
                                 F=self.pbf.alevar["Fale_old"],
                                 chi=self.pbf.phasevar["chi_old"],
-                                mask_bulk=self.pbf.stab_mask["lsic"],
                             )
                             self.deltaW_int_stabredch_mid += self.pbf.vf.stab_lsic(
                                 res_p_ch_mid,
-                                self.pbf.tau_lsic_mid,
+                                self.pbf.tau_c_mid,
                                 self.pbf.rho[n],
                                 self.pbf.dx(M),
                                 F=self.pbf.alevar["Fale_mid"],
                                 chi=self.pbf.phasevar["chi_mid"],
-                                mask_bulk=self.pbf.stab_mask["lsic"],
                             )
 
         # add to fluid momentum
