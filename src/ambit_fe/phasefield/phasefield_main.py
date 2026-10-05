@@ -168,7 +168,7 @@ class PhasefieldProblem(problem_base):
         self.phi_old = fem.Function(self.V_phi)
         self.phi_veryold = fem.Function(self.V_phi)
         self.phidot_old = fem.Function(self.V_phi)
-        self.jphidot_old = fem.Function(self.V_phi)
+        self.Jphidot_old = fem.Function(self.V_phi)
         self.mu_old = fem.Function(self.V_mu)
 
         self.numdof = self.phi.x.petsc_vec.getSize() + self.mu.x.petsc_vec.getSize()
@@ -283,25 +283,25 @@ class PhasefieldProblem(problem_base):
             J, J_old, J_veryold = 1.0, 1.0, 1.0
         if self.ti.discretely_conservative:
             # set form for phidot
-            self.jphidot = self.ti.set_phidot(J*self.phi, J_old*self.phi_old, J_veryold*self.phi_veryold, self.jphidot_old)
+            self.Jphidot = self.ti.set_phidot(J*self.phi, J_old*self.phi_old, J_veryold*self.phi_veryold, self.Jphidot_old)
             # compile expression for later update
-            self.jphidot_expr = fem.Expression(self.jphidot, self.ti.phidot_work.function_space.element.interpolation_points)
+            self.Jphidot_expr = fem.Expression(self.Jphidot, self.ti.phidot_work.function_space.element.interpolation_points)
             # set mid-point representation
-            self.jphidot_mid = self.timefac_m * self.jphidot + (1.0 - self.timefac_m) * self.jphidot_old
+            self.Jphidot_mid = self.timefac_m * self.Jphidot + (1.0 - self.timefac_m) * self.Jphidot_old
         else:
-            self.jphidot_expr = None
-            self.jphidot = self.vf.cahnhilliard_phidot(self.phidot, self.phi, w=self.alevar["w"], F=self.alevar["Fale"])
-            self.jphidot_old = self.vf.cahnhilliard_phidot(self.phidot_old, self.phi_old, w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-            self.jphidot_mid = self.vf.cahnhilliard_phidot(self.phidot_mid, self.phi_mid, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+            self.Jphidot_expr = None
+            self.Jphidot = self.vf.cahnhilliard_phidot(self.phidot, self.phi, w=self.alevar["w"], F=self.alevar["Fale"])
+            self.Jphidot_old = self.vf.cahnhilliard_phidot(self.phidot_old, self.phi_old, w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+            self.Jphidot_mid = self.vf.cahnhilliard_phidot(self.phidot_mid, self.phi_mid, w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
 
         self.phase_field, self.potential = ufl.as_ufl(0), ufl.as_ufl(0)
         self.phase_field_old, self.potential_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.cahnhilliard_phase(self.jphidot, self.phi, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
-            self.phase_field_old += self.vf.cahnhilliard_phase(self.jphidot_old, self.phi_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-            self.phase_field_mid += self.vf.cahnhilliard_phase(self.jphidot_mid, self.phi_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+            self.phase_field += self.vf.cahnhilliard_phase(self.Jphidot, self.phi, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+            self.phase_field_old += self.vf.cahnhilliard_phase(self.Jphidot_old, self.phi_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+            self.phase_field_mid += self.vf.cahnhilliard_phase(self.Jphidot_mid, self.phi_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
             self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.kappa[n], self.dx(M), F=self.alevar["Fale"])
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.kappa[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.kappa[n], self.dx(M), F=self.alevar["Fale_mid"])
@@ -560,9 +560,9 @@ class PhasefieldProblem(problem_base):
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const' or 'dt_vel'.")
 
                     if self.scheme_type["res_phi"] == "full":
-                        residual_phi_strong = self.vf.res_phi_strong(self.jphidot, self.phi, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
-                        residual_phi_strong_old = self.vf.res_phi_strong(self.jphidot_old, self.phi_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-                        residual_phi_strong_mid = self.vf.res_phi_strong(self.jphidot_mid, self.phi_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                        residual_phi_strong = self.vf.res_phi_strong(self.Jphidot, self.phi, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+                        residual_phi_strong_old = self.vf.res_phi_strong(self.Jphidot_old, self.phi_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"], alpha=self.fluidvar["alpha_old"][n]), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                        residual_phi_strong_mid = self.vf.res_phi_strong(self.Jphidot_mid, self.phi_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"], alpha=self.fluidvar["alpha_mid"][n]), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
                     elif self.scheme_type["res_phi"] == "reduced":  # only advection term
                         residual_phi_strong = self.vf.res_phi_strong_advec(self.phi, v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
                         residual_phi_strong_old = self.vf.res_phi_strong_advec(self.phi_old, v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
@@ -851,7 +851,7 @@ class PhasefieldProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_expr, self.phidot_old, self.mu, self.mu_old, jphidot_expr=self.jphidot_expr, jphidot_old=self.jphidot_old)
+        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_expr, self.phidot_old, self.mu, self.mu_old, Jphidot_expr=self.Jphidot_expr, Jphidot_old=self.Jphidot_old)
 
     def print_to_screen(self):
         pass

@@ -75,7 +75,8 @@ def test_main():
         "order_vel": 2,
         "order_pres": 1,
         "quad_degree": 6,
-        "fluid_formulation": "conservative",
+        "momentum_formulation": "conservative",
+        "continuity_formulation": "conservative",
         "prestress_initial": True,
         "prestress_kinetic": "stokes_transient",
     }

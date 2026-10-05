@@ -60,7 +60,7 @@ def test_main():
         "order_vel": 1,
         "order_pres": 1,
         "quad_degree": 5,
-        "fluid_formulation": "nonconservative",  # nonconservative (default), conservative
+        "momentum_formulation": "advective",  # advective (default), conservative
         "stabilization": {
             "scheme": "rbvms",
             "stab_params": "dt_vel_visc",

@@ -83,8 +83,8 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative",
-                        "mass_formulation": "conservative_mass"}  # conservative_mass, reduced_mass
+                        "momentum_formulation": "conservative",
+                        "continuity_formulation": "conservative"}  # conservative, reduced
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 

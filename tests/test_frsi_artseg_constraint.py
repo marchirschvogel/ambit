@@ -65,7 +65,7 @@ def test_main():
         "order_vel": 2,
         "order_pres": 1,
         "quad_degree": 6,
-        "fluid_formulation": "nonconservative",
+        "momentum_formulation": "advective",
     }
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 6}

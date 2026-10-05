@@ -28,42 +28,47 @@ class variationalform(variationalform_base):
         self.var_v = tstfncs[0]
         self.var_p = tstfncs[1]
         variationalform_base.__init__(self, tstfncs=tstfncs, n0=n0, x_ref=x_ref, ro0=ro0)
-        self.formulation, self.mass_formulation = formulation[0], formulation[1]
+        self.momentum_formulation, self.continuity_formulation = formulation[0], formulation[1]
         self.I = ufl.Identity(len(self.var_v))
 
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
-    def deltaW_kin_navierstokes_transient(self, amom, v, rho, ddomain, w=None, F=None, chi=None):
+    def deltaW_kin_navierstokes_transient(self, amom, v, rho, rhodot, ddomain, w=None, F=None, chi=None):
         rho_ = self.get_density(rho, chi=chi)
         # standard Eulerian fluid
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             """ TeX:
             \int\limits_{\mathit{\Omega}} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(amom + rho_*ufl.grad(v) * v, self.var_v) * ddomain
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             """ TeX:
             \int\limits_{\mathit{\Omega}} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(amom + ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
+        elif self.momentum_formulation == "energy_split":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}} \left(\frac{1}{2}\boldsymbol{v}\frac{\partial\rho}{\partial t} + \rho\frac{\partial\boldsymbol{v}}{\partial t} + \frac{1}{2}\boldsymbol{v}\nabla\cdot(\rho\boldsymbol{v}) + \rho(\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+            """
+            return ufl.dot(0.5*v*rhodot + amom + 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v, self.var_v) * ddomain
         else:
-            raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, F=None, chi=None):
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             """ TeX:
             \int\limits_{\mathit{\Omega}} \rho (\nabla\boldsymbol{v})\boldsymbol{v} \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             """ TeX:
             \int\limits_{\mathit{\Omega}} \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def deltaW_kin_stokes_transient(self, amom, v, rho, ddomain, w=None, F=None, chi=None):
         """ TeX:
@@ -80,27 +85,24 @@ class variationalform(variationalform_base):
 
     # conservation of mass
     def deltaW_int_pres(self, v, var_p, ddomain, rho=None, w=None, F=None, chi=None, rhodot=None):
-        if self.mass_formulation=="conservative_mass":
-            rho_ = self.get_density(rho, chi=chi)
-            if self.formulation == "nonconservative":
-                """ TeX:
-                \int\limits_{\mathit{\Omega}}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v} + \rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}V = 0
-                """
-                return (rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)) * var_p * ddomain
-            elif self.formulation == "conservative":
-                """ TeX:
-                \int\limits_{\mathit{\Omega}}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}V = 0
-                """
-                return (rhodot + ufl.div(rho_*v)) * var_p * ddomain
-            else:
-                raise ValueError("Unknown fluid formulation!")
-        elif self.mass_formulation=="reduced_mass":
+        rho_ = self.get_density(rho, chi=chi)
+        if self.continuity_formulation == "expanded_advective":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v} + \rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}V = 0
+            """
+            return (rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)) * var_p * ddomain
+        elif self.continuity_formulation == "conservative":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}V = 0
+            """
+            return (rhodot + ufl.div(rho_*v)) * var_p * ddomain
+        elif self.continuity_formulation=="reduced":
             """ TeX:
             \int\limits_{\mathit{\Omega}}(\nabla\cdot\boldsymbol{v}\,\delta p)\,\mathrm{d}V = 0
             """
             return ufl.div(v) * var_p * ddomain
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation! Choose either 'expanded_advective', 'conservative', or 'reduced'.")
 
     # CH-NS part for reduced mass formulation
     def deltaW_int_pres_reduced_ch(self, alpha, Jflux, var_p, ddomain, F=None):
@@ -109,8 +111,8 @@ class variationalform(variationalform_base):
         """
         return ufl.inner(alpha*Jflux, ufl.grad(var_p)) * ddomain
 
-    def res_v_strong_navierstokes_transient(self, amom, v, rho, sig, fbody, w=None, F=None, chi=None):
-        return self.f_inert_strong_navierstokes_transient(amom, v, rho, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
+    def res_v_strong_navierstokes_transient(self, amom, v, rho, rhodot, sig, fbody, w=None, F=None, chi=None):
+        return self.f_inert_strong_navierstokes_transient(amom, v, rho, rhodot, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, chi=None):
         return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
@@ -121,25 +123,29 @@ class variationalform(variationalform_base):
     def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
         return -self.f_stress_strong(sig, F=F) - fbody
 
-    def f_inert_strong_navierstokes_transient(self, amom, v, rho, w=None, F=None, chi=None):
+    def f_inert_strong_navierstokes_transient(self, amom, v, rho, rhodot, w=None, F=None, chi=None):
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             return amom + rho_*ufl.grad(v) * v
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             return amom + ufl.div(rho_*ufl.outer(v, v))
+        elif self.momentum_formulation == "energy_split":
+            return 0.5*v*rhodot + amom + 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None, chi=None):
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             return rho_ * (ufl.grad(v) * v)
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             return ufl.div(rho_*ufl.outer(v, v))
+        elif self.momentum_formulation == "energy_split":
+            return 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def f_inert_strong_stokes_transient(self, amom, rho, chi=None):
         return amom
@@ -151,18 +157,15 @@ class variationalform(variationalform_base):
         return ufl.grad(p)
 
     def res_p_strong(self, v, rho, w=None, F=None, chi=None, rhodot=None):
-        if self.mass_formulation=="conservative_mass":
-            rho_ = self.get_density(rho, chi=chi)
-            if self.formulation == "nonconservative":
-                return rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)
-            elif self.formulation == "conservative":
-                return rhodot + ufl.div(rho_*v)
-            else:
-                raise ValueError("Unknown fluid formulation!")
-        elif self.mass_formulation=="reduced_mass":
+        rho_ = self.get_density(rho, chi=chi)
+        if self.continuity_formulation == "expanded_advective":
+            return rhodot + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)
+        elif self.continuity_formulation == "conservative":
+            return rhodot + ufl.div(rho_*v)
+        elif self.continuity_formulation=="reduced":
             return ufl.div(v)
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation! Choose either 'expanded_advective', 'conservative', or 'reduced'.")
 
     def res_p_strong_reduced_ch(self, alpha, Jflux, F=None):
         return ufl.div(alpha*Jflux)
@@ -208,22 +211,22 @@ class variationalform(variationalform_base):
             return ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
     def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
-        if self.mass_formulation=="conservative_mass":
+        if self.continuity_formulation=="conservative" or self.continuity_formulation == "expanded_advective":
             return ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
-        elif self.mass_formulation=="reduced_mass":
+        elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
             return (1./rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation!")
 
     def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
-        if self.mass_formulation=="conservative_mass":
+        if self.continuity_formulation=="conservative" or self.continuity_formulation == "expanded_advective":
             return tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
-        elif self.mass_formulation=="reduced_mass":
+        elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
             return tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation!")
 
     # cross-stress from RBVMS stabilization
     def stab_cross(
@@ -254,8 +257,16 @@ class variationalform(variationalform_base):
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
-        rhodot_ = self.drho_dt(rho, w=w, F=F, phi=phi, chi=chi, phidot=phidot)
-        return rho_*a + rhodot_*v
+        if self.momentum_formulation == "advective":
+            assert(phi is None)
+            return rho_*a
+        elif self.momentum_formulation == "conservative":
+            rhodot_ = self.drho_dt(rho, w=w, F=F, phi=phi, chi=chi, phidot=phidot)
+            return rhodot_*v + rho_*a
+        elif self.momentum_formulation == "energy_split":
+            return rho_*a
+        else:
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def drho_dt(self, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -264,7 +275,7 @@ class variationalform(variationalform_base):
         else:
             return ufl.as_ufl(0)
 
-    def dj_dt(self, w=None, F=None):
+    def dJ_dt(self, w=None, F=None):
         return ufl.as_ufl(0)
 
     ### Flux coupling conditions
@@ -333,56 +344,61 @@ class variationalform(variationalform_base):
 
 class variationalform_ale(variationalform):
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
-    def deltaW_kin_navierstokes_transient(self, amom, v, rho, ddomain, w=None, F=None, chi=None):
+    def deltaW_kin_navierstokes_transient(self, amom, v, rho, rhodot, ddomain, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot(J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot(amom + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T), self.var_v) * ddomain  # NOTE: amom already scaled with J
+        elif self.momentum_formulation == "energy_split":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}} \left(\frac{1}{2}\boldsymbol{v}\frac{\partial(\widehat{J}\rho)}{\partial t} + \widehat{J}\rho\frac{\partial\boldsymbol{v}}{\partial t} + \frac{1}{2}\boldsymbol{v}\nabla_0\cdot(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})) + \widehat{J}\rho(\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+            """
+            return ufl.dot(0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(v-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain  # NOTE: rhodot is actually J*rhodot
         else:
-            raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\widehat{J}\rho(\nabla_0\boldsymbol{v}\boldsymbol{F}^{-1})\boldsymbol{v}\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return J*rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * v, self.var_v) * ddomain  # NOTE: No domain velocity here! ... Really?!
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot(ufl.div(J*rho_*ufl.outer(v, v)*ufl.inv(F).T), self.var_v) * ddomain  # NOTE: No domain velocity here! ... Really?!
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def deltaW_kin_stokes_transient(self, amom, v, rho, ddomain, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot(J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * ddomain
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot(amom + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T), self.var_v) * ddomain  # NOTE: amom already scaled with correct J!
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     # Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
     def deltaW_int(self, sig, ddomain, F=None):
@@ -395,28 +411,25 @@ class variationalform_ale(variationalform):
     # conservation of mass in ALE form
     def deltaW_int_pres(self, v, var_p, ddomain, rho=None, w=None, F=None, chi=None, rhodot=None):
         J = ufl.det(F)
-        if self.mass_formulation=="conservative_mass":
-            rho_ = self.get_density(rho, chi=chi)
-            if self.formulation == "nonconservative":
-                """ TeX:
-                \int\limits_{\mathit{\Omega}_0}\left(\widehat{J}\left.\frac{\partial\rho}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\rho\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right)\right)\delta p\,\mathrm{d}V = 0
-                """
-                return (J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)) * var_p * ddomain
-            elif self.formulation == "conservative":
-                """ TeX:
-                \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V = 0
-                """
-                return (rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w))) * var_p * ddomain  # NOTE: rhodot is d(J*rho)/dt
-            else:
-                raise ValueError("Unknown fluid formulation!")
-        elif self.mass_formulation=="reduced_mass":
+        rho_ = self.get_density(rho, chi=chi)
+        if self.continuity_formulation == "expanded_advective":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}_0}\left(\widehat{J}\left.\frac{\partial\rho}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\rho\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right)\right)\delta p\,\mathrm{d}V = 0
+            """
+            return (J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)) * var_p * ddomain
+        elif self.continuity_formulation == "conservative":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V = 0
+            """
+            return (rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w))) * var_p * ddomain  # NOTE: rhodot is d(J*rho)/dt
+        elif self.continuity_formulation=="reduced":
             """ TeX:
             \int\limits_{\mathit{\Omega}_0}\nabla_0\cdot(\widehat{J}\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V = 0
             """
-            # NOTE: If discretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
-            return (rhodot + ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain  # NOTE: rhodot here is is dJ/dt
+            # NOTE: If discretely conservative time scheme is chosen, Jdot should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
+            return (rhodot + ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain  # NOTE: rhodot is dJ/dt
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation! Choose either 'expanded_advective', 'conservative', or 'reduced'.")
 
     # CH-NS part for reduced mass formulation
     def deltaW_int_pres_reduced_ch(self, alpha, Jflux, var_p, ddomain, F=None):
@@ -426,8 +439,8 @@ class variationalform_ale(variationalform):
         """
         return J*ufl.dot(alpha*ufl.inv(F)*Jflux, ufl.grad(var_p)) * ddomain
 
-    def res_v_strong_navierstokes_transient(self, amom, v, rho, sig, fbody, w=None, F=None, chi=None):
-        return self.f_inert_strong_navierstokes_transient(amom, v, rho, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
+    def res_v_strong_navierstokes_transient(self, amom, v, rho, rhodot, sig, fbody, w=None, F=None, chi=None):
+        return self.f_inert_strong_navierstokes_transient(amom, v, rho, rhodot, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, chi=None):
         return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, chi=chi) - self.f_stress_strong(sig, F=F) - fbody
@@ -438,38 +451,45 @@ class variationalform_ale(variationalform):
     def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
         return -self.f_stress_strong(sig, F=F) - fbody
 
-    def f_inert_strong_navierstokes_transient(self, amom, v, rho, w=None, F=None, chi=None):
+    def f_inert_strong_navierstokes_transient(self, amom, v, rho, rhodot, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w)
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             return amom + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
+        elif self.momentum_formulation == "energy_split":
+            return 0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(v-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w)
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+          # NOTE: No domain velocity here! ... Really?!
+        if self.momentum_formulation == "advective":
             assert(chi is None)
-            return J*rho_ * (ufl.grad(v) * ufl.inv(F) * v)  # NOTE: No domain velocity here! ... Really?!
-        elif self.formulation == "conservative":
-            return ufl.div(J*rho_*ufl.outer(v, v)*ufl.inv(F).T)  # NOTE: No domain velocity here! ... Really?!
+            return J*rho_ * (ufl.grad(v) * ufl.inv(F) * v)
+        elif self.momentum_formulation == "conservative":
+            return ufl.div(J*rho_*ufl.outer(v, v)*ufl.inv(F).T)
+        elif self.momentum_formulation == "energy_split":
+            return 0.5*v*ufl.div(J*ufl.inv(F)*rho_*v) + J*rho_*ufl.grad(v) * ufl.inv(F) * v
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def f_inert_strong_stokes_transient(self, amom, v, rho, w=None, F=None, chi=None):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(chi is None)
             return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w)
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             return amom + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
+        elif self.momentum_formulation == "energy_split":
+            return 0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w)
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def f_stress_strong(self, sig, F=None):
         J = ufl.det(F)
@@ -481,20 +501,16 @@ class variationalform_ale(variationalform):
 
     def res_p_strong(self, v, rho, w=None, F=None, chi=None, rhodot=None):
         J = ufl.det(F)
-        if self.mass_formulation=="conservative_mass":
-            rho_ = self.get_density(rho, chi=chi)
-            if self.formulation == "nonconservative":
-                return J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)
-            elif self.formulation == "conservative":
-                return rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w))
-            else:
-                raise ValueError("Unknown fluid formulation!")
-        elif self.mass_formulation=="reduced_mass":
-            # return ufl.div(J*ufl.inv(F)*v)
-            # NOTE: If discretely conservative time scheme is chosen, Jdot (here denoted by rhodot!) should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
-            return rhodot + ufl.div(J*ufl.inv(F)*(v-w))  # NOTE: rhodot here is is dJ/dt
+        rho_ = self.get_density(rho, chi=chi)
+        if self.continuity_formulation == "expanded_advective":
+            return J*rhodot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*v)
+        elif self.continuity_formulation == "conservative":
+            return rhodot + ufl.div(J*ufl.inv(F)*rho_*(v-w)) # NOTE: rhodot is d(J*rho)/dt
+        elif self.continuity_formulation=="reduced":
+            # NOTE: If discretely conservative time scheme is chosen, Jdot should be the time-discretely evolved J, not "ufl.div(J*ufl.inv(F)*w)"
+            return rhodot + ufl.div(J*ufl.inv(F)*(v-w))  # NOTE: rhodot is dJ/dt
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation! Choose either 'expanded_advective', 'conservative', or 'reduced'.")
 
     def res_p_strong_reduced_ch(self, alpha, Jflux, F=None):
         J = ufl.det(F)
@@ -546,23 +562,23 @@ class variationalform_ale(variationalform):
 
     def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_v_strong
-        if self.mass_formulation=="conservative_mass":
+        if self.continuity_formulation=="conservative" or self.continuity_formulation == "expanded_advective":
             return ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
-        elif self.mass_formulation=="reduced_mass":
+        elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
             return (1./rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation!")
 
     def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_p_strong
-        if self.mass_formulation=="conservative_mass":
+        if self.continuity_formulation=="conservative" or self.continuity_formulation=="expanded_advective":
             return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
-        elif self.mass_formulation=="reduced_mass":
+        elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
             return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
-            raise ValueError("Unknown fluid mass formulation!")
+            raise ValueError("Unknown fluid continuity formulation!")
 
     # cross-stress from RBVMS stabilization
     def stab_cross(
@@ -596,14 +612,16 @@ class variationalform_ale(variationalform):
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
         J = ufl.det(F)
-        if self.formulation == "nonconservative":
+        if self.momentum_formulation == "advective":
             assert(phi is None)
             return rho_*a  # NOTE: J-scaling is done in NS momentum form!
-        elif self.formulation == "conservative":
+        elif self.momentum_formulation == "conservative":
             rhodot_ = self.drho_dt(rho, w=w, F=F, phi=phi, chi=chi, phidot=phidot)  # already scaled by J
             return rhodot_*v + J*rho_*a
+        elif self.momentum_formulation == "energy_split":
+            return rho_*a  # NOTE: J-scaling is done in NS momentum form!
         else:
-            raise ValueError("Unknown fluid formulation!")
+            raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
     def drho_dt(self, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -612,15 +630,10 @@ class variationalform_ale(variationalform):
             rhodot_ = ufl.diff(rho_,phi) * phidot
         else:
             rhodot_ = ufl.as_ufl(0)
-        if self.formulation == "nonconservative":
-            return rhodot_  # NOTE: J-scaling is done in NS mass form!
-        elif self.formulation == "conservative":
-            Jdot = ufl.div(J*ufl.inv(F)*w)
-            return J*rhodot_ + rho_*Jdot
-        else:
-            raise ValueError("Unknown fluid formulation!")
+        Jdot = ufl.div(J*ufl.inv(F)*w)
+        return J*rhodot_ + rho_*Jdot
 
-    def dj_dt(self, w=None, F=None):
+    def dJ_dt(self, w=None, F=None):
         J = ufl.det(F)
         return ufl.div(J*ufl.inv(F)*w)
 

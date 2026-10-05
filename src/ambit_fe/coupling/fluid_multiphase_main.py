@@ -267,7 +267,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             chi=self.pbf.phasevar["chi_mid"],
                         )
 
-                    if self.pbf.mass_formulation=="reduced_mass":
+                    if self.pbf.continuity_formulation=="reduced":
                         if self.pbf.scheme_type["res_p"] == "full":
                             res_p_ch = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu, self.pbp.phi, p=self.pbf.p_[j], F=self.pbf.alevar["Fale"], alpha=self.pbf.alpha[n]), F=self.pbf.alevar["Fale"])
                             res_p_ch_old = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_old[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_old, self.pbp.phi_old, p=self.pbf.p_old_[j], F=self.pbf.alevar["Fale_old"], alpha=self.pbf.alpha_old[n]), F=self.pbf.alevar["Fale_old"])
@@ -316,7 +316,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                     self.pbf.weakform_v += self.deltaW_int_stabcap
             # missing LSIC term from reduced mass version - actually div(Jflux), should vanish for first order elements
             if self.pbf.scheme_type["res_p"] == "full":
-                if self.pbf.mass_formulation=="reduced_mass": # NOTE: Positive sign, in contrast to weak contribution - integration by parts!
+                if self.pbf.continuity_formulation=="reduced": # NOTE: Positive sign, in contrast to weak contribution - integration by parts!
                     if self.pbf.ti.res_eval == "trap":
                         self.pbf.weakform_v += self.pbf.timefac * self.deltaW_int_stabredch + (1.0 - self.pbf.timefac) * self.deltaW_int_stabredch_old
                     if self.pbf.ti.res_eval == "midp":
@@ -335,7 +335,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         if self.pbf.ti.res_eval == "back":
                             self.pbf.weakform_p[n] += self.deltaW_p_stabcap[n]
 
-        if self.pbf.mass_formulation=="reduced_mass":
+        if self.pbf.continuity_formulation=="reduced":
             self.deltaW_p_ch, self.deltaW_p_ch_old, self.deltaW_p_ch_mid = [], [], []
 
             for n, M in enumerate(self.pbf.domain_ids):

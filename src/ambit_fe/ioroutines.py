@@ -867,8 +867,13 @@ class IO_fsi(IO):
             subdomain_data=self.mt_b,
             metadata={"quadrature_degree": qdeg},
         )
+        self.dSfull = ufl.Measure(
+            "dS",
+            domain=msh,
+            metadata={"quadrature_degree": qdeg},
+        )
 
-        self.bmeasures = [self.ds, self.dS]
+        self.bmeasures = [self.ds, self.dS, self.dSfull]
 
         if bool(self.duplicate_mesh_domains):
             self.submshes_emap, self.sub_mt_d, self.sub_mt_b = {}, {}, {}

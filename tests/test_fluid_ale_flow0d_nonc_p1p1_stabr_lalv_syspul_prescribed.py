@@ -62,7 +62,7 @@ def test_main():
 
     TIME_PARAMS = {"timint": "ost",
                    "theta_ost": 1.0,
-                   "discretely_conservative": True}  # same for nonconservative fluid formulation
+                   "discretely_conservative": True}  # same for advective fluid formulation
 
     TIME_PARAMS_FLOW0D = {
         "timint": "ost",
@@ -101,7 +101,7 @@ def test_main():
             "symmetric": True,
             "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
         },
-        "fluid_formulation": "nonconservative",
+        "momentum_formulation": "advective",
     }
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}

@@ -92,6 +92,9 @@ class variationalform(variationalform_base):
     ):
         return ufl.dot(tau_m * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
 
+    def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
+        return tau_cip * ufl.jump(Jflux, self.n0) * ufl.jump(-Mob * ufl.grad(var_), self.n0) * dboundary
+
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)
 
@@ -182,3 +185,7 @@ class variationalform_ale(variationalform):
     ):
         # NOTE: J=det(F) already included in res_phi_strong
         return ufl.dot(tau_m * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
+
+    def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
+        J = ufl.det(F)
+        return tau_cip * ufl.jump(J*ufl.inv(F)*Jflux, self.n0) * ufl.jump(-J*ufl.inv(F)*Mob * ufl.inv(F).T*ufl.grad(var_), self.n0) * dboundary

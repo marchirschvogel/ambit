@@ -72,7 +72,8 @@ def test_main():
         "order_vel": 1,
         "order_pres": 1,
         "quad_degree": 5,
-        "fluid_formulation": "conservative",  # nonconservative (default), conservative
+        "momentum_formulation": "conservative",  # advective (default), conservative
+        "continuity_formulation": "conservative",
         "stabilization": {
             "scheme": "supg_pspg",
             "vscale": 1e3,

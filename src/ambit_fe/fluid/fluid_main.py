@@ -107,8 +107,8 @@ class FluidmechanicsProblem(problem_base):
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho1"])
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho2"])
 
-        self.fluid_formulation = self.fem_params.get("fluid_formulation", "nonconservative")
-        self.mass_formulation = self.fem_params.get("mass_formulation", "conservative_mass")
+        self.momentum_formulation = self.fem_params.get("momentum_formulation", "advective")
+        self.continuity_formulation = self.fem_params.get("continuity_formulation", "expanded_advective")
         self.fluid_governing_type = self.time_params.get("fluid_governing_type", "navierstokes_transient")
         self.stabilization = self.fem_params.get("stabilization", None)
 
@@ -293,9 +293,10 @@ class FluidmechanicsProblem(problem_base):
         # values of previous time step(s)
         self.v_old = fem.Function(self.V_v)
         self.a_old = fem.Function(self.V_v)
-        self.amom_old = [fem.Function(self.V_v) for _ in range(self.num_domains)]  # old state of momentum time derivative, d(rho * v)/dt, in case of non-constant density
+        self.amom_old = [fem.Function(self.V_v) for _ in range(self.num_domains)]  # old state of momentum time derivative d(rho * v)/dt in case of non-constant density
         self.v_veryold = fem.Function(self.V_v)
-        self.rhodot_old = [fem.Function(self.V_scalar) for _ in range(self.num_domains)]  # old state of density time derivative, d(rho)/dt, in case of non-constant density
+        self.Jrhodot_m_old = [fem.Function(self.V_scalar) for _ in range(self.num_domains)]  # old state of density time derivative drho/dt or d(J*rho)/dt in momentum
+        self.Jrhodot_c_old = [fem.Function(self.V_scalar) for _ in range(self.num_domains)]  # old state of density time derivative drho/dt, d(J*rho)/dt or J derivative dJ/dt in continuity
         # fluid displacement (needed in ALE / FSI)
         self.uf = fem.Function(self.V_v, name="FluidDisplacement")
         self.uf_old = fem.Function(self.V_v)
@@ -398,7 +399,7 @@ class FluidmechanicsProblem(problem_base):
         )
 
         # continuity should be at midpoint for consistent time-integration in multi-phase flow, when conservative mass formulation is used...
-        if self.is_multiphase and self.ti.res_eval != "back" and self.mass_formulation == "conservative_mass":
+        if self.is_multiphase and self.ti.res_eval != "back" and self.continuity_formulation == "conservative":
             assert(self.ti.continuity_at_midpoint)
 
         # if shear + volumetric strain rate should be used in constitutive model - required for multiphase and/or compressible flows
@@ -424,7 +425,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform(
                 tstfncs=[self.var_v, self.var_p_],
                 n0=self.io.n0,
-                formulation=[self.fluid_formulation,self.mass_formulation],
+                formulation=[self.momentum_formulation,self.continuity_formulation],
             )
 
         else:
@@ -432,7 +433,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform_ale(
                 tstfncs=[self.var_v, self.var_p_],
                 n0=self.io.n0,
-                formulation=[self.fluid_formulation,self.mass_formulation],
+                formulation=[self.momentum_formulation,self.continuity_formulation],
             )
 
         # read in fiber data - for reduced solid (FrSI)
@@ -598,7 +599,8 @@ class FluidmechanicsProblem(problem_base):
             self.pf_mid_ = [self.timefac * self.p_[0] + (1.0 - self.timefac) * self.p_old_[0]]
 
         self.accmom, self.accmom_expr, self.accmom_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
-        self.rhodot, self.rhodot_expr, self.rhodot_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+        self.Jrhodot_m, self.Jrhodot_m_expr, self.Jrhodot_m_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+        self.Jrhodot_c, self.Jrhodot_c_expr, self.Jrhodot_c_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
         for n, M in enumerate(self.domain_ids):
             # get densities - either constant or dependent on phasefield
             rho = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
@@ -615,51 +617,61 @@ class FluidmechanicsProblem(problem_base):
                 J, J_old, J_veryold = 1.0, 1.0, 1.0
             if self.ti.discretely_conservative:
                 # set form for time derivative of momentum
-                if self.fluid_formulation == "nonconservative":
-                    self.accmom[n] = self.ti.set_acc(rho*self.v, rho_old*self.v_old, rho_veryold*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside nonconservative NS routine!
-                elif self.fluid_formulation == "conservative":
+                if self.momentum_formulation == "advective":
+                    self.accmom[n] = self.ti.set_acc(rho*self.v, rho*self.v_old, rho*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside advective NS routine!
+                elif self.momentum_formulation == "conservative":
                     self.accmom[n] = self.ti.set_acc(J*rho*self.v, J_old*rho_old*self.v_old, J_veryold*rho_veryold*self.v_veryold, self.amom_old[n])
+                elif self.momentum_formulation == "energy_split":
+                    self.accmom[n] = self.ti.set_acc(rho*self.v, rho*self.v_old, rho*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside advective NS routine!
+                    self.Jrhodot_m[n] = self.ti.update_dvar(J*rho, J_old*rho_old, self.Jrhodot_m_old[n], self.pbase.dt, var_veryold=J_veryold*rho_veryold)
                 else:
                     raise ValueError("Unknown fluid formulation!")
                 # compile expression for later update
                 self.accmom_expr[n] = fem.Expression(self.accmom[n], self.ti.amom_work[n].function_space.element.interpolation_points)
                 # set mid-point representation
                 self.accmom_mid[n] = self.timefac_m * self.accmom[n] + (1.0 - self.timefac_m) * self.amom_old[n]
-                # set form for time derivative of density - for conservative mass formulation
-                if self.mass_formulation=="conservative_mass":
-                    if self.fluid_formulation == "nonconservative":
-                        self.rhodot[n] = self.ti.update_dvar(rhoU, rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=rhoU_veryold)
-                    elif self.fluid_formulation == "conservative":
-                        self.rhodot[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.rhodot_old[n], self.pbase.dt, var_veryold=J_veryold*rhoU_veryold)
+                # set form for time derivative of density - for conservative continuity formulation
+                if self.continuity_formulation=="expanded_advective":
+                    self.Jrhodot_c[n] = self.ti.update_dvar(rhoU, rhoU_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=rhoU_veryold)
+                elif self.continuity_formulation=="conservative":
+                    self.Jrhodot_c[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=J_veryold*rhoU_veryold)
+                elif self.continuity_formulation=="reduced":
+                    if self.is_ale:  # time-evolved Jdot
+                        self.Jrhodot_c[n] = self.ti.update_dvar(J, J_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=J_veryold)
                     else:
-                        raise ValueError("Unknown fluid formulation!")
-                elif self.mass_formulation=="reduced_mass":
-                    if self.is_ale:  # NOTE: This is time-evolved Jdot
-                        self.rhodot[n] = self.ti.update_dvar(J, J_old, self.rhodot_old[n], self.pbase.dt, var_veryold=J_veryold)
-                    else:
-                        self.rhodot[n] = fem.Constant(self.ti.rhodot_work[n].function_space.mesh, 0.0)
+                        self.Jrhodot_c[n] = fem.Constant(self.ti.Jrhodot_c_work[n].function_space.mesh, 0.0)
                 else:
-                    raise ValueError("Unknown fluid mass formulation!")
+                    raise ValueError("Unknown fluid continuity formulation!")
                 # compile expression for later update
-                self.rhodot_expr[n] = fem.Expression(self.rhodot[n], self.ti.rhodot_work[n].function_space.element.interpolation_points)
+                self.Jrhodot_c_expr[n] = fem.Expression(self.Jrhodot_c[n], self.ti.Jrhodot_c_work[n].function_space.element.interpolation_points)
                 # set mid-point representation
-                self.rhodot_mid[n] = self.timefac_m * self.rhodot[n] + (1.0 - self.timefac_m) * self.rhodot_old[n]
+                self.Jrhodot_c_mid[n] = self.timefac_m * self.Jrhodot_c[n] + (1.0 - self.timefac_m) * self.Jrhodot_c_old[n]
+                # only needed for energy-split momentum formulation
+                if self.momentum_formulation == "energy_split":
+                    # compile expression for later update
+                    self.Jrhodot_m_expr[n] = fem.Expression(self.Jrhodot_m[n], self.ti.Jrhodot_m_work[n].function_space.element.interpolation_points)
+                    # set mid-point representation
+                    self.Jrhodot_m_mid[n] = self.timefac_m * self.Jrhodot_m[n] + (1.0 - self.timefac_m) * self.Jrhodot_m_old[n]
             else:
                 # time derivative of momentum for non-discretely conservative scheme - apply classical product rule
                 self.accmom[n] = self.vf.acc_momentum_dt(self.acc, self.v, self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chi"], phidot=self.phasevar["phidot"])
                 self.amom_old[n] = self.vf.acc_momentum_dt(self.a_old, self.v_old, self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chi_old"], phidot=self.phasevar["phidot_old"])
                 self.accmom_mid[n] = self.vf.acc_momentum_dt(self.acc_mid, self.vel_mid, self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chi_mid"], phidot=self.phasevar["phidot_mid"])
                 # time derivative of density (for multiphase fluid) using chain rule
-                if self.mass_formulation=="conservative_mass":
-                    self.rhodot[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chiU"], phidot=self.phasevar["phidot"])
-                    self.rhodot_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chiU_old"], phidot=self.phasevar["phidot_old"])
-                    self.rhodot_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chiU_mid"], phidot=self.phasevar["phidot_mid"])
-                elif self.mass_formulation=="reduced_mass":
-                    self.rhodot[n] = self.vf.dj_dt(w=self.alevar["w"], F=self.alevar["Fale"])
-                    self.rhodot_old[n] = self.vf.dj_dt(w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-                    self.rhodot_mid[n] = self.vf.dj_dt(w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+                if self.continuity_formulation=="conservative" or self.continuity_formulation=="expanded_advective":
+                    self.Jrhodot_c[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chiU"], phidot=self.phasevar["phidot"])
+                    self.Jrhodot_c_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chiU_old"], phidot=self.phasevar["phidot_old"])
+                    self.Jrhodot_c_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chiU_mid"], phidot=self.phasevar["phidot_mid"])
+                elif self.continuity_formulation=="reduced":
+                    self.Jrhodot_c[n] = self.vf.dJ_dt(w=self.alevar["w"], F=self.alevar["Fale"])
+                    self.Jrhodot_c_old[n] = self.vf.dJ_dt(w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+                    self.Jrhodot_c_mid[n] = self.vf.dJ_dt(w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
                 else:
-                    raise ValueError("Unknown fluid mass formulation!")
+                    raise ValueError("Unknown fluid continuity formulation!")
+                if self.momentum_formulation == "energy_split":
+                    self.Jrhodot_m[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chi"], phidot=self.phasevar["phidot"])
+                    self.Jrhodot_m_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chi_old"], phidot=self.phasevar["phidot_old"])
+                    self.Jrhodot_m_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chi_mid"], phidot=self.phasevar["phidot_mid"])
 
         if self.pbase.have_rom:
             self.xdtr_expr, self.xintr_expr = self.acc_expr, self.ufluid_expr
@@ -689,6 +701,7 @@ class FluidmechanicsProblem(problem_base):
                     self.accmom[n],
                     self.v,
                     self.rho[n],
+                    self.Jrhodot_m[n],
                     self.dx(M),
                     w=self.alevar["w"],
                     F=self.alevar["Fale"],
@@ -698,6 +711,7 @@ class FluidmechanicsProblem(problem_base):
                     self.amom_old[n],
                     self.v_old,
                     self.rho[n],
+                    self.Jrhodot_m_old[n],
                     self.dx(M),
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
@@ -707,6 +721,7 @@ class FluidmechanicsProblem(problem_base):
                     self.accmom_mid[n],
                     self.vel_mid,
                     self.rho[n],
+                    self.Jrhodot_m_mid[n],
                     self.dx(M),
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
@@ -794,7 +809,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w"],
                     F=self.alevar["Fale"],
                     chi=self.phasevar["chiU"],  # somehow need unclipped chi for consistency of CH-NS...
-                    rhodot=self.rhodot[n],
+                    rhodot=self.Jrhodot_c[n],
                 )
             )
             self.deltaW_p_old.append(
@@ -806,7 +821,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
                     chi=self.phasevar["chiU_old"],  # somehow need unclipped chi for consistency of CH-NS...
-                    rhodot=self.rhodot_old[n],
+                    rhodot=self.Jrhodot_c_old[n],
                 )
             )
             self.deltaW_p_mid.append(
@@ -818,7 +833,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
                     chi=self.phasevar["chiU_mid"],  # somehow need unclipped chi for consistency of CH-NS...
-                    rhodot=self.rhodot_mid[n],
+                    rhodot=self.Jrhodot_c_mid[n],
                 )
             )
 
@@ -1313,7 +1328,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
                         chi=self.phasevar["chiU"],
-                        rhodot=self.rhodot[n],
+                        rhodot=self.Jrhodot_c[n],
                     )
                 )
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
@@ -1322,6 +1337,7 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n][0]*self.acc_prestr,
                         self.v,
                         self.rho[n],
+                        self.Jrhodot_m[n],
                         self.dx(M),
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
@@ -1465,7 +1481,7 @@ class FluidmechanicsProblem(problem_base):
             dscales = self.stabilization.get("dscales", {"tau_m": 1.0, "tau_c": 1.0})
 
             # mask: if True, stabilization is smoothly restricted to bulk fluid in multiphase flow
-            self.stab_mask = self.stabilization.get("mask_bulk", {"tau_m": False, "tau_c": False, "exp": 2.0})
+            self.stab_mask = self.stabilization.get("mask_bulk", {"tau_m": False, "tau_c": False, "eps": 1e-3, "dmin": 0.0})
 
             if self.scheme_type["res_v"] == "reduced":
                 assert self.order_vel == 1
@@ -1537,10 +1553,10 @@ class FluidmechanicsProblem(problem_base):
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const', 'dt_vel', or 'dt_vel_visc'.")
 
                     if self.phasevar["chi"] is not None:
-                        assert(self.stab_mask["exp"] % 2 == 0)
-                        msk = (2.0*self.phasevar["chiU"] - 1.0)**self.stab_mask["exp"]
-                        msk_old = (2.0*self.phasevar["chiU_old"] - 1.0)**self.stab_mask["exp"]
-                        msk_mid = (2.0*self.phasevar["chiU_mid"] - 1.0)**self.stab_mask["exp"]
+                        # mask that is mostly zero within chi [0,1] and smoothly transits to 1 over eps at interface bounds
+                        msk = self.chi_mask(self.phasevar["chiU"], self.stab_mask["eps"], self.stab_mask["dmin"])
+                        msk_old = self.chi_mask(self.phasevar["chiU_old"], self.stab_mask["eps"], self.stab_mask["dmin"])
+                        msk_mid = self.chi_mask(self.phasevar["chiU_mid"], self.stab_mask["eps"], self.stab_mask["dmin"])
 
                         if self.stab_mask["tau_m"]:
                             self.tau_m *= msk
@@ -1558,6 +1574,7 @@ class FluidmechanicsProblem(problem_base):
                                 self.accmom[n],
                                 self.v,
                                 self.rho[n],
+                                self.Jrhodot_m[n],
                                 self.ma[n].sigma(
                                     self.v,
                                     self.p_[j],
@@ -1573,6 +1590,7 @@ class FluidmechanicsProblem(problem_base):
                                 self.amom_old[n],
                                 self.v_old,
                                 self.rho[n],
+                                self.Jrhodot_m_old[n],
                                 self.ma[n].sigma(
                                     self.v_old,
                                     self.p_old_[j],
@@ -1588,6 +1606,7 @@ class FluidmechanicsProblem(problem_base):
                                 self.accmom_mid[n],
                                 self.vel_mid,
                                 self.rho[n],
+                                self.Jrhodot_m_mid[n],
                                 self.ma[n].sigma(
                                     self.vel_mid,
                                     self.pf_mid_[j],
@@ -1814,7 +1833,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
                         chi=self.phasevar["chiU"],
-                        rhodot=self.rhodot[n]
+                        rhodot=self.Jrhodot_c[n],
                     )
                     residual_p_strong_old = self.vf.res_p_strong(
                         self.v_old,
@@ -1822,7 +1841,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w_old"],
                         F=self.alevar["Fale_old"],
                         chi=self.phasevar["chiU_old"],
-                        rhodot=self.rhodot_old[n]
+                        rhodot=self.Jrhodot_c_old[n],
                     )
                     residual_p_strong_mid = self.vf.res_p_strong(
                         self.vel_mid,
@@ -1830,7 +1849,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w_mid"],
                         F=self.alevar["Fale_mid"],
                         chi=self.phasevar["chiU_mid"],
-                        rhodot=self.rhodot_mid[n]
+                        rhodot=self.Jrhodot_c_mid[n],
                     )
 
                     # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
@@ -1989,7 +2008,7 @@ class FluidmechanicsProblem(problem_base):
                             w=self.alevar["w"],
                             F=self.alevar["Fale"],
                             chi=self.phasevar["chiU"],
-                            rhodot=self.rhodot[n]
+                            rhodot=self.Jrhodot_c[n],
                         )
                         # LSIC term
                         self.deltaW_prestr_int += self.vf.stab_lsic(
@@ -2007,6 +2026,7 @@ class FluidmechanicsProblem(problem_base):
                                     self.acc_prestr,
                                     self.v,
                                     self.rho[n],
+                                    self.Jrhodot_m[n],
                                     self.ma[n].sigma(
                                         self.v,
                                         self.p_[j],
@@ -2909,6 +2929,24 @@ class FluidmechanicsProblem(problem_base):
             else:
                 raise ValueError("Unknown smooth method. Choose 'cos', 'cubic', or 'quintic'!")
 
+    def chi_mask(self, chi, eps, dmin):
+        return ufl.conditional(
+            ufl.le(chi, 0.0),
+            1.0,
+            ufl.conditional(
+                ufl.lt(chi, eps),
+                dmin + (1.0 - dmin) * 0.5 * (1.0 + ufl.cos(np.pi * chi / eps)),
+                ufl.conditional(
+                    ufl.le(chi, 1.0 - eps),
+                    dmin,
+                    ufl.conditional(
+                        ufl.lt(chi, 1.0),
+                        dmin + (1.0 - dmin) * 0.5 * (1.0 + ufl.cos(np.pi * (1.0 - chi) / eps)),
+                        1.0
+                    )
+                )
+            )
+        )
 
     ### now the base routines for this problem
 
@@ -3021,8 +3059,10 @@ class FluidmechanicsProblem(problem_base):
             uf_veryold=self.uf_veryold,
             accmom_expr=self.accmom_expr,
             amom_old=self.amom_old,
-            rhodot_expr=self.rhodot_expr,
-            rhodot_old=self.rhodot_old,
+            Jrhodot_m_expr=self.Jrhodot_m_expr,
+            Jrhodot_m_old=self.Jrhodot_m_old,
+            Jrhodot_c_expr=self.Jrhodot_c_expr,
+            Jrhodot_c_old=self.Jrhodot_c_old,
         )
 
         # update monitor dicts

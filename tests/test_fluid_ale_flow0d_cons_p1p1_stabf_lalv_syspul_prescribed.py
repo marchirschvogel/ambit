@@ -102,7 +102,8 @@ def test_main():
             "symmetric": False,
             "scheme_type": {"res_v": "full", "res_p": "full"},
         },
-        "fluid_formulation": "conservative",
+        "momentum_formulation": "conservative",
+        "continuity_formulation": "conservative",
     }
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}

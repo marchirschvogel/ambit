@@ -31,18 +31,7 @@ class materiallaw_flux:
         self.a = a
         self.b = b
 
-    def mat_cahnhilliard_flux(self, params, p=None, F=None, alpha=None):
-        mobility = params.get("mobility", "constant")
-        M0 = params["M0"]
-        if mobility=="constant":
-            M = M0
-        elif mobility=="degenerate":
-            exp = params.get("exponent", 1.0)
-            # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
-            M = M0 * abs((self.a-self.phi)**exp * (self.b-self.phi)**exp)
-        else:
-            raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
-
+    def mat_cahnhilliard_flux(self, params, mob, p=None, F=None, alpha=None):
         # fluid pressure proportional term (needed for consistency of mass-averged velocity formulation!)
         if p is not None:
             beta = params.get("beta", 1.0)  # experimental: to tune pressure gradient-driven diffusive flux...
@@ -51,6 +40,6 @@ class materiallaw_flux:
             ap = ufl.as_ufl(0)
 
         if F is not None:
-            return -M*ufl.inv(F).T*ufl.grad(self.mu + ap)
+            return -mob*ufl.inv(F).T*ufl.grad(self.mu + ap)
         else:
-            return -M*ufl.grad(self.mu + ap)
+            return -mob*ufl.grad(self.mu + ap)

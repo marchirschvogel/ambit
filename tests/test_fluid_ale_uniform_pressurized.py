@@ -46,7 +46,7 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative"}
+                        "momentum_formulation": "conservative"}
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 

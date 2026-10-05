@@ -24,6 +24,7 @@ class constitutive:
         self.mat_void = ["id", "source"]
 
         self.phi_range = phi_range
+        self.a, self.b = self.phi_range[0], self.phi_range[1]
 
     # diffusive flux
     def diffusive_flux(self, mu_, phi_, p=None, F=None, alpha=None):
@@ -36,7 +37,8 @@ class constitutive:
         for key, value in self.materials.items():
             if key not in self.mat_void:
                 if key == "mat_cahnhilliard":
-                    Jflux += mat_flux.mat_cahnhilliard_flux(value, p=p, F=F, alpha=alpha)
+                    mob = self.mobility(phi_, value)
+                    Jflux += mat_flux.mat_cahnhilliard_flux(value, mob, p=p, F=F, alpha=alpha)
                 else:
                     raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
 
@@ -65,3 +67,15 @@ class constitutive:
             return psi
         else:
             raise ValueError("Unknown returnquantity!")
+
+    def mobility(self, phi_, params):
+        mob_type = params.get("mobility", "constant")
+        M0 = params["M0"]
+        if mob_type=="constant":
+            return M0
+        elif mob_type=="degenerate":
+            exp = params.get("exponent", 1.0)
+            # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
+            return M0 * abs((self.a-phi_)**exp * (self.b-phi_)**exp)
+        else:
+            raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")

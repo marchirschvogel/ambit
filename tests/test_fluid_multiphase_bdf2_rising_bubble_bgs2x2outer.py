@@ -4,7 +4,7 @@
 Two-phase flow rising bubble in gravitational flield
 BDF2 time-integration scheme for both fluid and phasefield
 Outer BGS2x2 preconditioner
-reduced_mass formulation - needs noticeably fewer linear iterations!
+reduced formulation - needs noticeably fewer linear iterations!
 """
 
 import ambit_fe
@@ -93,8 +93,8 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative",
-                        "mass_formulation": "reduced_mass"}  # conservative_mass, reduced_mass
+                        "momentum_formulation": "conservative",   # conservative, energy_split
+                        "continuity_formulation": "reduced"}  # conservative, reduced
 
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 

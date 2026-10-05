@@ -684,7 +684,10 @@ class timeintegration_fluid(timeintegration):
         if self.discretely_conservative:
             self.amom_work = [fem.Function(self.V[0]) for _ in range(self.num_dom)]
             if len(V) > 1:  # not so nice...
-                self.rhodot_work = [fem.Function(self.V[1]) for _ in range(self.num_dom)]
+                self.Jrhodot_m_work = [fem.Function(self.V[1]) for _ in range(self.num_dom)]
+                self.Jrhodot_c_work = [fem.Function(self.V[1]) for _ in range(self.num_dom)]
+        else:
+            self.amom_work, self.Jrhodot_m_work, self.Jrhodot_c_work = [None], [None], [None]
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -745,11 +748,13 @@ class timeintegration_fluid(timeintegration):
         uf_veryold=None,
         accmom_expr=[None],
         amom_old=[None],
-        rhodot_expr=[None],
-        rhodot_old=[None],
+        Jrhodot_m_expr=[None],
+        Jrhodot_m_old=[None],
+        Jrhodot_c_expr=[None],
+        Jrhodot_c_old=[None],
     ):
         # update old fields with new quantities
-        self.update_fields(v, v_old, v_veryold, acc_expr, a_old, uf_expr=uf_expr, uf_old=uf_old, uf_veryold=uf_veryold, accmom_expr=accmom_expr, amom_old=amom_old, rhodot_expr=rhodot_expr, rhodot_old=rhodot_old)
+        self.update_fields(v, v_old, v_veryold, acc_expr, a_old, uf_expr=uf_expr, uf_old=uf_old, uf_veryold=uf_veryold, accmom_expr=accmom_expr, amom_old=amom_old, Jrhodot_m_expr=Jrhodot_m_expr, Jrhodot_m_old=Jrhodot_m_old, Jrhodot_c_expr=Jrhodot_c_expr, Jrhodot_c_old=Jrhodot_c_old)
 
         # update pressure variable
         p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
@@ -772,7 +777,7 @@ class timeintegration_fluid(timeintegration):
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
-    def update_fields(self, v, v_old, v_veryold, acc_expr, a_old, uf_expr=None, uf_old=None, uf_veryold=None, accmom_expr=[None], amom_old=[None], rhodot_expr=[None], rhodot_old=[None]):
+    def update_fields(self, v, v_old, v_veryold, acc_expr, a_old, uf_expr=None, uf_old=None, uf_veryold=None, accmom_expr=[None], amom_old=[None], Jrhodot_m_expr=[None], Jrhodot_m_old=[None], Jrhodot_c_expr=[None], Jrhodot_c_old=[None]):
         self.a_work.interpolate(acc_expr)
         self.a_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
@@ -781,16 +786,21 @@ class timeintegration_fluid(timeintegration):
                 self.amom_work[n].interpolate(accmom_expr[n])
                 self.amom_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if None not in rhodot_expr:
+        if None not in Jrhodot_m_expr:
             for n in range(self.num_dom):
-                self.rhodot_work[n].interpolate(rhodot_expr[n])
-                self.rhodot_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.Jrhodot_m_work[n].interpolate(Jrhodot_m_expr[n])
+                self.Jrhodot_m_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if None not in Jrhodot_c_expr:
+            for n in range(self.num_dom):
+                self.Jrhodot_c_work[n].interpolate(Jrhodot_c_expr[n])
+                self.Jrhodot_c_work[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if uf_old is not None:
             self.uf_work.interpolate(uf_expr)
             self.uf_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old, amom_old=amom_old, rhodot_old=rhodot_old)
+        self.update_a_v_old(a_old, v_veryold, v_old, v, uf_veryold=uf_veryold, uf_old=uf_old, amom_old=amom_old, Jrhodot_m_old=Jrhodot_m_old, Jrhodot_c_old=Jrhodot_c_old)
 
     def update_dvar(self, var, var_old, dvar_old, dt, var_veryold=None):
         if self.timint == "ost":
@@ -829,22 +839,28 @@ class timeintegration_fluid(timeintegration):
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None, amom_old=[None], rhodot_old=[None]):
+    def update_a_v_old(self, a_old, v_veryold, v_old, v, uf_veryold=None, uf_old=None, amom_old=[None], Jrhodot_m_old=[None], Jrhodot_c_old=[None]):
         # update acceleration: a_old <- a
         a_old.x.petsc_vec.axpby(1.0, 0.0, self.a_work.x.petsc_vec)
         a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if None not in amom_old:
+        if None not in self.amom_work:
             for n in range(self.num_dom):
                 if isinstance(amom_old[n], fem.function.Function):
                     amom_old[n].x.petsc_vec.axpby(1.0, 0.0, self.amom_work[n].x.petsc_vec)
                     amom_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if None not in rhodot_old:
+        if None not in self.Jrhodot_m_work:
             for n in range(self.num_dom):
-                if isinstance(rhodot_old[n], fem.function.Function):
-                    rhodot_old[n].x.petsc_vec.axpby(1.0, 0.0, self.rhodot_work[n].x.petsc_vec)
-                    rhodot_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                if isinstance(Jrhodot_m_old[n], fem.function.Function):
+                    Jrhodot_m_old[n].x.petsc_vec.axpby(1.0, 0.0, self.Jrhodot_m_work[n].x.petsc_vec)
+                    Jrhodot_m_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if None not in self.Jrhodot_c_work:
+            for n in range(self.num_dom):
+                if isinstance(Jrhodot_c_old[n], fem.function.Function):
+                    Jrhodot_c_old[n].x.petsc_vec.axpby(1.0, 0.0, self.Jrhodot_c_work[n].x.petsc_vec)
+                    Jrhodot_c_old[n].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_veryold <- v_old
         v_veryold.x.petsc_vec.axpby(1.0, 0.0, v_old.x.petsc_vec)
@@ -954,7 +970,10 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         # work vector for time derivative of phase field
         self.phidot_work = fem.Function(self.V[0])
-        self.jphidot_work = fem.Function(self.V[0])
+        if self.discretely_conservative:
+            self.Jphidot_work = fem.Function(self.V[0])
+        else:
+            self.Jphidot_work = None
 
         if self.timint == "ost":
             self.theta_ost = time_params["theta_ost"]
@@ -974,9 +993,9 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
-    def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=None, jphidot_old=None):
+    def update_timestep(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, Jphidot_expr=None, Jphidot_old=None):
         # update old fields with new quantities
-        self.update_fields(phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=jphidot_expr, jphidot_old=jphidot_old)
+        self.update_fields(phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, Jphidot_expr=Jphidot_expr, Jphidot_old=Jphidot_old)
         # update old time-dependent load curves
         self.update_time_funcs_old()
 
@@ -984,26 +1003,26 @@ class timeintegration_phasefield(timeintegration_fluid):
         # set form for rate of phi
         return self.update_dvar(phi, phi_old, phidot_old, self.dt, var_veryold=phi_veryold)
 
-    def update_fields(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, jphidot_expr=None, jphidot_old=None):
+    def update_fields(self, phi, phi_old, phi_veryold, phidot_expr, phidot_old, mu, mu_old, Jphidot_expr=None, Jphidot_old=None):
         # update work vector - interpolate expression
         self.phidot_work.interpolate(phidot_expr)
         self.phidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if jphidot_expr is not None:
-            self.jphidot_work.interpolate(jphidot_expr)
-            self.jphidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if Jphidot_expr is not None:
+            self.Jphidot_work.interpolate(Jphidot_expr)
+            self.Jphidot_work.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu, jphidot_old=jphidot_old)
+        self.update_phidot_phi_mu_old(phidot_old, phi_veryold, phi_old, mu_old, phi, mu, Jphidot_old=Jphidot_old)
 
-    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phi, mu, jphidot_old=None):
+    def update_phidot_phi_mu_old(self, phidot_old, phi_veryold, phi_old, mu_old, phi, mu, Jphidot_old=None):
         # update time derivative of phase field: phidot_old <- phidot
         phidot_old.x.petsc_vec.axpby(1.0, 0.0, self.phidot_work.x.petsc_vec)
         phidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if jphidot_old is not None:
-            if isinstance(jphidot_old, fem.function.Function):
-                jphidot_old.x.petsc_vec.axpby(1.0, 0.0, self.jphidot_work.x.petsc_vec)
-                jphidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.Jphidot_work is not None:
+            if isinstance(Jphidot_old, fem.function.Function):
+                Jphidot_old.x.petsc_vec.axpby(1.0, 0.0, self.Jphidot_work.x.petsc_vec)
+                Jphidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update phase field: phi_veryold <- phi_old
         phi_veryold.x.petsc_vec.axpby(1.0, 0.0, phi_old.x.petsc_vec)

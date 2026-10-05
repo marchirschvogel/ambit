@@ -52,7 +52,8 @@ def test_main():
                         'stabilization'  : {'scheme'         : 'supg_pspg',
                                             'vscale'         : 1.0e1,
                                             'dscales'        : {"tau_m": 1.0, "tau_c": 1.0}},
-                        "fluid_formulation": "conservative"} # irrelevant for steady Stokes
+                        "momentum_formulation": "conservative",  # irrelevant for steady Stokes
+                        "continuity_formulation": "conservative"}
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 

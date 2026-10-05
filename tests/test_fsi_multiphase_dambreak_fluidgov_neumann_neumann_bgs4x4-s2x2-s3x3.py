@@ -119,8 +119,8 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative",
-                        "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
+                        "momentum_formulation": "conservative",
+                        "continuity_formulation": "conservative",  # conservative, reduced
                         "stabilization": {"scheme": "rbvms",
                                           "dscales": {"tau_m": 1.0, "tau_c": 0.0},  # no LSIC!
                                           "cscales": {"ct": 2.0, "cv": 2.0, "cnu": 4.0},

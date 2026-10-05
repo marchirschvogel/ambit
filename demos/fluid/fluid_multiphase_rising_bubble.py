@@ -129,8 +129,8 @@ def main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 9,
-                        "fluid_formulation": "conservative",  # conservative Navier-Stokes formulation - mandatory for CH-NS
-                        "mass_formulation": "reduced_mass",  # conservative_mass (standard continuity), reduced_mass (Brunk and ten Eikelder (2026) version, where continuity is partly consolidated with Cahn-Hilliard flux term) - give identical results
+                        "momentum_formulation": "conservative",  # conservative Navier-Stokes formulation - mandatory for CH-NS
+                        "continuity_formulation": "reduced",  # conservative (standard continuity), reduced (Brunk and ten Eikelder (2026) version, where continuity is partly consolidated with Cahn-Hilliard flux term) - give identical results
                        }
 
     """

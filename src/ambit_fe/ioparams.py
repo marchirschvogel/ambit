@@ -141,8 +141,8 @@ def check_params_fem_solid(params):
 def check_params_fem_fluid(params):
     valid_params = [
         "initial_fluid_pressure",
-        "fluid_formulation",
-        "mass_formulation",
+        "momentum_formulation",
+        "continuity_formulation",
         "order_vel",
         "order_pres",
         "prestress_from_file",

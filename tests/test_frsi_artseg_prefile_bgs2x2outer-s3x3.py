@@ -65,7 +65,7 @@ def test_main():
         "order_vel": 2,
         "order_pres": 1,
         "quad_degree": 6,
-        "fluid_formulation": "nonconservative",
+        "momentum_formulation": "advective",
         "prestress_from_file": [basepath + "/input/artseg_uf_pre.xdmf"],
     }
 
