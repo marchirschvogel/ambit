@@ -182,7 +182,7 @@ def main():
                         "order_pres": 1,
                         "quad_degree": 5,
                         "momentum_formulation": "conservative",
-                        "continuity_formulation": "conservative"}  # conservative, expanded_advective, reduced
+                        "continuity_formulation": "conservative"}  # conservative, advective, reduced
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
