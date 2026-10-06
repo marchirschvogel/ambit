@@ -97,7 +97,6 @@ def test_main():
         "stabilization": {
             "scheme": "supg_pspg",
             "vscale": 1e3,
-            "dscales": {"tau_m": 1.0, "tau_c": 1.0},
             "symmetric": True,
             "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
         },

@@ -50,8 +50,7 @@ def test_main():
                         "order_pres": 1,
                         "quad_degree": 5,
                         'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : {"tau_m": 1.0, "tau_c": 1.0}},
+                                            'vscale'         : 1.0e1},
                         "momentum_formulation": "conservative",  # irrelevant for steady Stokes
                         "continuity_formulation": "conservative"}
 

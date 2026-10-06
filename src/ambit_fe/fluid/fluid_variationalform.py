@@ -51,6 +51,11 @@ class variationalform(variationalform_base):
             \int\limits_{\mathit{\Omega}} \left(\frac{1}{2}\boldsymbol{v}\frac{\partial\rho}{\partial t} + \rho\frac{\partial\boldsymbol{v}}{\partial t} + \frac{1}{2}\boldsymbol{v}\nabla\cdot(\rho\boldsymbol{v}) + \rho(\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(0.5*v*rhodot + amom + 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v, self.var_v) * ddomain
+        elif self.momentum_formulation == "energy_split_skewsym":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}} \left(\left(\frac{1}{2}\boldsymbol{v}\frac{\partial\rho}{\partial t} + \rho\frac{\partial\boldsymbol{v}}{\partial t}\right) \cdot \delta\boldsymbol{v} + \frac{1}{2}\nabla\boldsymbol{v} : \rho(\delta\boldsymbol{v}\otimes\boldsymbol{v}) - \frac{1}{2}\nabla\delta\boldsymbol{v} : \rho(\boldsymbol{v}\otimes\boldsymbol{v})\right)\mathrm{d}V
+            """
+            return (ufl.dot(0.5*v*rhodot + amom, self.var_v) + 0.5*ufl.inner(ufl.grad(v), rho_*ufl.outer(self.var_v, v)) - 0.5*ufl.inner(ufl.grad(self.var_v), rho_*ufl.outer(v, v))) * ddomain
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
@@ -130,7 +135,7 @@ class variationalform(variationalform_base):
             return amom + rho_*ufl.grad(v) * v
         elif self.momentum_formulation == "conservative":
             return amom + ufl.div(rho_*ufl.outer(v, v))
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return 0.5*v*rhodot + amom + 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -142,7 +147,7 @@ class variationalform(variationalform_base):
             return rho_ * (ufl.grad(v) * v)
         elif self.momentum_formulation == "conservative":
             return ufl.div(rho_*ufl.outer(v, v))
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return 0.5*v*ufl.div(rho_*v) + rho_*ufl.grad(v) * v
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -196,6 +201,7 @@ class variationalform(variationalform_base):
     ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"
     def stab_supg(
         self,
+        sc,
         v,
         res_v_strong,
         tau_m,
@@ -206,31 +212,32 @@ class variationalform(variationalform_base):
         symmetric=False,
     ):
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
         else:
-            return ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
-            return (1./rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * (1./rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
+    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
+            return sc * tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
-            return tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
+            return sc * tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
     # cross-stress from RBVMS stabilization
     def stab_cross(
         self,
+        sc,
         v,
         res_v_strong,
         tau_m,
@@ -239,11 +246,12 @@ class variationalform(variationalform_base):
         F=None,
         chi=None,
     ):
-        return ufl.inner(tau_m * ufl.grad(self.var_v), ufl.outer(v, res_v_strong)) * ddomain
+        return sc * ufl.inner(tau_m * ufl.grad(self.var_v), ufl.outer(v, res_v_strong)) * ddomain
 
     # Reynolds subgrid stress from RBVMS stabilization
-    def stab_reynolds(
+    def stab_reysub(
         self,
+        sc,
         rho,
         res_v_strong,
         tau_m,
@@ -253,7 +261,7 @@ class variationalform(variationalform_base):
         chi=None,
     ):
         rho_ = self.get_density(rho, chi=chi)
-        return -tau_m**2.0 / (rho_) * ufl.inner(ufl.grad(self.var_v), ufl.outer(res_v_strong, res_v_strong)) * ddomain
+        return -sc * tau_m**2.0 / (rho_) * ufl.inner(ufl.grad(self.var_v), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -263,7 +271,7 @@ class variationalform(variationalform_base):
         elif self.momentum_formulation == "conservative":
             rhodot_ = self.drho_dt(rho, w=w, F=F, phi=phi, chi=chi, phidot=phidot)
             return rhodot_*v + rho_*a
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return rho_*a
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -363,6 +371,11 @@ class variationalform_ale(variationalform):
             \int\limits_{\mathit{\Omega}} \left(\frac{1}{2}\boldsymbol{v}\frac{\partial(\widehat{J}\rho)}{\partial t} + \widehat{J}\rho\frac{\partial\boldsymbol{v}}{\partial t} + \frac{1}{2}\boldsymbol{v}\nabla_0\cdot(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})) + \widehat{J}\rho(\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(v-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain  # NOTE: rhodot is actually J*rhodot
+        elif self.momentum_formulation == "energy_split_skewsym":
+            """ TeX:
+            \int\limits_{\mathit{\Omega}} \left(\left(\frac{1}{2}\boldsymbol{v}\frac{\partial(\widehat{J}\rho)}{\partial t} + \widehat{J}\rho\frac{\partial\boldsymbol{v}}{\partial t}\right) \cdot \delta\boldsymbol{v} + \frac{1}{2}\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1} : \widehat{J}\rho(\delta\boldsymbol{v}\otimes(\boldsymbol{v}-\widehat{\boldsymbol{w}})) - \frac{1}{2}\nabla_0\delta\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1} : \widehat{J}\rho(\boldsymbol{v}\otimes(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\right)\mathrm{d}V
+            """
+            return (ufl.dot(0.5*v*rhodot + J*amom, self.var_v) + 0.5*ufl.inner(ufl.grad(v) * ufl.inv(F), J*rho_*ufl.outer(self.var_v, v - w)) - 0.5*ufl.inner(ufl.grad(self.var_v) * ufl.inv(F), J*rho_*ufl.outer(v, v - w))) * ddomain
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
 
@@ -459,7 +472,7 @@ class variationalform_ale(variationalform):
             return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w)
         elif self.momentum_formulation == "conservative":
             return amom + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return 0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(v-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (v - w)
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -473,7 +486,7 @@ class variationalform_ale(variationalform):
             return J*rho_ * (ufl.grad(v) * ufl.inv(F) * v)
         elif self.momentum_formulation == "conservative":
             return ufl.div(J*rho_*ufl.outer(v, v)*ufl.inv(F).T)
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return 0.5*v*ufl.div(J*ufl.inv(F)*rho_*v) + J*rho_*ufl.grad(v) * ufl.inv(F) * v
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -486,7 +499,7 @@ class variationalform_ale(variationalform):
             return J*amom + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w)
         elif self.momentum_formulation == "conservative":
             return amom + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T)  # NOTE: amom already scaled with correct J!
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return 0.5*v*rhodot + J*amom + 0.5*v*ufl.div(J*ufl.inv(F)*rho_*(-w)) + J*rho_*ufl.grad(v) * ufl.inv(F) * (-w)
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")
@@ -544,6 +557,7 @@ class variationalform_ale(variationalform):
     ### SUPG/PSPG stabilization
     def stab_supg(
         self,
+        sc,
         v,
         res_v_strong,
         tau_m,
@@ -556,33 +570,34 @@ class variationalform_ale(variationalform):
         vel = v - w # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
-            return ufl.dot(tau_m * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_v_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
-            return (1./rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * (1./rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
+    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
         # NOTE: J=det(F) already included in res_p_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation=="advective":
-            return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
+            return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = self.get_density(rho, chi=chi)
-            return tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
+            return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
     # cross-stress from RBVMS stabilization
     def stab_cross(
         self,
+        sc,
         v,
         res_v_strong,
         tau_m,
@@ -592,11 +607,12 @@ class variationalform_ale(variationalform):
         chi=None,
     ):
         vel = v - w # streamline direction should be relavive velocity in ALE
-        return ufl.inner(tau_m * ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(vel, res_v_strong)) * ddomain
+        return sc * ufl.inner(tau_m * ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(vel, res_v_strong)) * ddomain
 
     # Reynolds subgrid stress from RBVMS stabilization
-    def stab_reynolds(
+    def stab_reysub(
         self,
+        sc,
         rho,
         res_v_strong,
         tau_m,
@@ -607,7 +623,7 @@ class variationalform_ale(variationalform):
     ):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        return -tau_m**2.0 / (J*rho_) * ufl.inner(ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(res_v_strong, res_v_strong)) * ddomain
+        return -sc * tau_m**2.0 / (J*rho_) * ufl.inner(ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -618,7 +634,7 @@ class variationalform_ale(variationalform):
         elif self.momentum_formulation == "conservative":
             rhodot_ = self.drho_dt(rho, w=w, F=F, phi=phi, chi=chi, phidot=phidot, frm="conservative")  # already scaled by J
             return rhodot_*v + J*rho_*a
-        elif self.momentum_formulation == "energy_split":
+        elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
             return rho_*a  # NOTE: J-scaling is done in NS momentum form!
         else:
             raise ValueError("Unknown fluid momentum formulation! Choose either 'advective', 'conservative', or 'energy_split'.")

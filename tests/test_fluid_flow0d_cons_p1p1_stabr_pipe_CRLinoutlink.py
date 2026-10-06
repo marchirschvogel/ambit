@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# #!/usr/bin/env python3
 
 """
 Transient incompressible Navier-Stokes flow in a pipe with two separate regions connected via a 0D model
@@ -78,7 +78,6 @@ def test_main():
             "scheme": "supg_pspg",
             "vscale": 1e3,
             "scheme_type": {"res_v": "reduced", "res_p": "reduced"},
-            "dscales": {"tau_m": 1.0, "tau_c": 1.0},
         },
     }
 

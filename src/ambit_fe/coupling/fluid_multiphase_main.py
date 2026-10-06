@@ -209,6 +209,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                     if self.pbf.scheme_type["res_v"] == "full":
                         # SUPG
                         self.deltaW_int_stabcap += self.pbf.vf.stab_supg(
+                            self.pbf.scale_supg,
                             self.pbf.v,
                             f_cap,
                             self.pbf.tau_m,
@@ -219,6 +220,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             symmetric=self.pbf.stab_symm,
                         )
                         self.deltaW_int_stabcap_old += self.pbf.vf.stab_supg(
+                            self.pbf.scale_supg,
                             self.pbf.v_old,
                             f_cap_old,
                             self.pbf.tau_m_old,
@@ -229,6 +231,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             symmetric=self.pbf.stab_symm,
                         )
                         self.deltaW_int_stabcap_mid += self.pbf.vf.stab_supg(
+                            self.pbf.scale_supg,
                             self.pbf.vel_mid,
                             f_cap_mid,
                             self.pbf.tau_m_mid,
@@ -240,6 +243,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         )
                         # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                         self.deltaW_p_stabcap[n] = self.pbf.vf.stab_pspg(
+                            self.pbf.scale_pspg,
                             self.pbf.var_p_[j],
                             f_cap,
                             self.pbf.tau_m,
@@ -249,6 +253,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             chi=self.pbf.phasevar["chi"],
                         )
                         self.deltaW_p_stabcap_old[n] = self.pbf.vf.stab_pspg(
+                            self.pbf.scale_pspg,
                             self.pbf.var_p_[j],
                             f_cap_old,
                             self.pbf.tau_m_old,
@@ -258,6 +263,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             chi=self.pbf.phasevar["chi_old"],
                         )
                         self.deltaW_p_stabcap_mid[n] = self.pbf.vf.stab_pspg(
+                            self.pbf.scale_pspg,
                             self.pbf.var_p_[j],
                             f_cap_mid,
                             self.pbf.tau_m_mid,
@@ -273,6 +279,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             res_p_ch_old = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_old[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_old, self.pbp.phi_old, p=self.pbf.p_old_[j], F=self.pbf.alevar["Fale_old"], alpha=self.pbf.alpha_old[n]), F=self.pbf.alevar["Fale_old"])
                             res_p_ch_mid = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_mid, self.pbp.phi_mid, p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), F=self.pbf.alevar["Fale_mid"])
                             self.deltaW_int_stabredch += self.pbf.vf.stab_lsic(
+                                self.pbf.scale_lsic,
                                 res_p_ch,
                                 self.pbf.tau_c,
                                 self.pbf.rho[n],
@@ -281,6 +288,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                                 chi=self.pbf.phasevar["chi"],
                             )
                             self.deltaW_int_stabredch_old += self.pbf.vf.stab_lsic(
+                                self.pbf.scale_lsic,
                                 res_p_ch_old,
                                 self.pbf.tau_c_old,
                                 self.pbf.rho[n],
@@ -289,6 +297,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                                 chi=self.pbf.phasevar["chi_old"],
                             )
                             self.deltaW_int_stabredch_mid += self.pbf.vf.stab_lsic(
+                                self.pbf.scale_lsic,
                                 res_p_ch_mid,
                                 self.pbf.tau_c_mid,
                                 self.pbf.rho[n],

@@ -27,12 +27,14 @@ class variationalform(variationalform_base):
         if v is not None:
             # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
             advec = ufl.div(phi*v)
+            advec2 = -phi*v
         else:
             advec = ufl.as_ufl(0)
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}V - \int\limits_{\mathit{\Omega}} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}V = 0
         """
-        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        # return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec2, ufl.grad(self.var_phi)) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, kappa, ddomain, F=None):
         """ TeX:
@@ -83,6 +85,7 @@ class variationalform(variationalform_base):
     # SUPG advection stabilization
     def stab_supg(
         self,
+        sc,
         v,
         res_phi_strong,
         tau_m,
@@ -90,7 +93,7 @@ class variationalform(variationalform_base):
         w=None,
         F=None,
     ):
-        return ufl.dot(tau_m * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
+        return sc * ufl.dot(tau_m * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
 
     def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
         return tau_cip * ufl.jump(Jflux, self.n0) * ufl.jump(-Mob * ufl.grad(var_), self.n0) * dboundary
@@ -176,6 +179,7 @@ class variationalform_ale(variationalform):
     # SUPG advection stabilization
     def stab_supg(
         self,
+        sc,
         v,
         res_phi_strong,
         tau_m,
@@ -184,7 +188,7 @@ class variationalform_ale(variationalform):
         F=None,
     ):
         # NOTE: J=det(F) already included in res_phi_strong
-        return ufl.dot(tau_m * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
+        return sc * ufl.dot(tau_m * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
 
     def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
         J = ufl.det(F)

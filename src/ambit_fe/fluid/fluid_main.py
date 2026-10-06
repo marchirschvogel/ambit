@@ -621,7 +621,7 @@ class FluidmechanicsProblem(problem_base):
                     self.accmom[n] = self.ti.set_acc(rho*self.v, rho*self.v_old, rho*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside advective NS routine!
                 elif self.momentum_formulation == "conservative":
                     self.accmom[n] = self.ti.set_acc(J*rho*self.v, J_old*rho_old*self.v_old, J_veryold*rho_veryold*self.v_veryold, self.amom_old[n])
-                elif self.momentum_formulation == "energy_split":
+                elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
                     self.accmom[n] = self.ti.set_acc(rho*self.v, rho*self.v_old, rho*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside advective NS routine!
                     self.Jrhodot_m[n] = self.ti.update_dvar(J*rho, J_old*rho_old, self.Jrhodot_m_old[n], self.pbase.dt, var_veryold=J_veryold*rho_veryold)
                 else:
@@ -647,7 +647,7 @@ class FluidmechanicsProblem(problem_base):
                 # set mid-point representation
                 self.Jrhodot_c_mid[n] = self.timefac_m * self.Jrhodot_c[n] + (1.0 - self.timefac_m) * self.Jrhodot_c_old[n]
                 # only needed for energy-split momentum formulation
-                if self.momentum_formulation == "energy_split":
+                if self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
                     # compile expression for later update
                     self.Jrhodot_m_expr[n] = fem.Expression(self.Jrhodot_m[n], self.ti.Jrhodot_m_work[n].function_space.element.interpolation_points)
                     # set mid-point representation
@@ -668,7 +668,7 @@ class FluidmechanicsProblem(problem_base):
                     self.Jrhodot_c_mid[n] = self.vf.dJ_dt(w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
                 else:
                     raise ValueError("Unknown fluid continuity formulation!")
-                if self.momentum_formulation == "energy_split":
+                if self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
                     self.Jrhodot_m[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.phasevar["chi"], phidot=self.phasevar["phidot"], frm="advective")
                     self.Jrhodot_m_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.phasevar["chi_old"], phidot=self.phasevar["phidot_old"], frm="advective")
                     self.Jrhodot_m_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.phasevar["chi_mid"], phidot=self.phasevar["phidot_mid"], frm="advective")
@@ -1464,7 +1464,7 @@ class FluidmechanicsProblem(problem_base):
         # stabilization
         if self.stabilization is not None:
             # should only be used for equal-order approximations
-            assert self.order_vel == self.order_pres
+            #assert self.order_vel == self.order_pres
 
             # reduced stabiliztion scheme optimized for first-order: missing transient NS term as well as divergence stress term of strong residual
             self.scheme_type = self.stabilization.get("scheme_type", {"res_v": "full", "res_p": "full"})
@@ -1478,10 +1478,15 @@ class FluidmechanicsProblem(problem_base):
 
             self.stab_symm = self.stabilization.get("symmetric", False)
 
-            dscales = self.stabilization.get("dscales", {"tau_m": 1.0, "tau_c": 1.0})
+            dscales = self.stabilization.get("dscales", {"supg": 1.0, "pspg": 1.0, "lsic": 1.0, "cross": 1.0, "reysub": 1.0})
+            self.scale_supg = dscales.get("supg", 1.0)
+            self.scale_pspg = dscales.get("pspg", 1.0)
+            self.scale_lsic = dscales.get("lsic", 1.0)
+            self.scale_cross = dscales.get("cross", 1.0)
+            self.scale_reysub = dscales.get("reysub", 1.0)
 
             # mask: if True, stabilization is smoothly restricted to bulk fluid in multiphase flow
-            self.stab_mask = self.stabilization.get("mask_bulk", {"tau_m": False, "tau_c": False, "eps": 1e-3, "dmin": 0.0})
+            self.stab_mask = self.stabilization.get("mask_bulk", {"tau_m": False, "tau_c": False, "eps": 1e-3, "dmin_m": 0.0, "dmin_c": 0.0, "previous_state": False})
 
             if self.scheme_type["res_v"] == "reduced":
                 assert self.order_vel == 1
@@ -1499,8 +1504,8 @@ class FluidmechanicsProblem(problem_base):
                     if stab_params=="const":
                         self.tau_base = h / vscale
 
-                        self.tau_m = dscales["tau_m"] * self.tau_base
-                        self.tau_c = dscales["tau_c"] * h**2.0 / self.tau_base
+                        self.tau_m = self.tau_base
+                        self.tau_c = h**2.0 / self.tau_base
 
                         self.tau_m_old, self.tau_m_mid = self.tau_m, self.tau_m
                         self.tau_c_old, self.tau_c_mid = self.tau_c, self.tau_c
@@ -1541,31 +1546,50 @@ class FluidmechanicsProblem(problem_base):
                             self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
                             self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
 
-                        self.tau_m = dscales["tau_m"] * self.tau_base
-                        self.tau_c = dscales["tau_c"] * h**2.0 / self.tau_base
+                        self.tau_m = self.tau_base
+                        self.tau_c = h**2.0 / self.tau_base
 
-                        self.tau_m_old = dscales["tau_m"] * self.tau_base_old
-                        self.tau_c_old = dscales["tau_c"] * h**2.0 / self.tau_base_old
+                        self.tau_m_old = self.tau_base_old
+                        self.tau_c_old = h**2.0 / self.tau_base_old
 
-                        self.tau_m_mid = dscales["tau_m"] * self.tau_base_mid
-                        self.tau_c_mid = dscales["tau_c"] * h**2.0 / self.tau_base_mid
+                        self.tau_m_mid = self.tau_base_mid
+                        self.tau_c_mid = h**2.0 / self.tau_base_mid
                     else:
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const', 'dt_vel', or 'dt_vel_visc'.")
 
                     if self.phasevar["chi"] is not None:
+                        dmin_m = self.stab_mask.get("dmin_m", 0.0)
+                        dmin_c = self.stab_mask.get("dmin_c", 0.0)
+                        eps_msk = self.stab_mask.get("eps", 1e-3)
+                        use_prev_state = self.stab_mask.get("previous_state", False)
                         # mask that is mostly zero within chi [0,1] and smoothly transits to 1 over eps at interface bounds
-                        msk = self.chi_mask(self.phasevar["chiU"], self.stab_mask["eps"], self.stab_mask["dmin"])
-                        msk_old = self.chi_mask(self.phasevar["chiU_old"], self.stab_mask["eps"], self.stab_mask["dmin"])
-                        msk_mid = self.chi_mask(self.phasevar["chiU_mid"], self.stab_mask["eps"], self.stab_mask["dmin"])
+                        mskm = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_m)
+                        mskm_old = self.chi_mask(self.phasevar["chiU_old"], eps_msk, dmin_m)
+                        mskm_mid = self.chi_mask(self.phasevar["chiU_mid"], eps_msk, dmin_m)
+                        mskc = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_c)
+                        mskc_old = self.chi_mask(self.phasevar["chiU_old"], eps_msk, dmin_c)
+                        mskc_mid = self.chi_mask(self.phasevar["chiU_mid"], eps_msk, dmin_c)
 
                         if self.stab_mask["tau_m"]:
-                            self.tau_m *= msk
-                            self.tau_m_old *= msk_old
-                            self.tau_m_mid *= msk_mid
+                            # to decrease degree of nonlinearity, we might want the previous converged step state as a mask
+                            if use_prev_state:
+                                self.tau_m *= mskm_old
+                                self.tau_m_old *= mskm_old
+                                self.tau_m_mid *= mskm_old
+                            else:
+                                self.tau_m *= mskm
+                                self.tau_m_old *= mskm_old
+                                self.tau_m_mid *= mskm_mid
                         if self.stab_mask["tau_c"]:
-                            self.tau_c *= msk
-                            self.tau_c_old *= msk_old
-                            self.tau_c_mid *= msk_mid
+                            # to decrease degree of nonlinearity, we might want the previous converged step state as a mask
+                            if use_prev_state:
+                                self.tau_c *= mskc_old
+                                self.tau_c_old *= mskc_old
+                                self.tau_c_mid *= mskc_old
+                            else:
+                                self.tau_c *= mskc
+                                self.tau_c_old *= mskc_old
+                                self.tau_c_mid *= mskc_mid
 
                     # strong momentum residuals
                     if self.fluid_governing_type == "navierstokes_transient":
@@ -1858,6 +1882,7 @@ class FluidmechanicsProblem(problem_base):
                         or self.fluid_governing_type == "navierstokes_steady"
                     ):
                         self.deltaW_int += self.vf.stab_supg(
+                            self.scale_supg,
                             self.v,
                             residual_v_strong,
                             self.tau_m,
@@ -1868,6 +1893,7 @@ class FluidmechanicsProblem(problem_base):
                             symmetric=self.stab_symm,
                         )
                         self.deltaW_int_old += self.vf.stab_supg(
+                            self.scale_supg,
                             self.v_old,
                             residual_v_strong_old,
                             self.tau_m_old,
@@ -1878,6 +1904,7 @@ class FluidmechanicsProblem(problem_base):
                             symmetric=self.stab_symm,
                         )
                         self.deltaW_int_mid += self.vf.stab_supg(
+                            self.scale_supg,
                             self.vel_mid,
                             residual_v_strong_mid,
                             self.tau_m_mid,
@@ -1892,6 +1919,7 @@ class FluidmechanicsProblem(problem_base):
                         if self.stabilization["scheme"] == "rbvms":
                             # cross-stress
                             self.deltaW_int += self.vf.stab_cross(
+                                self.scale_cross,
                                 self.v,
                                 residual_v_strong,
                                 self.tau_m,
@@ -1901,6 +1929,7 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.phasevar["chi"],
                             )
                             self.deltaW_int_old += self.vf.stab_cross(
+                                self.scale_cross,
                                 self.v_old,
                                 residual_v_strong_old,
                                 self.tau_m_old,
@@ -1910,6 +1939,7 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.phasevar["chi_old"],
                             )
                             self.deltaW_int_mid += self.vf.stab_cross(
+                                self.scale_cross,
                                 self.vel_mid,
                                 residual_v_strong_mid,
                                 self.tau_m_mid,
@@ -1919,7 +1949,8 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.phasevar["chi_mid"],
                             )
                             # Reynolds subgrid stress
-                            self.deltaW_int += self.vf.stab_reynolds(
+                            self.deltaW_int += self.vf.stab_reysub(
+                                self.scale_reysub,
                                 self.rho[n],
                                 residual_v_strong,
                                 self.tau_m,
@@ -1928,7 +1959,8 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
                             )
-                            self.deltaW_int_old += self.vf.stab_reynolds(
+                            self.deltaW_int_old += self.vf.stab_reysub(
+                                self.scale_reysub,
                                 self.rho[n],
                                 residual_v_strong_old,
                                 self.tau_m_old,
@@ -1937,7 +1969,8 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_old"],
                                 chi=self.phasevar["chi_old"],
                             )
-                            self.deltaW_int_mid += self.vf.stab_reynolds(
+                            self.deltaW_int_mid += self.vf.stab_reysub(
+                                self.scale_reysub,
                                 self.rho[n],
                                 residual_v_strong_mid,
                                 self.tau_m_mid,
@@ -1948,6 +1981,7 @@ class FluidmechanicsProblem(problem_base):
                             )
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
                     self.deltaW_int += self.vf.stab_lsic(
+                        self.scale_lsic,
                         residual_p_strong,
                         self.tau_c,
                         self.rho[n],
@@ -1956,6 +1990,7 @@ class FluidmechanicsProblem(problem_base):
                         chi=self.phasevar["chi"],
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
+                        self.scale_lsic,
                         residual_p_strong_old,
                         self.tau_c_old,
                         self.rho[n],
@@ -1964,6 +1999,7 @@ class FluidmechanicsProblem(problem_base):
                         chi=self.phasevar["chi_old"],
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
+                        self.scale_lsic,
                         residual_p_strong_mid,
                         self.tau_c_mid,
                         self.rho[n],
@@ -1973,6 +2009,7 @@ class FluidmechanicsProblem(problem_base):
                     )
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                     self.deltaW_p[n] += self.vf.stab_pspg(
+                        self.scale_pspg,
                         self.var_p_[j],
                         residual_v_strong,
                         self.tau_m,
@@ -1982,6 +2019,7 @@ class FluidmechanicsProblem(problem_base):
                         chi=self.phasevar["chi"],
                     )
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
+                        self.scale_pspg,
                         self.var_p_[j],
                         residual_v_strong_old,
                         self.tau_m_old,
@@ -1991,6 +2029,7 @@ class FluidmechanicsProblem(problem_base):
                         chi=self.phasevar["chi_old"],
                     )
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
+                        self.scale_pspg,
                         self.var_p_[j],
                         residual_v_strong_mid,
                         self.tau_m_mid,
@@ -2012,6 +2051,7 @@ class FluidmechanicsProblem(problem_base):
                         )
                         # LSIC term
                         self.deltaW_prestr_int += self.vf.stab_lsic(
+                            self.scale_lsic,
                             residual_p_strong_prestr,
                             self.tau_c,
                             self.rho[n],
@@ -2109,6 +2149,7 @@ class FluidmechanicsProblem(problem_base):
                             raise ValueError("Unknown prestress_kinetic option!")
                         # PSPG term
                         self.deltaW_p_prestr[n] += self.vf.stab_pspg(
+                            self.scale_pspg,
                             self.var_p_[j],
                             residual_v_strong_prestr,
                             self.tau_m,
@@ -2123,6 +2164,7 @@ class FluidmechanicsProblem(problem_base):
                             or self.prestress_kinetic == "navierstokes_steady"
                         ):
                             self.deltaW_prestr_int += self.vf.stab_supg(
+                                self.scale_supg,
                                 self.v,
                                 residual_v_strong_prestr,
                                 self.tau_m,

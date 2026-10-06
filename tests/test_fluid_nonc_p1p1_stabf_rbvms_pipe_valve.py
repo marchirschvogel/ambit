@@ -64,7 +64,6 @@ def test_main():
         "stabilization": {
             "scheme": "rbvms",
             "stab_params": "dt_vel_visc",
-            "dscales": {"tau_m": 1.0, "tau_c": 1.0},
         },
     }
 

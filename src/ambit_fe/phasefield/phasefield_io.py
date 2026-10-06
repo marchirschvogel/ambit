@@ -71,6 +71,26 @@ class IO_phasefield(IO_field):
                         else:
                             mu_out.interpolate(self.pb.mu)
                         self.pb.resultsfiles[res].write_function(mu_out, indicator)
+                    elif res == "diffusive_flux":
+                        fluxfuncs = []
+                        for n in range(self.pb.num_domains):
+                            if self.pb.io.output_midpoint:
+                                mu, phi, p, F = self.pb.mu_mid, self.pb.phi_mid, self.pb.fluidvar["p_mid"], self.pb.alevar["Fale_mid"]
+                            else:
+                                mu, phi, p, F = self.pb.mu, self.pb.phi, self.pb.fluidvar["p"], self.pb.alevar["Fale"]
+                            fluxfuncs.append(self.pb.ma[n].diffusive_flux(mu, phi, p=p, F=F, alpha=self.pb.fluidvar["alpha"][n]))
+                        diff_flux = project(
+                            fluxfuncs,
+                            self.pb.Vd_mu_vector,
+                            self.pb.dx,
+                            domids=self.pb.domain_ids,
+                            nm="DiffusiveFlux",
+                            comm=self.pb.comm,
+                            entity_maps=self.pb.io.entity_maps,
+                        )
+                        diff_flux_out = fem.Function(self.pb.V_out_vector, name=diff_flux.name)
+                        diff_flux_out.interpolate(diff_flux)
+                        self.pb.resultsfiles[res].write_function(diff_flux_out, indicator)
                     else:
                         raise NameError("Unknown output to write for Cahn-Hilliard problem!")
 

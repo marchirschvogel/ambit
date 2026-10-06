@@ -63,7 +63,7 @@ def test_main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "direct",  # direct, iterative
+        "solve_type": "iterative",  # direct, iterative
         "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
@@ -119,13 +119,14 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "momentum_formulation": "conservative",
-                        "continuity_formulation": "conservative",  # conservative, reduced
+                        "momentum_formulation": "energy_split_skewsym",
+                        "continuity_formulation": "reduced",  # conservative, reduced
                         "stabilization": {"scheme": "rbvms",
-                                          "dscales": {"tau_m": 1.0, "tau_c": 0.0},  # no LSIC!
+                                          "mask_bulk": {"tau_m": True, "tau_c": True, "eps": 1e-1},
+                                          "dscales": {"supg": 1.0e-2, "pspg": 1e-2, "cross": 1e-2, "reysub": 1e-2, "lsic": 1.0},
                                           "cscales": {"ct": 2.0, "cv": 2.0, "cnu": 4.0},
-                                          "stab_params": "dt_vel_visc",
-                                          "scheme_type": {"res_v": "full", "res_p": "full"},
+                                          "stab_params": "dt_vel",
+                                          "scheme_type": {"res_v": "full_bulk", "res_p": "reduced"},
                                           "symmetric": False,
                                         }}
 
@@ -175,6 +176,8 @@ def test_main():
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "curve": 1, "scale_density": True}}}
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0,
+                                                  "exponent": 2.0,
+                                                  "truncate": False,
                                                   "D": sigtilde/(4.*eps),
                                                   "kappa": sigtilde*eps,
                                                   "mobility": "degenerate"}, "id": 1}}
@@ -231,11 +234,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -2.6730838100194379E-06  # x
-    u_corr[1] = -3.5478716191203505E-05  # y
+    u_corr[0] = -2.6448189987514607E-06  # x
+    u_corr[1] = -3.5458158004006937E-05  # y
 
-    v_corr[0] = -1.6469950695699373E-03  # x
-    v_corr[1] = -2.1974309519855573E-02  # y
+    v_corr[0] = -1.6288854746338139E-03  # x
+    v_corr[1] = -2.1965482146998724E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,
