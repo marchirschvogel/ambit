@@ -81,7 +81,7 @@ class constitutive:
             if trunc:
                 return M0 * ufl.conditional(
                             ufl.gt(s, 0.0),
-                            s**2,
+                            s**exp,
                             0.0
                         )
             else:

@@ -27,14 +27,12 @@ class variationalform(variationalform_base):
         if v is not None:
             # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
             advec = ufl.div(phi*v)
-            advec2 = -phi*v
         else:
             advec = ufl.as_ufl(0)
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}V - \int\limits_{\mathit{\Omega}} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}V = 0
         """
-        # return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
-        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec2, ufl.grad(self.var_phi)) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(jphidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, kappa, ddomain, F=None):
         """ TeX:
