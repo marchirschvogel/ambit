@@ -310,7 +310,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             self.deltaW_int_stabcap += self.pbf.vf.stab_reysub(
                                 self.pbf.scale_reysub,
                                 self.pbf.rho[n],
-                                f_cap_old,
+                                f_cap,
                                 self.pbf.tau_m,
                                 self.pbf.dx(M),
                                 w=self.pbf.alevar["w"],
