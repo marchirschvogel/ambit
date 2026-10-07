@@ -24,7 +24,7 @@ def print_problem_header(comm):
     )
 
 
-def print_problem(ptype, sname, comm, numdof):
+def print_problem(ptype, sname, numdof, numstep, comm):
     print_problem_header(comm)
 
     if ptype == "solid":
@@ -173,6 +173,7 @@ def print_problem(ptype, sname, comm, numdof):
     else:
         print_status("Number of degrees of freedom: %i" % (numdof), comm)
     print_status("Number of cores: %i" % (comm.size), comm)
+    print_status("Number of time steps planned: %i" % (numstep), comm)
     print_status("File name: %s" % (sys.argv[0]), comm)
     print_status("Output specifier name: %s" % (sname), comm)
 

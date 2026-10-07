@@ -70,9 +70,6 @@ class problem_base:
                 self.numstep = len(self.dts)
 
                 self.dt = self.dts[0]
-
-                utilities.print_status("Variable time step requested, number of steps: %i\n" % (self.numstep), self.comm)
-
             else:
                 # constant dt
                 self.dt = dt
@@ -180,8 +177,9 @@ class solver_base:
         utilities.print_problem(
             self.pb.problem_physics,
             self.pb.pbase.simname,
-            self.pb.comm,
             self.pb.numdof,
+            self.pb.pbase.numstep_stop,
+            self.pb.comm,
         )
 
         # model order reduction stuff
