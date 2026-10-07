@@ -34,10 +34,56 @@ class problem_base:
             assert "dt" not in ctrl_params.keys()
             self.numstep = ctrl_params["numstep"]
             self.dt = self.maxtime / self.numstep
+
+            self.dts = np.full(self.numstep, self.dt)
+            self.times = np.concatenate(([0.0], np.cumsum(self.dts)))
         elif "dt" in ctrl_params.keys():
             assert "numstep" not in ctrl_params.keys()
-            self.dt = ctrl_params["dt"]
-            self.numstep = int(self.maxtime / self.dt)
+            dt = ctrl_params["dt"]
+            # user input function fot dt
+            if callable(dt):
+                times = [0.0]
+                dts = []
+                t = 0.0
+                tol = 100.0 * np.finfo(float).eps * max(1.0, abs(self.maxtime))
+
+                while self.maxtime - t > tol:
+                    dt_n = dt(t)
+
+                    if dt_n <= 0.0:
+                        raise RuntimeError("dt(t) must be positive!")
+
+                    remaining = self.maxtime - t
+
+                    # final step
+                    if dt_n >= remaining - tol:
+                        dt_n = remaining
+                        t = self.maxtime
+                    else:
+                        t += dt_n
+
+                    dts.append(dt_n)
+                    times.append(t)
+
+                self.dts = np.asarray(dts)
+                self.times = np.asarray(times)
+                self.numstep = len(self.dts)
+
+                self.dt = self.dts[0]
+
+                utilities.print_status("Variable time step requested, number of steps: %i\n" % (self.numstep), self.comm)
+
+            else:
+                # constant dt
+                self.dt = dt
+                self.numstep = int(np.ceil(self.maxtime / self.dt))
+
+                self.dts = np.full(self.numstep, self.dt)
+
+                # shorten final step if necessary
+                self.dts[-1] = self.maxtime - (self.numstep - 1) * self.dt
+
+                self.times = np.concatenate(([0.0], np.cumsum(self.dts)))
         else:
             raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
@@ -59,6 +105,7 @@ class problem_base:
             # since user might request restart with a different time step size!
             # Hence we read the initial (restart) time from file.
             self.t_init = self.read_step_time(self.restart_step)[1]
+            assert np.isclose(self.t_init, self.times[self.restart_step])
 
         self.have_rom = False
 
@@ -209,8 +256,10 @@ class solver_base:
         for N in range(self.pb.pbase.restart_step + 1, self.pb.pbase.numstep_stop + 1):
             wts = time.time()
 
+            # current time step size
+            self.pb.pbase.dt = self.pb.pbase.dts[N-1]
             # current time
-            t = self.pb.pbase.t_init + (N-self.pb.pbase.restart_step) * self.pb.pbase.dt
+            t = self.pb.pbase.times[N]
 
             # evaluate any (solution-independent) time curves or other functions
             self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt)
@@ -237,7 +286,7 @@ class solver_base:
             wt = time.time() - wts
 
             # print timestep info
-            self.print_timestep_info(N, t, self.solnln.ni, self.solnln.li, wt)
+            self.print_timestep_info(N, t, self.pb.pbase.dt, self.solnln.ni, self.solnln.li, wt)
 
             # apply any "on-the-fly" changes of model state/parameters
             self.pb.induce_state_change()

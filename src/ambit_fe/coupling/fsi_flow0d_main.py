@@ -596,6 +596,6 @@ class FSIFlow0DSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, dt, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

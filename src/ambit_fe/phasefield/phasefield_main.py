@@ -80,6 +80,8 @@ class PhasefieldProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_phase]
         self.num_domains = self.io.num_domains[self.io.m_id_phase]
         self.mesh = self.io.mesh_[self.io.m_id_phase]
+        # define time step as dolfinx constant
+        self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_phase], self.io.mt_b_[self.io.m_id_phase], self.io.mt_sb_[self.io.m_id_phase]
         # global measures for weak BCs
@@ -184,7 +186,7 @@ class PhasefieldProblem(problem_base):
         # initialize phase field time-integration class
         self.ti = timeintegration.timeintegration_phasefield(
             self.time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             V=[self.V_phi],
             time_curves=time_curves,
@@ -558,9 +560,9 @@ class PhasefieldProblem(problem_base):
                         v_eff_norm_sq_mid = ufl.dot(v_eff_mid, v_eff_mid)
 
                         cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0})
-                        self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
-                        self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
-                        self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
+                        self.tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
+                        self.tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
+                        self.tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
 
                         self.tau_m = self.tau_base
                         self.tau_m_old = self.tau_base_old
@@ -683,7 +685,7 @@ class PhasefieldProblem(problem_base):
         else:
             J, J_old = 1.0, 1.0
         for n, M in enumerate(self.domain_ids):
-            phase_form += (J * self.phi - J_old * self.phi_old) / (self.pbase.dt) * self.dx(M)
+            phase_form += (J * self.phi - J_old * self.phi_old) / (self.dt) * self.dx(M)
 
         pst = fem.assemble_scalar(fem.form(phase_form, entity_maps=self.io.entity_maps))
         pst = self.comm.allgather(pst)
@@ -839,6 +841,8 @@ class PhasefieldProblem(problem_base):
                 self.io_field.write_output_pre(fld, self.V_out_scalar, 0.0, self.var_names[n]+"_initial")
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt.value = dt
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 
@@ -863,6 +867,7 @@ class PhasefieldProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
+        # update fields
         self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot_expr, self.phidot_old, self.mu, self.mu_old, Jphidot_expr=self.Jphidot_expr, Jphidot_old=self.Jphidot_old)
 
     def print_to_screen(self):
@@ -915,6 +920,6 @@ class PhasefieldSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

@@ -2,6 +2,7 @@
 
 """
 solid mechanics: prescribed growth of an idealized LV geometry to theta = 2
+variable load step test
 """
 
 import ambit_fe
@@ -25,7 +26,14 @@ def test_main():
         "simname": "solid_growth_prescribed_iso_lv",
     }
 
-    CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
+    def dt(t):
+        if t < 0.1:
+            return 0.05
+        else:
+            return 0.2
+
+    CONTROL_PARAMS = {"maxtime": 1.0,
+                      "dt": dt}
 
     FEM_PARAMS = {
         "order_disp": 1,

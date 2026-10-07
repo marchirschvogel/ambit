@@ -394,7 +394,7 @@ class FluidmechanicsAleProblem(problem_base):
             # zero rows where DBC is applied and set diagonal entry to -1
             self.K_dv.zeroRows(self.fdofs_fluid_ale, diag=-1.0)
             # we apply u_fluid to ALE, hence get du_fluid/dv
-            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt)
             self.K_dv.scale(fac)
         if self.have_dbc_ale_fluid:
             self.K_vd_.zeroEntries()
@@ -405,7 +405,7 @@ class FluidmechanicsAleProblem(problem_base):
             # zero rows where DBC is applied and set diagonal entry to -1
             self.K_vd_add.zeroRows(self.fdofs_ale_fluid, diag=-1.0)
             # we apply w_ALE to fluid, hence get dw_ALE/dd
-            fac = self.pba.ti.get_factor_deriv_dvar(self.pbase.dt)
+            fac = self.pba.ti.get_factor_deriv_dvar(self.pba.dt)
             self.K_vd_add.scale(fac)
 
         self.K_list[2][0] = self.K_dv
@@ -667,6 +667,6 @@ class FluidmechanicsAleSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.pbf.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

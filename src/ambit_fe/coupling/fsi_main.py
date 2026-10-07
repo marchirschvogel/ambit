@@ -687,7 +687,7 @@ class FSIProblem(problem_base):
             self.K_uu_work.assemble()
 
             # we apply u_fluid to solid, hence get du_fluid/dv
-            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt)
 
             # multiply to get the relevant columns only
             self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv)
@@ -1163,6 +1163,6 @@ class FSISolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N, localdata=self.pb.pbs.localdata)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.pbf.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

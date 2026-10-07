@@ -700,7 +700,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
             # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
             if self.pb0.cq[i] == "volume":
-                timefac = 1.0 / self.pbase.dt
+                timefac = 1.0 / self.pbs.dt
             if self.pb0.cq[i] == "flux":
                 timefac = -self.pb0.theta0d_timint(t)  # 0D model time-integration factor
             if self.pb0.cq[i] == "pressure":
@@ -953,7 +953,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
     def write_output_coupling(self, N, t):
         if self.coupling_type == "monolithic_lagrange":
             if self.pbs.io.write_results_every > 0 and N % self.pbs.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.pbs.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1113,6 +1113,6 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N, localdata=self.pb.pbs.localdata)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, dt, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

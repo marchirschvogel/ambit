@@ -73,6 +73,8 @@ class AleProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_ale]
         self.num_domains = self.io.num_domains[self.io.m_id_ale]
         self.mesh = self.io.mesh_[self.io.m_id_ale]
+        # define time step as dolfinx constant
+        self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_ale], self.io.mt_b_[self.io.m_id_ale], self.io.mt_sb_[self.io.m_id_ale]
         # global measures for weak BCs
@@ -191,7 +193,7 @@ class AleProblem(problem_base):
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(
             self.time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             V=[self.V_d],
             time_curves=time_curves,
@@ -355,6 +357,8 @@ class AleProblem(problem_base):
         pass
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt.value = dt
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 
@@ -378,6 +382,7 @@ class AleProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
+        # update fields
         self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.wel_expr, self.w_old)
 
     def print_to_screen(self):
@@ -412,6 +417,6 @@ class AleSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

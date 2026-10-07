@@ -981,7 +981,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def write_output_coupling(self, N, t):
         if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:
-            if np.isclose(t, self.pbase.dt):
+            if np.isclose(t, self.pbf.dt.value):
                 mode = "wt"
             else:
                 mode = "a"
@@ -1119,6 +1119,6 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, dt, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

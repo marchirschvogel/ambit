@@ -45,6 +45,9 @@ class Flow0DProblem(problem_base):
 
         self.time_params = time_params
 
+        # define time step
+        self.dt = self.pbase.dt
+
         # only relevant to syspul* models
         try:
             self.chamber_models = model_params["chamber_models"]
@@ -315,7 +318,7 @@ class Flow0DProblem(problem_base):
         # initialize flow0d time-integration class
         self.ti = timeintegration.timeintegration_flow0d(
             time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             time_curves,
             self.pbase.t_init,
@@ -358,8 +361,8 @@ class Flow0DProblem(problem_base):
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         self.r.zeroEntries()
 
-        self.r.axpy(1.0 / self.pbase.dt, self.df)
-        self.r.axpy(-1.0 / self.pbase.dt, self.df_old)
+        self.r.axpy(1.0 / self.dt, self.df)
+        self.r.axpy(-1.0 / self.dt, self.df_old)
 
         self.r.axpy(theta, self.f)
         self.r.axpy(1.0 - theta, self.f_old)
@@ -394,7 +397,7 @@ class Flow0DProblem(problem_base):
         self.K.assemble()
 
         self.K.zeroEntries()
-        self.K.axpy(1.0 / self.pbase.dt, self.dK_)
+        self.K.axpy(1.0 / self.dt, self.dK_)
         self.K.axpy(theta, self.K_)
 
         # if we have prescribed variable values over time
@@ -407,7 +410,7 @@ class Flow0DProblem(problem_base):
 
     def theta0d_timint(self, t):
         if self.initial_backwardeuler:
-            if np.isclose(t, self.pbase.dt):
+            if np.isclose(t, self.dt):
                 theta = 1.0
             else:
                 theta = self.theta_ost
@@ -558,6 +561,8 @@ class Flow0DProblem(problem_base):
         pass
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt = dt
         # external volume/flux from time curve
         if self.excitation_curve is not None:
             for i in range(len(self.excitation_curve)):
@@ -678,6 +683,6 @@ class Flow0DSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

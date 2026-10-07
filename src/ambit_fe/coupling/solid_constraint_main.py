@@ -655,7 +655,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.write_output(N, t)
 
         if self.pbs.io.write_results_every > 0 and N % self.pbs.io.write_results_every == 0:
-            if np.isclose(t, self.pbase.dt):
+            if np.isclose(t, self.pbs.dt.value):
                 mode = "wt"
             else:
                 mode = "a"
@@ -786,6 +786,6 @@ class SolidmechanicsConstraintSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N, localdata=self.pb.pbs.localdata)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.pbs.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.pbs.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

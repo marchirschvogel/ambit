@@ -47,7 +47,7 @@ class cardiovascular0Dbase(ode):
 
         is_periodic = False
 
-        if self.T_cycl > 0.0 and np.isclose(math.fmod(t, self.T_cycl), 0.0):
+        if self.T_cycl > 0.0 and np.isclose(math.remainder(t, self.T_cycl), 0.0):
             varTc[vs:ve] = var[vs:ve]
             auxTc[:] = aux[:]
 

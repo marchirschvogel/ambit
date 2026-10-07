@@ -45,6 +45,9 @@ class SignallingNetworkProblem(problem_base):
 
         self.time_params = time_params
 
+        # define time step
+        self.dt = self.pbase.dt
+
         initial_file = time_params.get("initial_file", "")
 
         # could use extra write frequency setting for signet model (i.e. for coupled problem)
@@ -129,7 +132,7 @@ class SignallingNetworkProblem(problem_base):
         # initialize signet time-integration class
         self.ti = timeintegration.timeintegration_signet(
             time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             time_curves,
             self.pbase.t_init,
@@ -173,8 +176,8 @@ class SignallingNetworkProblem(problem_base):
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         self.r.zeroEntries()
 
-        self.r.axpy(1.0 / self.pbase.dt, self.df)
-        self.r.axpy(-1.0 / self.pbase.dt, self.df_old)
+        self.r.axpy(1.0 / self.dt, self.df)
+        self.r.axpy(-1.0 / self.dt, self.df_old)
 
         self.r.axpy(theta, self.f)
         self.r.axpy(1.0 - theta, self.f_old)
@@ -191,14 +194,14 @@ class SignallingNetworkProblem(problem_base):
         self.K.assemble()
 
         self.K.zeroEntries()
-        self.K.axpy(1.0 / self.pbase.dt, self.dK_)
+        self.K.axpy(1.0 / self.dt, self.dK_)
         self.K.axpy(theta, self.K_)
 
         self.K_list[0][0] = self.K
 
     def thetasn_timint(self, t):
         if self.initial_backwardeuler:
-            if np.isclose(t, self.pbase.dt):
+            if np.isclose(t, self.dt):
                 theta = 1.0
             else:
                 theta = self.theta_ost
@@ -270,7 +273,8 @@ class SignallingNetworkProblem(problem_base):
         pass
 
     def evaluate_pre_solve(self, t, N, dt):
-        pass
+        # set dt from main loop - may be variable
+        self.dt = dt
 
     def evaluate_post_solve(self, t, N):
         pass
@@ -348,6 +352,6 @@ class SignallingNetworkSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

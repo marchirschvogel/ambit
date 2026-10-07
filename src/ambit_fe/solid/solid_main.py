@@ -87,6 +87,8 @@ class SolidmechanicsProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_solid]
         self.num_domains = self.io.num_domains[self.io.m_id_solid]
         self.mesh = self.io.mesh_[self.io.m_id_solid]
+        # define time step as dolfinx constant
+        self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_solid], self.io.mt_b_[self.io.m_id_solid], self.io.mt_sb_[self.io.m_id_solid]
         # global measures for weak BCs
@@ -406,7 +408,7 @@ class SolidmechanicsProblem(problem_base):
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(
             self.time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             V=[self.V_u],
             time_curves=time_curves,
@@ -832,7 +834,7 @@ class SolidmechanicsProblem(problem_base):
                             tau_gr = self.constitutive_models["MAT" + str(n + 1)]["growth"]["tau_gr"]
                             theta_c = grfnc.grfnc_concentration(self.pbscat.c["c" + str(1)])
                             # Backward Euler integration of dtheta/dt = (theta(c) - theta)/tau_gr - works only if linear in theta!
-                            self.theta = ((self.pbase.dt/tau_gr) * theta_c + self.theta_old) / (1.0 + (self.pbase.dt/tau_gr))
+                            self.theta = ((self.dt/tau_gr) * theta_c + self.theta_old) / (1.0 + (self.dt/tau_gr))
                         else:
                             raise ValueError("Unknown growth_law_type!")
 
@@ -1167,7 +1169,7 @@ class SolidmechanicsProblem(problem_base):
                         self.pressures,
                         self.internalvars,
                         self.theta_old,
-                        self.pbase.dt,
+                        self.dt,
                         self.growth_thres,
                         "res_del",
                     )
@@ -1265,7 +1267,7 @@ class SolidmechanicsProblem(problem_base):
                         self.tau_a_.append(
                             self.actstress[na].tau_act(
                                 self.tau_a_old,
-                                self.pbase.dt,
+                                self.dt,
                                 lam=lam_fib,
                                 amp_old=self.amp_old,
                             )
@@ -1333,7 +1335,7 @@ class SolidmechanicsProblem(problem_base):
                         self.pressures,
                         self.internalvars,
                         self.theta_old,
-                        self.pbase.dt,
+                        self.dt,
                         self.growth_thres,
                     )
                     if self.mat_remodel[n] and self.lin_remod_full:
@@ -1344,7 +1346,7 @@ class SolidmechanicsProblem(problem_base):
                             self.pressures,
                             self.internalvars,
                             self.theta_old,
-                            self.pbase.dt,
+                            self.dt,
                             self.growth_thres,
                         )
                         Ctang = Cmat + Cgrowth + Cremod
@@ -1462,7 +1464,7 @@ class SolidmechanicsProblem(problem_base):
                             self.pressures,
                             self.internalvars,
                             self.theta_old,
-                            self.pbase.dt,
+                            self.dt,
                             self.growth_thres,
                         )
                         if self.mat_remodel[n] and self.lin_remod_full:
@@ -1473,7 +1475,7 @@ class SolidmechanicsProblem(problem_base):
                                 self.pressures,
                                 self.internalvars,
                                 self.theta_old,
-                                self.pbase.dt,
+                                self.dt,
                                 self.growth_thres,
                             )
                             Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
@@ -1486,7 +1488,7 @@ class SolidmechanicsProblem(problem_base):
                             self.pressures,
                             self.internalvars,
                             self.theta_old,
-                            self.pbase.dt,
+                            self.dt,
                             self.growth_thres,
                         )
                         Jtang = Jmat + Jgrowth
@@ -1500,7 +1502,7 @@ class SolidmechanicsProblem(problem_base):
                             self.pressures,
                             self.internalvars,
                             self.theta_old,
-                            self.pbase.dt,
+                            self.dt,
                             self.growth_thres,
                         )
                         if not isinstance(dthetadp, ufl.constantvalue.Zero):
@@ -1587,7 +1589,7 @@ class SolidmechanicsProblem(problem_base):
     def compute_solid_growth_rate(self, N, t):
         dtheta_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.dx(M)
+            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all, entity_maps=self.io.entity_maps))
         gr = self.comm.allgather(gr)
@@ -1597,7 +1599,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1632,7 +1634,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1675,7 +1677,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1741,7 +1743,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -2056,6 +2058,9 @@ class SolidmechanicsProblem(problem_base):
             self.pbscat.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt.value = dt
+
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 
@@ -2191,9 +2196,9 @@ class SolidmechanicsSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N, localdata=self.pb.localdata)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)
 
     def solve_initial_prestress(self):
         utilities.print_prestress("start", self.pb.pbase.comm)

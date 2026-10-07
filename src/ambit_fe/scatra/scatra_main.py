@@ -82,6 +82,8 @@ class ScatraProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_scatra]
         self.num_domains = self.io.num_domains[self.io.m_id_scatra]
         self.mesh = self.io.mesh_[self.io.m_id_scatra]
+        # define time step as dolfinx constant
+        self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_scatra], self.io.mt_b_[self.io.m_id_scatra], self.io.mt_sb_[self.io.m_id_scatra]
         # global measures for weak BCs
@@ -189,7 +191,7 @@ class ScatraProblem(problem_base):
         for i in range(self.num_species):
             self.ti.append(timeintegration.timeintegration_scatra(
                 self.time_params[i],
-                self.pbase.dt,
+                self.dt,
                 self.pbase.numstep,
                 V=[self.V_c],
                 time_curves=time_curves,
@@ -481,6 +483,8 @@ class ScatraProblem(problem_base):
         pass
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt = dt
         # set time-dependent functions
         for i in range(self.num_species):
             self.ti[i].set_time_funcs(t, dt)
@@ -505,6 +509,7 @@ class ScatraProblem(problem_base):
         self.io_field.write_output(N=N, t=t)
 
     def update(self):
+        # update all fields
         for i in range(self.num_species):
             self.ti[i].update_timestep(self.c["c" + str(i+1)], self.c_old["c" + str(i+1)], self.c_veryold[i], self.cdot_expr[i], self.cdot_old[i])
 
@@ -540,6 +545,6 @@ class ScatraSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti[0].print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti[0].print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)

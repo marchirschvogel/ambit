@@ -7,6 +7,7 @@
 - Robin conditions
 - own read-/write function for restarts (only working for nodal fields!)
 - iterative solution using Hypre AMG
+- time step from callable function
 """
 
 import ambit_fe
@@ -40,7 +41,12 @@ def test_main():
         "simname": "solid_robin_genalpha",
     }
 
-    CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
+    # test time step from callable function (here constant)
+    def dt(t):
+        return 0.1
+
+    CONTROL_PARAMS = {"maxtime": 1.0,
+                      "dt": dt}
 
     SOLVER_PARAMS = {
         "solve_type": "iterative",

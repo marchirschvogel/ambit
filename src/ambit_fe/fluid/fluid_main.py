@@ -88,6 +88,8 @@ class FluidmechanicsProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_fluid]
         self.num_domains = self.io.num_domains[self.io.m_id_fluid]
         self.mesh = self.io.mesh_[self.io.m_id_fluid]
+        # define time step as dolfinx constant
+        self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_fluid], self.io.mt_b_[self.io.m_id_fluid], self.io.mt_sb_[self.io.m_id_fluid]
         # global measures for weak BCs
@@ -388,7 +390,7 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(
             self.time_params,
-            self.pbase.dt,
+            self.dt,
             self.pbase.numstep,
             V=[self.V_v,self.V_scalar],
             time_curves=time_curves,
@@ -623,7 +625,7 @@ class FluidmechanicsProblem(problem_base):
                     self.accmom[n] = self.ti.set_acc(J*rho*self.v, J_old*rho_old*self.v_old, J_veryold*rho_veryold*self.v_veryold, self.amom_old[n])
                 elif self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
                     self.accmom[n] = self.ti.set_acc(rho*self.v, rho*self.v_old, rho*self.v_veryold, self.amom_old[n])  # NOTE: Scaling with J done inside advective NS routine!
-                    self.Jrhodot_m[n] = self.ti.update_dvar(J*rho, J_old*rho_old, self.Jrhodot_m_old[n], self.pbase.dt, var_veryold=J_veryold*rho_veryold)
+                    self.Jrhodot_m[n] = self.ti.update_dvar(J*rho, J_old*rho_old, self.Jrhodot_m_old[n], self.dt, var_veryold=J_veryold*rho_veryold)
                 else:
                     raise ValueError("Unknown fluid formulation!")
                 # compile expression for later update
@@ -632,12 +634,12 @@ class FluidmechanicsProblem(problem_base):
                 self.accmom_mid[n] = self.timefac_m * self.accmom[n] + (1.0 - self.timefac_m) * self.amom_old[n]
                 # set form for time derivative of density - for conservative continuity formulation
                 if self.continuity_formulation=="advective":
-                    self.Jrhodot_c[n] = self.ti.update_dvar(rhoU, rhoU_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=rhoU_veryold)
+                    self.Jrhodot_c[n] = self.ti.update_dvar(rhoU, rhoU_old, self.Jrhodot_c_old[n], self.dt, var_veryold=rhoU_veryold)
                 elif self.continuity_formulation=="conservative":
-                    self.Jrhodot_c[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=J_veryold*rhoU_veryold)
+                    self.Jrhodot_c[n] = self.ti.update_dvar(J*rhoU, J_old*rhoU_old, self.Jrhodot_c_old[n], self.dt, var_veryold=J_veryold*rhoU_veryold)
                 elif self.continuity_formulation=="reduced":
                     if self.is_ale:  # time-evolved Jdot
-                        self.Jrhodot_c[n] = self.ti.update_dvar(J, J_old, self.Jrhodot_c_old[n], self.pbase.dt, var_veryold=J_veryold)
+                        self.Jrhodot_c[n] = self.ti.update_dvar(J, J_old, self.Jrhodot_c_old[n], self.dt, var_veryold=J_veryold)
                     else:
                         self.Jrhodot_c[n] = fem.Constant(self.ti.Jrhodot_c_work[n].function_space.mesh, 0.0)
                 else:
@@ -1538,13 +1540,13 @@ class FluidmechanicsProblem(problem_base):
 
                         cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0, "cnu": 4.0})
                         if stab_params=="dt_vel":
-                            self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
-                            self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
-                            self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
+                            self.tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
+                            self.tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
+                            self.tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
                         elif stab_params=="dt_vel_visc":
-                            self.tau_base = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
-                            self.tau_base_old = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
-                            self.tau_base_mid = ( (cscales["ct"] / self.pbase.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            self.tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            self.tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            self.tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
 
                         self.tau_m = self.tau_base
                         self.tau_c = h**2.0 / self.tau_base
@@ -2222,7 +2224,7 @@ class FluidmechanicsProblem(problem_base):
             for nm in range(len(self.bc_dict["membrane"])):
                 if self.mem_active_stress[nm]:
                     if self.mem_active_stress_type[nm] == "ode":
-                        self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt))
+                        self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.dt))
                         na += 1
                     if self.mem_active_stress_type[nm] == "prescribed":
                         self.tau_a_.append(self.act_curve[nm])  # act_curve now stores the prescribed active stress
@@ -2307,7 +2309,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -2342,7 +2344,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.pbase.dt):
+                if np.isclose(t, self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -2370,7 +2372,7 @@ class FluidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             rho_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU"])
             rho_old_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU_old"])
-            mass_form += (J * rho_ - J_old * rho_old_) / (self.pbase.dt) * self.dx(M)
+            mass_form += (J * rho_ - J_old * rho_old_) / (self.dt) * self.dx(M)
 
         mst = fem.assemble_scalar(fem.form(mass_form, entity_maps=self.io.entity_maps))
         mst = self.comm.allgather(mst)
@@ -2383,7 +2385,7 @@ class FluidmechanicsProblem(problem_base):
         J, J_old, J_mid = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"]), ufl.det(self.alevar["Fale_mid"])
 
         for n, M in enumerate(self.domain_ids):
-            geocons += ((J - J_old) / (self.pbase.dt) - ufl.div(J_mid*ufl.inv(self.alevar["Fale_mid"])*self.alevar["w_mid"])) * self.dx(M)
+            geocons += ((J - J_old) / (self.dt) - ufl.div(J_mid*ufl.inv(self.alevar["Fale_mid"])*self.alevar["w_mid"])) * self.dx(M)
 
         geocons_form = fem.assemble_scalar(fem.form(geocons, entity_maps=self.io.entity_maps))
         geocons_form = self.comm.allgather(geocons_form)
@@ -3037,6 +3039,8 @@ class FluidmechanicsProblem(problem_base):
                 self.io_field.write_output_pre(fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
     def evaluate_pre_solve(self, t, N, dt):
+        # set dt from main loop - may be variable
+        self.dt.value = dt
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 
@@ -3180,9 +3184,9 @@ class FluidmechanicsSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, ni, li, wt):
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)
 
     def solve_initial_prestress(self):
         utilities.print_prestress("start", self.pb.comm)
