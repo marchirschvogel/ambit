@@ -272,7 +272,71 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                             F=self.pbf.alevar["Fale_mid"],
                             chi=self.pbf.phasevar["chi_mid"],
                         )
-
+                        # add extra terms (cross and Reynolds subgrid stresses) from residual-based
+                        # variational multiscale scheme (RBVMS)
+                        if self.pbf.stabilization["scheme"] == "rbvms":
+                            # cross-stress
+                            self.deltaW_int_stabcap += self.pbf.vf.stab_cross(
+                                self.pbf.scale_cross,
+                                self.pbf.v,
+                                f_cap,
+                                self.pbf.tau_m,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w"],
+                                F=self.pbf.alevar["Fale"],
+                                chi=self.pbf.phasevar["chi"],
+                            )
+                            self.deltaW_int_stabcap_old += self.pbf.vf.stab_cross(
+                                self.pbf.scale_cross,
+                                self.pbf.v_old,
+                                f_cap_old,
+                                self.pbf.tau_m_old,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w_old"],
+                                F=self.pbf.alevar["Fale_old"],
+                                chi=self.pbf.phasevar["chi_old"],
+                            )
+                            self.deltaW_int_stabcap_mid += self.pbf.vf.stab_cross(
+                                self.pbf.scale_cross,
+                                self.pbf.vel_mid,
+                                f_cap_mid,
+                                self.pbf.tau_m_mid,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w_mid"],
+                                F=self.pbf.alevar["Fale_mid"],
+                                chi=self.pbf.phasevar["chi_mid"],
+                            )
+                            # Reynolds subgrid stress
+                            self.deltaW_int_stabcap += self.pbf.vf.stab_reysub(
+                                self.pbf.scale_reysub,
+                                self.pbf.rho[n],
+                                f_cap_old,
+                                self.pbf.tau_m,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w"],
+                                F=self.pbf.alevar["Fale"],
+                                chi=self.pbf.phasevar["chi"],
+                            )
+                            self.deltaW_int_stabcap_old += self.pbf.vf.stab_reysub(
+                                self.pbf.scale_reysub,
+                                self.pbf.rho[n],
+                                f_cap_old,
+                                self.pbf.tau_m_old,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w_old"],
+                                F=self.pbf.alevar["Fale_old"],
+                                chi=self.pbf.phasevar["chi_old"],
+                            )
+                            self.deltaW_int_stabcap_mid += self.pbf.vf.stab_reysub(
+                                self.pbf.scale_reysub,
+                                self.pbf.rho[n],
+                                f_cap_mid,
+                                self.pbf.tau_m_mid,
+                                self.pbf.dx(M),
+                                w=self.pbf.alevar["w_mid"],
+                                F=self.pbf.alevar["Fale_mid"],
+                                chi=self.pbf.phasevar["chi_mid"],
+                            )
                     if self.pbf.continuity_formulation=="reduced":
                         if self.pbf.scheme_type["res_p"] == "full":
                             res_p_ch = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu, self.pbp.phi, p=self.pbf.p_[j], F=self.pbf.alevar["Fale"], alpha=self.pbf.alpha[n]), F=self.pbf.alevar["Fale"])
