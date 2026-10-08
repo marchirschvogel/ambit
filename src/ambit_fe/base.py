@@ -6,7 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
+import time, math
 import numpy as np
 from . import utilities
 from . import ioparams
@@ -48,21 +48,25 @@ class problem_base:
                 tol = 100.0 * np.finfo(float).eps * max(1.0, abs(self.maxtime))
 
                 while self.maxtime - t > tol:
-                    dt_n = dt(t)
+                    dt_n = float(dt(t))
 
                     if dt_n <= 0.0:
                         raise RuntimeError("dt(t) must be positive!")
 
                     remaining = self.maxtime - t
 
-                    # final step
+                    # final step: land exactly on maxtime
                     if dt_n >= remaining - tol:
                         dt_n = remaining
+                        dts.append(dt_n)
                         t = self.maxtime
-                    else:
-                        t += dt_n
+                        times.append(t)
+                        break
 
                     dts.append(dt_n)
+
+                    # more accurate than repeated t += dt_n
+                    t = math.fsum(dts)
                     times.append(t)
 
                 self.dts = np.asarray(dts)
