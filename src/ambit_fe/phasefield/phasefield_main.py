@@ -702,9 +702,13 @@ class PhasefieldProblem(problem_base):
             J = 1.0
         diss_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
+            if self.fluidvar["p"] is not None:
+                ap = self.fluidvar["alpha"][n] * self.fluidvar["p"]
+            else:
+                ap = ufl.as_ufl(0)
             diss_all += -J * ufl.inner(
                 self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]),
-                ufl.inv(F).T*ufl.grad(self.mu + self.fluidvar["alpha"][n]*self.fluidvar["p"]),
+                ufl.inv(F).T*ufl.grad(self.mu + ap),
             ) * self.dx(M)
 
         diss = fem.assemble_scalar(fem.form(diss_all, entity_maps=self.io.entity_maps))

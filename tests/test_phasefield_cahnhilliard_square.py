@@ -30,7 +30,7 @@ def test_main():
         "restart_step": restart_step,
         "restart_io_type": "petscvector",
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["phase", "potential"],
+        "results_to_write": ["phase", "potential", "dissipation"],
         "simname": "cahnhilliard_square",
         "report_conservation_properties": True,
     }
