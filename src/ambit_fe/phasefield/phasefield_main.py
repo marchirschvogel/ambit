@@ -693,6 +693,37 @@ class PhasefieldProblem(problem_base):
 
         utilities.print_status("Total phasefield change: %.4e" % (self.phase_total), self.comm)
 
+    def compute_energy_dissipation(self, N, t):
+        if self.is_ale:
+            F = self.alevar["Fale"]
+            J = ufl.det(F)
+        else:
+            F = ufl.Identity(self.dim)
+            J = 1.0
+        diss_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            diss_all += -J * ufl.inner(
+                self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"], alpha=self.fluidvar["alpha"][n]),
+                ufl.inv(F).T*ufl.grad(self.mu + self.fluidvar["alpha"][n]*self.fluidvar["p"]),
+            ) * self.dx(M)
+
+        diss = fem.assemble_scalar(fem.form(diss_all, entity_maps=self.io.entity_maps))
+        diss = self.comm.allgather(diss)
+        dissipation = sum(diss)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefiled_dissipation.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, dissipation))
+                fp.close()
+
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
         utilities.print_status("FEM form compilation for phasefield (Cahn-Hilliard)...", self.comm, e=" ")
@@ -859,6 +890,8 @@ class PhasefieldProblem(problem_base):
     def evaluate_post_solve(self, t, N):
         if self.io.report_conservation_properties:
             self.compute_phasefield_conservation(N, t)
+        if "dissipation" in self.results_to_write:
+            self.compute_energy_dissipation(N, t)
 
     def set_output_state(self, N):
         pass

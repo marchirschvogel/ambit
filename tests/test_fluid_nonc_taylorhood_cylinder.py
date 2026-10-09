@@ -31,6 +31,7 @@ def test_main():
             "cauchystress",
             "fluiddisplacement",
             "internalpower",
+            "dissipation",
         ],
         "simname": "fluid_nonc_taylorhood_cylinder",
     }

@@ -2292,18 +2292,22 @@ class FluidmechanicsProblem(problem_base):
 
     # computes the fluid's total internal power
     def compute_power(self, N, t):
+        if self.is_ale:
+            J = ufl.det(self.alevar["Fale"])
+        else:
+            J = 1.0
         ip_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
             if self.num_dupl == 1:
                 j = 0
             else:
                 j = n
-            ip_all += ufl.inner(
+            ip_all += J * ufl.inner(
                 self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"], chi=self.phasevar["chi"]),
                 self.ki.shearrate(self.v, F=self.alevar["Fale"]),
             ) * self.dx(M)
 
-        ip = fem.assemble_scalar(fem.form(ip_all))
+        ip = fem.assemble_scalar(fem.form(ip_all, entity_maps=self.io.entity_maps))
         ip = self.comm.allgather(ip)
         internal_power = sum(ip)
 
@@ -2379,6 +2383,35 @@ class FluidmechanicsProblem(problem_base):
         self.mass_total = abs(sum(mst))
 
         utilities.print_status("Total fluid mass change: %.4e" % (self.mass_total), self.comm)
+
+    def compute_energy_dissipation(self, N, t):
+        if self.is_ale:
+            J = ufl.det(self.alevar["Fale"])
+        else:
+            J = 1.0
+        diss_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            diss_all += J * ufl.inner(
+                self.ma[n].sigma_visc(self.v, F=self.alevar["Fale"], chi=self.phasevar["chi"]),
+                self.ki.shearrate(self.v, F=self.alevar["Fale"]),
+            ) * self.dx(M)
+
+        diss = fem.assemble_scalar(fem.form(diss_all, entity_maps=self.io.entity_maps))
+        diss = self.comm.allgather(diss)
+        dissipation = sum(diss)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_dissipation.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, dissipation))
+                fp.close()
 
     def compute_geometric_conservation_law(self, N, t):  # Not used so far...
         geocons = ufl.as_ufl(0)
@@ -3078,6 +3111,8 @@ class FluidmechanicsProblem(problem_base):
             "strainenergy_membrane" in self.results_to_write or "internalpower_membrane" in self.results_to_write
         ):
             self.compute_strain_energy_power_membrane(N, t)
+        if "dissipation" in self.results_to_write:
+            self.compute_energy_dissipation(N, t)
         # report mass conservation if requested
         if self.io.report_conservation_properties:
             self.compute_mass_conservation(N, t)

@@ -27,29 +27,30 @@ class constitutive:
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
 
-    # Cauchy stress core routine: most general form
+    # full Cauchy stress
     """ TeX:
     \boldsymbol{\sigma} = -p \boldsymbol{I} + 2\eta\,\frac{1}{2}(\nabla\boldsymbol{v} + \left(\nabla\boldsymbol{v})^{\mathrm{T}}\right) + \left(\zeta-\frac{2}{d}\eta\right)(\nabla\cdot\boldsymbol{v})\boldsymbol{I}
     """
     def sigma(self, v_, p_, F=None, chi=None):
+        return -p_ * self.I + self.sigma_visc(v_, F=F, chi=chi)
+
+    # viscous Cauchy stress
+    def sigma_visc(self, v_, F=None, chi=None):
         shearrate_ = self.kin.shearrate(v_, F=F)
         volstrainrate_ = self.kin.volstrainrate(v_, F=F)
 
-        stress = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
+        stress_visc = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
 
         mat = materiallaw(shearrate_, volstrainrate_, self.kin.use_gen_strainrate, self.I)
 
         for key, value in self.materials.items():
             if key not in self.mat_void:
                 if key == "newtonian":
-                    stress += mat.newtonian(value, chi=chi)
+                    stress_visc += mat.newtonian(value, chi=chi)
                 else:
                     raise NameError("Unknown fluid material law '%s'!" % (key))
 
-        # TeX: \sigma_{\mathrm{vol}} = -p\boldsymbol{I}
-        stress += -p_ * self.I
-
-        return stress
+        return stress_visc
 
 
 class kinematics:

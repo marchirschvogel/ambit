@@ -16,7 +16,7 @@ from ..ioroutines import IO_field
 class IO_phasefield(IO_field):
     def __init__(self, pb):
         self.pb = pb
-        self.results_pre = []
+        self.results_pre = ["dissipation"]
 
     def write_output(self, writemesh=False, N=1, t=0):
         if self.pb.io.indicate_results_by == "time":
@@ -91,6 +91,9 @@ class IO_phasefield(IO_field):
                         diff_flux_out = fem.Function(self.pb.V_out_vector, name=diff_flux.name)
                         diff_flux_out.interpolate(diff_flux)
                         self.pb.resultsfiles[res].write_function(diff_flux_out, indicator)
+                    elif res == "dissipation":
+                        # only global output supported, not as field
+                        pass
                     else:
                         raise NameError("Unknown output to write for Cahn-Hilliard problem!")
 
