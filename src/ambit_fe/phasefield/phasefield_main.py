@@ -722,7 +722,7 @@ class PhasefieldProblem(problem_base):
                 else:
                     mode = "a"
                 fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefiled_dissipation.txt",
+                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_dissipation.txt",
                     mode,
                 )
                 fp.write("%.16E %.16E\n" % (t, dissipation))
