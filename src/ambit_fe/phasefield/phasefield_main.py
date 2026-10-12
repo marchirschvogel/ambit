@@ -80,8 +80,9 @@ class PhasefieldProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_phase]
         self.num_domains = self.io.num_domains[self.io.m_id_phase]
         self.mesh = self.io.mesh_[self.io.m_id_phase]
-        # define time step as dolfinx constant
+        # define time step and step ratio as dolfinx constants
         self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
+        self.om = fem.Constant(self.mesh, PETSc.ScalarType(1.0))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_phase], self.io.mt_b_[self.io.m_id_phase], self.io.mt_sb_[self.io.m_id_phase]
         # global measures for weak BCs
@@ -187,6 +188,7 @@ class PhasefieldProblem(problem_base):
         self.ti = timeintegration.timeintegration_phasefield(
             self.time_params,
             self.dt,
+            self.om,
             self.pbase.numstep,
             V=[self.V_phi],
             time_curves=time_curves,
@@ -875,9 +877,10 @@ class PhasefieldProblem(problem_base):
             for n, fld in enumerate([self.phi_old, self.mu_old]):
                 self.io_field.write_output_pre(fld, self.V_out_scalar, 0.0, self.var_names[n]+"_initial")
 
-    def evaluate_pre_solve(self, t, N, dt):
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
         # set dt from main loop - may be variable
         self.dt.value = dt
+        self.om.value = om
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 

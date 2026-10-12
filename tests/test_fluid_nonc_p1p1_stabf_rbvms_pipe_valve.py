@@ -41,7 +41,13 @@ def test_main():
         "simname": "fluid_nonc_p1p1_stabf_pipe_valve",
     }
 
-    CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
+    def dt(t):
+        if t >= 0.0 and t < 0.6:
+            return 0.2
+        elif t >= 0.6:
+            return 0.05
+
+    CONTROL_PARAMS = {"maxtime": 1.0, "dt": dt}
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
@@ -51,7 +57,7 @@ def test_main():
     }
 
     TIME_PARAMS = {
-        "timint": "ost",
+        "timint": "bdf2",
         "theta_ost": 1.0,
         "fluid_governing_type": "navierstokes_transient",
     }
@@ -127,9 +133,9 @@ def test_main():
     v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    v_corr[0] = 3.0565941015241131E+00  # x
-    v_corr[1] = -1.0233020552515504E+02  # y
-    v_corr[2] = -4.8046742445422046E+02  # z
+    v_corr[0] = 3.0622323628770811E+00  # x
+    v_corr[1] = -1.0344919767814625E+02  # y
+    v_corr[2] = -5.0128203955470616E+02  # z
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.v,

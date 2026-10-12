@@ -962,9 +962,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pbf.write_output_pre()
         self.pb0.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbf.evaluate_pre_solve(t, N, dt)
-        self.pb0.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbf.evaluate_pre_solve(t, N, dt, om=om)
+        self.pb0.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbf.evaluate_post_solve(t, N)

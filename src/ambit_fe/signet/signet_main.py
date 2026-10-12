@@ -45,8 +45,9 @@ class SignallingNetworkProblem(problem_base):
 
         self.time_params = time_params
 
-        # define time step
+        # define time step and step ratio
         self.dt = self.pbase.dt
+        self.om = 1.0
 
         initial_file = time_params.get("initial_file", "")
 
@@ -133,6 +134,7 @@ class SignallingNetworkProblem(problem_base):
         self.ti = timeintegration.timeintegration_signet(
             time_params,
             self.dt,
+            self.om,
             self.pbase.numstep,
             time_curves,
             self.pbase.t_init,
@@ -272,9 +274,10 @@ class SignallingNetworkProblem(problem_base):
     def write_output_pre(self):
         pass
 
-    def evaluate_pre_solve(self, t, N, dt):
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
         # set dt from main loop - may be variable
         self.dt = dt
+        self.om = om
 
     def evaluate_post_solve(self, t, N):
         pass

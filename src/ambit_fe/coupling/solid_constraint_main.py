@@ -633,8 +633,8 @@ class SolidmechanicsConstraintProblem(problem_base):
     def write_output_pre(self):
         self.pbs.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbs.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbs.evaluate_pre_solve(t, N, dt, om=om)
 
         for n in range(self.num_coupling_surf):
             self.constr_val[n] = self.pbs.ti.timecurves(

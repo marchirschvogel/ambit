@@ -603,9 +603,9 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfsi.write_output_pre()
         self.pbp.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbfsi.evaluate_pre_solve(t, N, dt)
-        self.pbp.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbfsi.evaluate_pre_solve(t, N, dt, om=om)
+        self.pbp.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbfsi.evaluate_post_solve(t, N)

@@ -409,9 +409,9 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pbfa.write_output_pre()
         self.pbf0.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbfa.evaluate_pre_solve(t, N, dt)
-        self.pbf0.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbfa.evaluate_pre_solve(t, N, dt, om=om)
+        self.pbf0.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbfa.evaluate_post_solve(t, N)

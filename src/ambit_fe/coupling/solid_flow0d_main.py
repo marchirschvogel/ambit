@@ -930,9 +930,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs.write_output_pre()
         self.pb0.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbs.evaluate_pre_solve(t, N, dt)
-        self.pb0.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbs.evaluate_pre_solve(t, N, dt, om=om)
+        self.pb0.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbs.evaluate_post_solve(t, N)

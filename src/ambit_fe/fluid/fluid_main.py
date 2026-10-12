@@ -88,8 +88,9 @@ class FluidmechanicsProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_fluid]
         self.num_domains = self.io.num_domains[self.io.m_id_fluid]
         self.mesh = self.io.mesh_[self.io.m_id_fluid]
-        # define time step as dolfinx constant
+        # define time step and step ratio as dolfinx constants
         self.dt = fem.Constant(self.mesh, PETSc.ScalarType(self.pbase.dt))
+        self.om = fem.Constant(self.mesh, PETSc.ScalarType(1.0))
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_fluid], self.io.mt_b_[self.io.m_id_fluid], self.io.mt_sb_[self.io.m_id_fluid]
         # global measures for weak BCs
@@ -391,6 +392,7 @@ class FluidmechanicsProblem(problem_base):
         self.ti = timeintegration.timeintegration_fluid(
             self.time_params,
             self.dt,
+            self.om,
             self.pbase.numstep,
             V=[self.V_v,self.V_scalar],
             time_curves=time_curves,
@@ -3071,9 +3073,10 @@ class FluidmechanicsProblem(problem_base):
                 )
                 self.io_field.write_output_pre(fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
-    def evaluate_pre_solve(self, t, N, dt):
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
         # set dt from main loop - may be variable
         self.dt.value = dt
+        self.om.value = om
         # set time-dependent functions
         self.ti.set_time_funcs(t, dt)
 

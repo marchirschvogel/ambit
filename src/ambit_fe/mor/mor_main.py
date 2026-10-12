@@ -861,7 +861,7 @@ class ModelOrderReduction:
             K_list_rom[self.fid][self.fid].axpy(timefac, self.CpenVTV)  # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_integ):
-            fac_timint = self.pb.ti.get_factor_deriv_varint(self.pb.pbase.dt)
+            fac_timint = self.pb.ti.get_factor_deriv_varint(self.pb.pbase.dt, om=self.pb.pbase.om)
             if self.pb.pre:
                 fac_timint = self.pb.prestress_dt
             K_list_rom[self.fid][self.fid].axpy(
@@ -869,7 +869,7 @@ class ModelOrderReduction:
             )  # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_deriv):
-            fac_timint = self.pb.ti.get_factor_deriv_dvar(self.pb.pbase.dt)
+            fac_timint = self.pb.ti.get_factor_deriv_dvar(self.pb.pbase.dt, om=self.pb.pbase.om)
             if self.pb.pre:
                 fac_timint = 1.0 / self.pb.prestress_dt
             K_list_rom[self.fid][self.fid].axpy(

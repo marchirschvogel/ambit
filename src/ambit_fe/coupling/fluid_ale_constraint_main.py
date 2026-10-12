@@ -393,8 +393,8 @@ class FluidmechanicsAleConstraintProblem(problem_base):
     def write_output_pre(self):
         self.pbfa.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbfa.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbfa.evaluate_pre_solve(t, N, dt, om=om)
         self.pbfc.evaluate_pre_solve_coupling(t, N, dt)
 
     def evaluate_post_solve(self, t, N):

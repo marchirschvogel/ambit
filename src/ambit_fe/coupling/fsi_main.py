@@ -687,7 +687,7 @@ class FSIProblem(problem_base):
             self.K_uu_work.assemble()
 
             # we apply u_fluid to solid, hence get du_fluid/dv
-            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt)
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt, om=self.pbf.om)
 
             # multiply to get the relevant columns only
             self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv)
@@ -993,9 +993,9 @@ class FSIProblem(problem_base):
         self.pbs.write_output_pre()
         self.pbfa.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbs.evaluate_pre_solve(t, N, dt)
-        self.pbfa.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbs.evaluate_pre_solve(t, N, dt, om=om)
+        self.pbfa.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbs.evaluate_post_solve(t, N)

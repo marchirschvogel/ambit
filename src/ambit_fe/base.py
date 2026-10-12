@@ -88,6 +88,10 @@ class problem_base:
         else:
             raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
+        # step ratios - e.g. needed for BDF2 scheme when step size is not constant
+        self.oms = np.ones_like(self.dts)
+        self.oms[1:] = self.dts[1:] / self.dts[:-1]
+
         self.restart_step = io_params.get("restart_step", 0)
 
         self.numstep_stop = ctrl_params.get("numstep_stop", self.numstep)
@@ -126,7 +130,7 @@ class problem_base:
     def write_output_pre(self):
         raise RuntimeError("Problem misses function implementation!")
 
-    def evaluate_pre_solve(self, t, N, dt):
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
         raise RuntimeError("Problem misses function implementation!")
 
     def evaluate_post_solve(self, t, N):
@@ -258,13 +262,14 @@ class solver_base:
         for N in range(self.pb.pbase.restart_step + 1, self.pb.pbase.numstep_stop + 1):
             wts = time.time()
 
-            # current time step size
+            # current time step size and step ratio
             self.pb.pbase.dt = self.pb.pbase.dts[N-1]
+            self.pb.pbase.om = self.pb.pbase.oms[N-1]
             # current time
             t = self.pb.pbase.times[N]
 
             # evaluate any (solution-independent) time curves or other functions
-            self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt)
+            self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt, om=self.pb.pbase.om)
 
             # solve the nonlinear problem
             self.solve_nonlinear_problem(t, N)

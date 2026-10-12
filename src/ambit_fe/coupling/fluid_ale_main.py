@@ -394,7 +394,7 @@ class FluidmechanicsAleProblem(problem_base):
             # zero rows where DBC is applied and set diagonal entry to -1
             self.K_dv.zeroRows(self.fdofs_fluid_ale, diag=-1.0)
             # we apply u_fluid to ALE, hence get du_fluid/dv
-            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt)
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbf.dt, om=self.pbf.om)
             self.K_dv.scale(fac)
         if self.have_dbc_ale_fluid:
             self.K_vd_.zeroEntries()
@@ -405,7 +405,7 @@ class FluidmechanicsAleProblem(problem_base):
             # zero rows where DBC is applied and set diagonal entry to -1
             self.K_vd_add.zeroRows(self.fdofs_ale_fluid, diag=-1.0)
             # we apply w_ALE to fluid, hence get dw_ALE/dd
-            fac = self.pba.ti.get_factor_deriv_dvar(self.pba.dt)
+            fac = self.pba.ti.get_factor_deriv_dvar(self.pba.dt, om=self.pba.om)
             self.K_vd_add.scale(fac)
 
         self.K_list[2][0] = self.K_dv
@@ -504,9 +504,9 @@ class FluidmechanicsAleProblem(problem_base):
         self.pbf.write_output_pre()
         self.pba.write_output_pre()
 
-    def evaluate_pre_solve(self, t, N, dt):
-        self.pbf.evaluate_pre_solve(t, N, dt)
-        self.pba.evaluate_pre_solve(t, N, dt)
+    def evaluate_pre_solve(self, t, N, dt, om=1.0):
+        self.pbf.evaluate_pre_solve(t, N, dt, om=om)
+        self.pba.evaluate_pre_solve(t, N, dt, om=om)
 
     def evaluate_post_solve(self, t, N):
         self.pbf.evaluate_post_solve(t, N)
