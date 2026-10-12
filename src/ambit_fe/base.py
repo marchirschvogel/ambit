@@ -91,6 +91,7 @@ class problem_base:
         # step ratios - e.g. needed for BDF2 scheme when step size is not constant
         self.oms = np.ones_like(self.dts)
         self.oms[1:] = self.dts[1:] / self.dts[:-1]
+        self.om = self.oms[0]
 
         self.restart_step = io_params.get("restart_step", 0)
 
