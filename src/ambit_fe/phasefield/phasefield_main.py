@@ -730,6 +730,46 @@ class PhasefieldProblem(problem_base):
                 fp.write("%.16E %.16E\n" % (t, dissipation))
                 fp.close()
 
+    def compute_phase_volumes(self, N, t):
+        if self.is_ale:
+            J = ufl.det(self.alevar["Fale"])
+        else:
+            J = 1.0
+        single_phase_a, single_phase_b = ufl.as_ufl(0), ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            chi = (self.phi - self.phi_range[0]) / (self.phi_range[1] - self.phi_range[0])
+            chi_b = ufl.min_value(1.0, ufl.max_value(0.0, chi))
+            chi_a = 1.0 - chi_b
+
+            single_phase_a += J * chi_a * self.dx(M)
+            single_phase_b += J * chi_b * self.dx(M)
+
+        sa = fem.assemble_scalar(fem.form(single_phase_a, entity_maps=self.io.entity_maps))
+        sa = self.comm.allgather(sa)
+        savol = sum(sa)
+        sb = fem.assemble_scalar(fem.form(single_phase_b, entity_maps=self.io.entity_maps))
+        sb = self.comm.allgather(sb)
+        sbvol = sum(sb)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fa = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_volume_phase_a.txt",
+                    mode,
+                )
+                fa.write("%.16E %.16E\n" % (t, savol))
+                fa.close()
+                fb = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_volume_phase_b.txt",
+                    mode,
+                )
+                fb.write("%.16E %.16E\n" % (t, sbvol))
+                fb.close()
+
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
         utilities.print_status("FEM form compilation for phasefield (Cahn-Hilliard)...", self.comm, e=" ")
@@ -899,6 +939,8 @@ class PhasefieldProblem(problem_base):
             self.compute_phasefield_conservation(N, t)
         if "dissipation" in self.results_to_write:
             self.compute_energy_dissipation(N, t)
+        if "phasevolumes" in self.results_to_write:
+            self.compute_phase_volumes(N, t)
 
     def set_output_state(self, N):
         pass

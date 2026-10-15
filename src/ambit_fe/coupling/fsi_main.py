@@ -178,6 +178,7 @@ class FSIProblem(problem_base):
         self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "no_slip")  # no_slip, slip
         self.fsi_kinematic_quantity = self.coupling_params.get("fsi_kinematic_quantity", "displacement")  # displacement, velocity
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann")  # neumann_neumann, neumann_dirichlet
+        self.fsi_traction_timepoints = self.coupling_params.get("fsi_traction_timepoints", "endpoint")  # endpoint, midpoint
         self.fluid_solid_surface_tension = self.coupling_params.get("fluid_solid_surface_tension", {})  # only for multiphase FSI
 
     def get_problem_var_list(self):
@@ -322,10 +323,17 @@ class FSIProblem(problem_base):
             else:
                 raise ValueError("Unknown FSI kinematic coupling. Choose 'no_slip' or 'slip'.")
 
-            # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
-            # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
-            self.pbs.weakform_u += self.work_coupling_solid
-            self.pbf.weakform_v += self.power_coupling_fluid
+            if self.fsi_traction_timepoints == "endpoint":
+                # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
+                # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
+                self.pbs.weakform_u += self.work_coupling_solid
+                self.pbf.weakform_v += self.power_coupling_fluid
+            elif self.fsi_traction_timepoints == "midpoint":
+                # may opt for midpoint of single-field time integrators...
+                self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
+                self.pbf.weakform_v += self.pbf.timefac * self.power_coupling_fluid + (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
+            else:
+                raise ValueError("Unknown option for fsi_traction_timepoints. Choose 'endpoint' or 'midpoint'.")
 
             if self.fsi_kinematic_coupling=="no_slip":
                 if self.fsi_kinematic_quantity == "displacement":
@@ -356,6 +364,8 @@ class FSIProblem(problem_base):
                 self.usf_subvec = self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub)
 
         elif self.fsi_system == "neumann_dirichlet":
+            # currently, only endpoint is supported for BDC / traction transfer!
+            assert(self.fsi_traction_timepoints == "endpoint")
             self.dbcs_coup_fluid_solid = []
             if all(isinstance(x, int) for x in self.io.surf_interf):
                 nodes_dbcs_fs = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.mesh.topology.dim - 1, self.pbs.mt_b.indices[np.isin(self.pbs.mt_b.values, self.io.surf_interf)])
@@ -430,8 +440,14 @@ class FSIProblem(problem_base):
             self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
             self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
 
-            self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            self.weakform_lin_vl = ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            if self.fsi_traction_timepoints == "endpoint":
+                self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+                self.weakform_lin_vl = ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            elif self.fsi_traction_timepoints == "midpoint":
+                self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+                self.weakform_lin_vl = self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            else:
+                raise ValueError("Unknown option for fsi_traction_timepoints. Choose 'endpoint' or 'midpoint'.")
 
             # for DBC application to LM, even if zero...
             self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)

@@ -284,6 +284,7 @@ def check_params_coupling_fsi_fluid_ale(params):
         "fsi_kinematic_coupling",
         "fsi_kinematic_quantity",
         "fsi_system",
+        "fsi_traction_timepoints",
         "k_pen",
     ]
 

@@ -76,15 +76,16 @@ class constitutive:
         elif mob_type=="degenerate":
             exp = params.get("exponent", 1.0)
             trunc = params.get("truncate", False)
+            eps_m = params.get("eps_m", 0.0)
             # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
             s = (phi_ - self.a) * (self.b - phi_)
             if trunc:
                 return M0 * ufl.conditional(
                             ufl.gt(s, 0.0),
-                            s**exp,
-                            0.0
+                            ufl.max_value(s**exp, eps_m),
+                            eps_m
                         )
             else:
-                return M0 * abs(s**exp)
+                return M0 * abs(s**exp + eps_m)
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
