@@ -364,8 +364,6 @@ class FSIProblem(problem_base):
                 self.usf_subvec = self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub)
 
         elif self.fsi_system == "neumann_dirichlet":
-            # currently, only endpoint is supported for BDC / traction transfer!
-            assert(self.fsi_traction_timepoints == "endpoint")
             self.dbcs_coup_fluid_solid = []
             if all(isinstance(x, int) for x in self.io.surf_interf):
                 nodes_dbcs_fs = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.mesh.topology.dim - 1, self.pbs.mt_b.indices[np.isin(self.pbs.mt_b.values, self.io.surf_interf)])
@@ -534,6 +532,11 @@ class FSIProblem(problem_base):
             # reaction forces on fluid side
             self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
             with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
+            # t_{n+1} and t_{n} old state for midpoint traction evaluation
+            self.r_reac_on_fluid_np = fem.petsc.assemble_vector(self.pbf.res_v)
+            with self.r_reac_on_fluid_np.localForm() as r_local: r_local.set(0.0)
+            self.r_reac_on_fluid_old = fem.petsc.assemble_vector(self.pbf.res_v)
+            with self.r_reac_on_fluid_old.localForm() as r_local: r_local.set(0.0)
 
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
@@ -710,6 +713,9 @@ class FSIProblem(problem_base):
 
             # get vv interface contribution prior to modification
             self.Diag_sol.transposeMatMult(self.K_uv, result=self.K_vv_i)
+            if self.fsi_traction_timepoints == "midpoint":
+                fac2 = self.pbf.timefac / self.pbs.timefac
+                self.K_vv_i.scale(fac2)
             # scale with du_fluid/dv and update fluid main block
             self.pbf.K_vv.axpy(fac, self.K_vv_i)
 
@@ -729,6 +735,9 @@ class FSIProblem(problem_base):
             # eliminate interface!
             self.K_vu.diagonalScale(R=self.Ifo)
             self.K_vu.assemble()
+
+            if self.fsi_traction_timepoints == "midpoint":
+                self.K_vu.scale(fac2)
 
             if self.pbs.incompressible_2field:
                 self.K_up_work.zeroEntries()
@@ -786,7 +795,12 @@ class FSIProblem(problem_base):
         self.r_reac_on_fluid.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD) # needed?!
 
         # add solid residual to fluid
-        self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
+        if self.fsi_traction_timepoints == "endpoint":
+            self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
+        if self.fsi_traction_timepoints == "midpoint":
+            fac = self.pbf.timefac / self.pbs.timefac
+            self.pbf.r_v.axpy(fac, self.r_reac_on_fluid)
+            self.pbf.r_v.axpy(1.0 - fac, self.r_reac_on_fluid_old)
 
     def evaluate_residual_dbc_coupling_solid_ale(self):
         # overwrite interface dofs with u
@@ -1036,6 +1050,16 @@ class FSIProblem(problem_base):
             # update Lagrange multiplier
             self.lm_old.x.petsc_vec.axpby(1.0, 0.0, self.lm.x.petsc_vec)
             self.lm_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.fsi_system == "neumann_dirichlet":
+            if self.fsi_traction_timepoints == "midpoint":
+                # reconstruct endpoint force at t_{n+1}
+                self.r_reac_on_fluid_np.axpby(1.0, 0.0, self.r_reac_on_fluid)
+                self.r_reac_on_fluid_np.axpy(-(1.0 - self.pbs.timefac), self.r_reac_on_fluid_old)
+                self.r_reac_on_fluid_np.scale(1.0 / self.pbs.timefac)
+                self.r_reac_on_fluid_np.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                # now update old force at t_{n}
+                self.r_reac_on_fluid_old.axpby(1.0, 0.0, self.r_reac_on_fluid_np)
+                self.r_reac_on_fluid_old.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def print_to_screen(self):
         self.pbs.print_to_screen()

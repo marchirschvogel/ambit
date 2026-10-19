@@ -9,16 +9,16 @@
 import ufl
 
 
-class materiallaw:
+class materiallaw_potential:
     def __init__(self, phi, a=0.0, b=1.0):
         self.phi = phi
         self.a = a
         self.b = b
 
-    def mat_cahnhilliard(self, params):
+    def mat_ginzburg_landau(self, params):
         D = params["D"]
 
-        # generalized double-well potential with minima at a and b
+        # generalized Ginzburg-Landau double-well potential with minima at a and b
         psi = D * (self.a-self.phi)**2.0 * (self.b-self.phi)**2.0
 
         return ufl.diff(psi,self.phi), psi
@@ -31,7 +31,7 @@ class materiallaw_flux:
         self.a = a
         self.b = b
 
-    def mat_cahnhilliard_flux(self, params, mob, p=None, F=None, alpha=None):
+    def mat_diffusive_flux(self, params, mob, p=None, F=None, alpha=None):
         # fluid pressure proportional term (needed for consistency of mass-averged velocity formulation!)
         if p is not None:
             beta = params.get("beta", 1.0)  # experimental: to tune pressure gradient-driven diffusive flux...

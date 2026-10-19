@@ -53,8 +53,8 @@ def test_main():
         "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
-    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
+    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.9, "eval_nonlin_terms": "trapezoidal"}
+    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.67, "eval_nonlin_terms": "midpoint"}
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -82,6 +82,8 @@ def test_main():
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [locate_interf()]}, # here test interface given by locator, instead of using id 3...
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_interface_motion": "fluid_governed",
+        "fsi_traction_timepoints": "endpoint",
     }
 
     class locate_solid:
@@ -152,10 +154,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 5.1280504637431015E+01  # x
-    v_corr[1] = -2.5705948309009239E+00  # y
+    v_corr[0] = 5.2297074400933703E+01  # x
+    v_corr[1] = -2.5007803633332002E+00  # y
 
-    p_corr[0] = -1.4586457042526377E-03
+    p_corr[0] = -1.7507770637636851E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

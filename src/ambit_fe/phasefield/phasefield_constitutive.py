@@ -9,7 +9,7 @@
 import ufl
 from petsc4py import PETSc
 
-from .phasefield_material import materiallaw, materiallaw_flux
+from .phasefield_material import materiallaw_potential, materiallaw_flux
 
 """
 Phase field/Cahn-Hilliard constitutive class
@@ -38,7 +38,7 @@ class constitutive:
             if key not in self.mat_void:
                 if key == "mat_cahnhilliard":
                     mob = self.mobility(phi_, value)
-                    Jflux += mat_flux.mat_cahnhilliard_flux(value, mob, p=p, F=F, alpha=alpha)
+                    Jflux += mat_flux.mat_diffusive_flux(value, mob, p=p, F=F, alpha=alpha)
                 else:
                     raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
 
@@ -50,12 +50,12 @@ class constitutive:
 
         dpsi_dphi, psi = ufl.as_ufl(0), ufl.as_ufl(0)
 
-        mat = materiallaw(phi_, a=self.phi_range[0], b=self.phi_range[1])
+        mat = materiallaw_potential(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
         for key, value in self.materials.items():
             if key not in self.mat_void:
                 if key == "mat_cahnhilliard":
-                    dpsi_dphi_, psi_ = mat.mat_cahnhilliard(value)
+                    dpsi_dphi_, psi_ = mat.mat_ginzburg_landau(value)
                     dpsi_dphi += dpsi_dphi_
                     psi += psi_
                 else:
