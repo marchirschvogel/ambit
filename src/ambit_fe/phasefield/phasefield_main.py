@@ -95,7 +95,8 @@ class PhasefieldProblem(problem_base):
         # collect domain data
         self.kappa = []
         for n, M in enumerate(self.domain_ids):
-            self.kappa.append(self.constitutive_models["MAT" + str(n + 1)]["mat_cahnhilliard"]["kappa"])
+            pot = list(self.constitutive_models["MAT" + str(n + 1)]["potential"].keys())[0]
+            self.kappa.append(self.constitutive_models["MAT" + str(n + 1)]["potential"][pot]["kappa"])
 
         self.stabilization = self.fem_params.get("stabilization", None)
 

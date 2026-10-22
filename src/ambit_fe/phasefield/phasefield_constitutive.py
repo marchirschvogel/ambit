@@ -20,9 +20,6 @@ class constitutive:
     def __init__(self, materials, phi_range=[0.0, 1.0]):
         self.materials = materials
 
-        # list entries of mats which do not return a flux/driving force
-        self.mat_void = ["id", "source"]
-
         self.phi_range = phi_range
         self.a, self.b = self.phi_range[0], self.phi_range[1]
 
@@ -34,13 +31,12 @@ class constitutive:
 
         mat_flux = materiallaw_flux(mu_, phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        for key, value in self.materials.items():
-            if key not in self.mat_void:
-                if key == "mat_cahnhilliard":
-                    mob = self.mobility(phi_, value)
-                    Jflux += mat_flux.mat_diffusive_flux(value, mob, p=p, F=F, alpha=alpha)
-                else:
-                    raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
+        for key, value in self.materials["diffusive_flux"].items():
+            if key == "grad_pot":
+                mob = self.mobility(phi_, value)
+                Jflux += mat_flux.mat_diffusive_flux(value, mob, p=p, F=F, alpha=alpha)
+            else:
+                raise NameError("Unknown Cahn-Hilliard material law for diffusive flux '%s'!" % (key))
 
         return Jflux
 
@@ -52,14 +48,13 @@ class constitutive:
 
         mat = materiallaw_potential(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        for key, value in self.materials.items():
-            if key not in self.mat_void:
-                if key == "mat_cahnhilliard":
-                    dpsi_dphi_, psi_ = mat.mat_ginzburg_landau(value)
-                    dpsi_dphi += dpsi_dphi_
-                    psi += psi_
-                else:
-                    raise NameError("Unknown Cahn-Hilliard material law '%s'!" % (key))
+        for key, value in self.materials["potential"].items():
+            if key == "ginzburg_landau":
+                dpsi_dphi_, psi_ = mat.mat_ginzburg_landau(value)
+                dpsi_dphi += dpsi_dphi_
+                psi += psi_
+            else:
+                raise NameError("Unknown Cahn-Hilliard material law for potential '%s'!" % (key))
 
         if returnquantity=="deriv":
             return dpsi_dphi

@@ -257,12 +257,12 @@ def main():
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": locate_fluid()}}
 
     m = 1e-8 # should be rather low if capillary stress is rather high
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate", # constant, degenerate
-                                                  "epsilon": 0.0,
-                                                  "exponent": 1.0,
-                                                  "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
-                                                  "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sig*eps},  # Gradient energy coefficient [pressure/length]
+    MATERIALS_PF = {"MAT1": {"diffusive_flux": {"grad_pot": {"mobility": "degenerate",  # constant, degenerate
+                                                             "eps_m": 0.0,
+                                                             "exponent": 1.0,
+                                                             "M0": m*eps**2.0}},  # Mobility [length^5/(pressure time)]
+                            "potential": {"ginzburg_landau": {"D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]}}
+                                                              "kappa": sig*eps}},  # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}
 
     class locate_corner:

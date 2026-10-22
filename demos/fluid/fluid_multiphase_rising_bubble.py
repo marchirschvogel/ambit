@@ -181,12 +181,12 @@ def main():
     """
     Constitutive parameters for the phase field
     """
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
-                                                  "epsilon": 0.0,
-                                                  "exponent": 1.0,
-                                                  "M0": 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
-                                                  "D": sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
-                                                  "kappa": sigtilde*eps},     # Gradient energy coefficient [Pa/m]
+    MATERIALS_PF = {"MAT1": {"diffusive_flux": {"grad_pot": {"mobility": "degenerate",
+                                                             "eps_m": 0.0,
+                                                             "exponent": 1.0,
+                                                             "M0": 0.1*eps**2.0}},  # Mobility [m^5/(Pa s)]
+                             "potential": {"ginzburg_landau": {"D": sigtilde/(4.*eps),   # Bulk free-energy parameter [Pa/m^3]
+                                                               "kappa": sigtilde*eps}},  # Gradient energy coefficient [Pa/m]
                                                   "id": locate_all()}}
 
     """

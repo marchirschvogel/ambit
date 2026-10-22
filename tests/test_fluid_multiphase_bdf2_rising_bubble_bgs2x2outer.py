@@ -120,10 +120,11 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": 0.1*eps**2.0,
-                                                  "D": sigtilde/(4.*eps),
-                                                  "kappa": sigtilde*eps,
-                                                  "mobility": "degenerate"}, "id": locate_all()}}
+    MATERIALS_PF = {"MAT1": {"diffusive_flux": {"grad_pot": {"M0": 0.1*eps**2.0,
+                                                             "mobility": "degenerate"}},
+                             "potential": {"ginzburg_landau": {"D": sigtilde/(4.*eps),
+                                                               "kappa": sigtilde*eps}},
+                                  "id": locate_all()}}
 
     class locate_top_bottom:
         def evaluate(self, x):

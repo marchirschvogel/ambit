@@ -58,7 +58,12 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
-    MATERIALS = {"MAT1": {"mat_cahnhilliard": {"M0": 1.0, "D": 100., "kappa": 0.01}, "id": locate_all()}}
+    MATERIALS = {"MAT1": {
+                          "potential": {"ginzburg_landau": {"D": 100., "kappa": 0.01}},
+                          "diffusive_flux": {"grad_pot": {"M0": 1.0}},
+                          "id": locate_all()
+                          }
+                }
 
     BC_DICT = { }
 

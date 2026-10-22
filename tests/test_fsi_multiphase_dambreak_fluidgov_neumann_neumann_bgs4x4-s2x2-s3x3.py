@@ -175,12 +175,13 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}, "id": 1,
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "curve": 1, "scale_density": True}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0,
-                                                  "exponent": 2.0,
-                                                  "truncate": False,
-                                                  "D": sigtilde/(4.*eps),
-                                                  "kappa": sigtilde*eps,
-                                                  "mobility": "degenerate"}, "id": 1}}
+    MATERIALS_PF = {"MAT1": {"diffusive_flux": {"grad_pot": {"M0": M0,
+                                                             "exponent": 2.0,
+                                                             "truncate": False,
+                                                             "mobility": "degenerate"}},
+                            "potential": {"ginzburg_landau": {"D": sigtilde/(4.*eps),
+                                                              "kappa": sigtilde*eps}},
+                                                              "id": 1}}
 
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": 1}}
 
