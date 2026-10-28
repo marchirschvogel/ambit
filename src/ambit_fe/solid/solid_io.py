@@ -602,42 +602,44 @@ class IO_solid(IO_field):
 
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
-        vecs_to_read[self.pb.u] = "u"
+        vecs_to_read["u"] = self.pb.u.x.petsc_vec
         if self.pb.incompressible_2field:
-            vecs_to_read[self.pb.p] = "p"
+            vecs_to_read["p"] = self.pb.p.x.petsc_vec
         if self.pb.is_poroelastic:
-            vecs_to_read[self.pb.phyd] = "phyd"
+            vecs_to_read["phyd"] = self.pb.phyd.x.petsc_vec
         if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
-            vecs_to_read[self.pb.theta] = "theta"
-            vecs_to_read[self.pb.theta_old] = "theta"
+            vecs_to_read["theta"] = self.pb.theta.x.petsc_vec
+            vecs_to_read["theta_old"] = self.pb.theta_old.x.petsc_vec
         if any(self.pb.mat_active_stress):
-            vecs_to_read[self.pb.tau_a] = "tau_a"
-            vecs_to_read[self.pb.tau_a_old] = "tau_a"
+            vecs_to_read["tau_a"] = self.pb.tau_a.x.petsc_vec
+            vecs_to_read["tau_a_old"] = self.pb.tau_a_old.x.petsc_vec
             if self.pb.have_frank_starling:
-                vecs_to_read[self.pb.amp_old] = "amp_old"
+                vecs_to_read["amp_old"] = self.pb.amp_old.x.petsc_vec
         if self.pb.u_pre is not None:
-            vecs_to_read[self.pb.u_pre] = "u_pre"
+            vecs_to_read["u_pre"] = self.pb.u_pre.x.petsc_vec
 
         if self.pb.timint != "static":
-            vecs_to_read[self.pb.u_old] = "u"
-            vecs_to_read[self.pb.v_old] = "v_old"
-            vecs_to_read[self.pb.a_old] = "a_old"
+            vecs_to_read["u_old"] = self.pb.u_old.x.petsc_vec
+            vecs_to_read["v_old"] = self.pb.v_old.x.petsc_vec
+            vecs_to_read["a_old"] = self.pb.a_old.x.petsc_vec
             if self.pb.incompressible_2field:
-                vecs_to_read[self.pb.p_old] = "p"
+                vecs_to_read["p"] = self.pb.p.x.petsc_vec
+                vecs_to_read["p_old"] = self.pb.p_old.x.petsc_vec
             if self.pb.is_poroelastic:
-                vecs_to_read[self.pb.phyd_old] = "phyd"
+                vecs_to_read["phyd"] = self.pb.phyd.x.petsc_vec
+                vecs_to_read["phyd_old"] = self.pb.phyd_old.x.petsc_vec
 
         if self.pb.pbase.problem_type == "solid_flow0d_multiscale_gandr":
-            vecs_to_read[self.pb.u_set] = "u_set"
-            vecs_to_read[self.pb.growth_thres] = "growth_thres"
+            vecs_to_read["u_set"] = self.pb.u_set.x.petsc_vec
+            vecs_to_read["growth_thres"] = self.pb.growth_thres.x.petsc_vec
             if self.pb.incompressible_2field:
-                vecs_to_read[self.pb.p_set] = "p_set"
+                vecs_to_read["p_set"] = self.pb.p_set.x.petsc_vec
             if any(self.pb.mat_active_stress):
-                vecs_to_read[self.pb.tau_a_set] = "tau_a_set"
+                vecs_to_read["tau_a_set"] = self.pb.tau_a_set.x.petsc_vec
                 if self.pb.have_frank_starling:
-                    vecs_to_read[self.pb.amp_old_set] = "amp_old_set"
+                    vecs_to_read["amp_old_set"] = self.pb.amp_old_set.x.petsc_vec
 
-        for key in vecs_to_read:
+        for key, value in vecs_to_read.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -648,7 +650,7 @@ class IO_solid(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + "_"
@@ -657,61 +659,68 @@ class IO_solid(IO_field):
                     "r",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.load(viewer)
-                key.x.petsc_vec.ghostUpdate(
+                value.load(viewer)
+                value.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.pb.io.readfunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + ".txt",
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")
 
     def writecheckpoint(self, N):
         vecs_to_write = {}
-        vecs_to_write[self.pb.u] = "u"
+        vecs_to_write["u"] = self.pb.u.x.petsc_vec
         if self.pb.incompressible_2field:
-            vecs_to_write[self.pb.p] = "p"
+            vecs_to_write["p"] = self.pb.p.x.petsc_vec
         if self.pb.is_poroelastic:
-            vecs_to_write[self.pb.phyd] = "phyd"
+            vecs_to_write["phyd"] = self.pb.phyd.x.petsc_vec
         if any(self.pb.mat_growth) and isinstance(self.pb.theta, fem.function.Function):
-            vecs_to_write[self.pb.theta] = "theta"
+            vecs_to_write["theta"] = self.pb.theta.x.petsc_vec
         if any(self.pb.mat_active_stress):
-            vecs_to_write[self.pb.tau_a] = "tau_a"
+            vecs_to_write["tau_a"] = self.pb.tau_a.x.petsc_vec
+            vecs_to_write["tau_a_old"] = self.pb.tau_a.x.petsc_vec
             if self.pb.have_frank_starling:
-                vecs_to_write[self.pb.amp_old] = "amp_old"
+                vecs_to_write["amp_old"] = self.pb.amp_old.x.petsc_vec
         if self.pb.u_pre is not None:
-            vecs_to_write[self.pb.u_pre] = "u_pre"
+            vecs_to_write["u_pre"] = self.pb.u_pre.x.petsc_vec
 
         if self.pb.timint != "static":
-            vecs_to_write[self.pb.v_old] = "v_old"
-            vecs_to_write[self.pb.a_old] = "a_old"
+            vecs_to_write["u_old"] = self.pb.u_old.x.petsc_vec
+            vecs_to_write["v_old"] = self.pb.v_old.x.petsc_vec
+            vecs_to_write["a_old"] = self.pb.a_old.x.petsc_vec
+            if self.pb.incompressible_2field:
+                vecs_to_write["p_old"] = self.pb.p_old.x.petsc_vec
+            if self.pb.is_poroelastic:
+                vecs_to_write["phyd_old"] = self.pb.phyd_old.x.petsc_vec
 
         if self.pb.pbase.problem_type == "solid_flow0d_multiscale_gandr":
-            vecs_to_write[self.pb.u_set] = "u_set"
-            vecs_to_write[self.pb.growth_thres] = "growth_thres"
+            vecs_to_write["u_set"] = self.pb.u_set.x.petsc_vec
+            vecs_to_write["growth_thres"] = self.pb.growth_thres.x.petsc_vec
             if self.pb.incompressible_2field:
-                vecs_to_write[self.pb.p_set] = "p_set"
+                vecs_to_write["p_set"] = self.pb.p_set.x.petsc_vec
             if any(self.pb.mat_active_stress):
-                vecs_to_write[self.pb.tau_a_set] = "tau_a_set"
+                vecs_to_write["tau_a_set"] = self.pb.tau_a_set.x.petsc_vec
                 if self.pb.have_frank_starling:
-                    vecs_to_write[self.pb.amp_old_set] = "amp_old_set"
+                    vecs_to_write["amp_old_set"] = self.pb.amp_old_set.x.petsc_vec
 
-        for key in vecs_to_write:
+        for key, value in vecs_to_write.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -722,7 +731,7 @@ class IO_solid(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N)
                     + "_"
@@ -731,21 +740,22 @@ class IO_solid(IO_field):
                     "w",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.view(viewer)
+                value.view(viewer)
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.pb.io.writefunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N),
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")

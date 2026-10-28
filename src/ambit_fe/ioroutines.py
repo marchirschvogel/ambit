@@ -890,10 +890,12 @@ class IO_field_fsi(IO_field):
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
         if self.pb.fsi_system == "neumann_neumann":
-            vecs_to_read[self.pb.lm] = "LM"
-            vecs_to_read[self.pb.lm_old] = "LM_old"
+            vecs_to_read["lm"] = self.pb.lm.x.petsc_vec
+            vecs_to_read["lm_old"] = self.pb.lm_old.x.petsc_vec
+        if self.pb.fsi_system == "neumann_dirichlet" and self.pb.fsi_traction_timepoints == "midpoint":
+            vecs_to_read["r_reac_on_fluid_old"] = self.pb.r_reac_on_fluid_old
 
-        for key in vecs_to_read:
+        for key, value in vecs_to_read.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -904,7 +906,7 @@ class IO_field_fsi(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + "_"
@@ -913,26 +915,27 @@ class IO_field_fsi(IO_field):
                     "r",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.load(viewer)
-                key.x.petsc_vec.ghostUpdate(
+                value.load(viewer)
+                value.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.readfunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + ".txt",
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")
@@ -941,10 +944,12 @@ class IO_field_fsi(IO_field):
         if (self.pb.io.write_restart_every > 0 and N % self.pb.io.write_restart_every == 0) or force:
             vecs_to_write = {}
             if self.pb.fsi_system == "neumann_neumann":
-                vecs_to_write[self.pb.lm] = "LM"
-                vecs_to_write[self.pb.lm_old] = "LM_old"
+                vecs_to_write["lm"] = self.pb.lm.x.petsc_vec
+                vecs_to_write["lm_old"] = self.pb.lm_old.x.petsc_vec
+            if self.pb.fsi_system == "neumann_dirichlet" and self.pb.fsi_traction_timepoints == "midpoint":
+                vecs_to_write["r_reac_on_fluid_old"] = self.pb.r_reac_on_fluid_old
 
-            for key in vecs_to_write:
+            for key, value in vecs_to_write.items():
                 if self.pb.io.restart_io_type == "petscvector":
                     # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                     # and for safety reasons, include the number of cores in the dat file name
@@ -955,7 +960,7 @@ class IO_field_fsi(IO_field):
                         + "_"
                         + self.pb.problem_physics
                         + "_"
-                        + vecs_to_write[key]
+                        + key
                         + "_"
                         + str(N)
                         + "_"
@@ -964,21 +969,22 @@ class IO_field_fsi(IO_field):
                         "w",
                         self.pb.comm,
                     )
-                    key.x.petsc_vec.view(viewer)
+                    value.view(viewer)
                     viewer.destroy()
                 elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                    raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                     self.writefunction(
-                        key,
+                        value,
                         self.pb.io.output_path
                         + "/checkpoint_"
                         + self.pb.pbase.simname
                         + "_"
                         + self.pb.problem_physics
                         + "_"
-                        + vecs_to_write[key]
+                        + key
                         + "_"
                         + str(N),
-                        filetype='plaintext',
+                        filetype="plaintext",
                     )
                 else:
                     raise ValueError("Unknown restart_io_type!")

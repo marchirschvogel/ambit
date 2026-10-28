@@ -92,6 +92,8 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.pbf.phasevar["phi"] = self.pbp.phi
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
         self.pbf.phasevar["phi_veryold"] = self.pbp.phi_veryold
+        self.pbf.phasevar["mu"] = self.pbp.mu
+        self.pbf.phasevar["mu_old"] = self.pbp.mu_old
         self.pbf.phasevar["phidot"] = self.pbp.phidot
         self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
         self.pbf.phasevar["phi_range"] = self.pbp.phi_range
@@ -178,11 +180,11 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             if self.capillary_force_from_korteweg_stress:
                 self.capillary_force -= self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale"])
                 self.capillary_force_old -= self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
-                self.capillary_force_mid -= self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
+                self.capillary_force_mid -= self.pbf.vf.korteweg_stress(self.pbf.phasevar["phi_mid"], self.pbf.phasevar["mu_mid"], self.pbp.ma[n].driv_force(self.pbf.phasevar["phi_mid"], returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
             else:
                 self.capillary_force += self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
                 self.capillary_force_old += self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
-                self.capillary_force_mid += self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
+                self.capillary_force_mid += self.pbf.vf.capillary_force(self.pbf.phasevar["phi_mid"], self.pbf.phasevar["mu_mid"], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
 
         # in case fluid uses stabilization, collect the strong capillary forms to add later to SUPG/PSPG
         if self.pbf.stabilization is not None:
@@ -198,11 +200,11 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                     if self.capillary_force_from_korteweg_stress:  # NOTE: Sign is positive, since non-integrated by parts div(sigma_korteweg) is added!
                         f_cap = self.pbf.vf.korteweg_stress(self.pbp.phi, self.pbp.mu, self.pbp.ma[n].driv_force(self.pbp.phi, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
                         f_cap_old = self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
-                        f_cap_mid = self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+                        f_cap_mid = self.pbf.vf.korteweg_stress(self.pbf.phasevar["phi_mid"], self.pbf.phasevar["mu_mid"], self.pbp.ma[n].driv_force(self.pbf.phasevar["phi_mid"], returnquantity="doublewell"), self.pbp.kappa[n], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
                     else:
                         f_cap = self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"], return_type="strong")
                         f_cap_old = self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"], return_type="strong")
-                        f_cap_mid = self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
+                        f_cap_mid = self.pbf.vf.capillary_force(self.pbf.phasevar["phi_mid"], self.pbf.phasevar["mu_mid"], self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"], return_type="strong")
 
                     if self.pbf.scheme_type["res_v"] == "full":
                         # SUPG
@@ -339,7 +341,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         if self.pbf.scheme_type["res_p"] == "full":
                             res_p_ch = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu, self.pbp.phi, p=self.pbf.p_[j], F=self.pbf.alevar["Fale"], alpha=self.pbf.alpha[n]), F=self.pbf.alevar["Fale"])
                             res_p_ch_old = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_old[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_old, self.pbp.phi_old, p=self.pbf.p_old_[j], F=self.pbf.alevar["Fale_old"], alpha=self.pbf.alpha_old[n]), F=self.pbf.alevar["Fale_old"])
-                            res_p_ch_mid = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_mid, self.pbp.phi_mid, p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), F=self.pbf.alevar["Fale_mid"])
+                            res_p_ch_mid = self.pbf.vf.res_p_strong_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbf.phasevar["mu_mid"], self.pbf.phasevar["phi_mid"], p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), F=self.pbf.alevar["Fale_mid"])
                             self.deltaW_int_stabredch += self.pbf.vf.stab_lsic(
                                 self.pbf.scale_lsic,
                                 res_p_ch,
@@ -367,6 +369,44 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                                 F=self.pbf.alevar["Fale_mid"],
                                 chi=self.pbf.phasevar["chi_mid"],
                             )
+
+            # add RBVMS fluid term to phase field...
+            if self.pbf.stabilization["scheme"] == "rbvms":
+                self.weakform_stab_rbvms_chcoup, self.weakform_stab_rbvms_chcoup_old, self.weakform_stab_rbvms_chcoup_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+                for n, M in enumerate(self.pbf.domain_ids):
+                    self.weakform_stab_rbvms_chcoup += self.pbp.vf.stab_rbvms_chcoup(
+                        1.0,
+                        self.pbp.phi,
+                        self.pbf.rho[n],
+                        self.pbf.residual_v_strong,
+                        self.pbf.tau_m,
+                        self.pbp.dx(M),
+                        w=self.pbp.alevar["w"],
+                        F=self.pbp.alevar["Fale"],
+                        chi=self.pbf.phasevar["chi"],
+                    )
+                    self.weakform_stab_rbvms_chcoup_old += self.pbp.vf.stab_rbvms_chcoup(
+                        1.0,
+                        self.pbp.phi_old,
+                        self.pbf.rho[n],
+                        self.pbf.residual_v_strong_old,
+                        self.pbf.tau_m_old,
+                        self.pbp.dx(M),
+                        w=self.pbp.alevar["w_old"],
+                        F=self.pbp.alevar["Fale_old"],
+                        chi=self.pbf.phasevar["chi_old"],
+                    )
+                    self.weakform_stab_rbvms_chcoup_mid += self.pbp.vf.stab_rbvms_chcoup(
+                        1.0,
+                        self.pbp.phi_mid,
+                        self.pbf.rho[n],
+                        self.pbf.residual_v_strong_mid,  # TODO: need phase field mid...?!
+                        self.pbf.tau_m_mid,  # TODO: need phase field mid...?!
+                        self.pbp.dx(M),
+                        w=self.pbp.alevar["w_mid"],
+                        F=self.pbp.alevar["Fale_mid"],
+                        chi=self.pbf.phasevar["chi_mid"],  # TODO: need phase field mid...?!
+                    )
 
         # add to fluid momentum
         if self.pbf.ti.res_eval == "trap":
@@ -416,7 +456,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                     j = n
                 self.deltaW_p_ch.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu, self.pbp.phi, p=self.pbf.p_[j], F=self.pbf.alevar["Fale"], alpha=self.pbf.alpha[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale"]))
                 self.deltaW_p_ch_old.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha_old[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_old, self.pbp.phi_old, p=self.pbf.p_old_[j], F=self.pbf.alevar["Fale_old"], alpha=self.pbf.alpha_old[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale_old"]))
-                self.deltaW_p_ch_mid.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_mid, self.pbp.phi_mid, p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale_mid"]))
+                self.deltaW_p_ch_mid.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbf.phasevar["mu_mid"], self.pbf.phasevar["phi_mid"], p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale_mid"]))
 
             # add to pressure forms
             for n, M in enumerate(self.pbf.domain_ids):
@@ -429,6 +469,15 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                         self.pbf.weakform_p[n] -= self.deltaW_p_ch_mid[n]
                     if self.pbf.ti.res_eval == "back":
                         self.pbf.weakform_p[n] -= self.deltaW_p_ch[n]
+
+        # # add missing RBVMS fluid residual to phase field weak form
+        # if self.pbf.stabilization["scheme"] == "rbvms":
+        #     if self.pbp.ti.res_eval == "trap":
+        #         self.pbp.weakform_phi += self.pbp.timefac * self.weakform_stab_rbvms_chcoup + (1.0 - self.pbp.timefac) * self.weakform_stab_rbvms_chcoup_old
+        #     if self.pbp.ti.res_eval == "midp":
+        #         self.pbp.weakform_phi += self.weakform_stab_rbvms_chcoup_mid
+        #     if self.pbp.ti.res_eval == "back":
+        #         self.pbp.weakform_phi += self.weakform_stab_rbvms_chcoup
 
     def set_variational_forms_jacobian_coupling(self):
         # derivative of fluid momentum w.r.t. phase field
@@ -449,7 +498,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.weakform_lin_phip = []
         for j in range(self.pbf.num_dupl):
             self.weakform_lin_phip.append(ufl.derivative(self.pbp.weakform_phi, self.pbf.p_[j], self.pbf.dp_[j]))
-        # derivative of potenrial w.r.t. fluid pressure - only needed for transformation of variables, q = mu + alpha p (not used so far...)
+        # derivative of potential w.r.t. fluid pressure - only needed for transformation of variables, q = mu + alpha p (not used so far...)
         # self.weakform_lin_mup = []
         # for j in range(self.pbf.num_dupl):
         #     self.weakform_lin_mup.append(ufl.derivative(self.pbp.weakform_mu, self.pbf.p_[j], self.pbf.dp_[j]))

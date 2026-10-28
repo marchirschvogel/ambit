@@ -125,6 +125,7 @@ def test_main():
     COUPLING_PARAMS_FSI = {
         "coupling_fsi": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_dirichlet, neumann_neumann
+         "fsi_traction_timepoints": "midpoint",
         "fluid_solid_surface_tension": {"sig_sf1": sig_sa, "sig_sf2": sig_sl, "wetting": True, "traction": True},
     }
 
@@ -234,11 +235,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -1.6714368436152307E-03  # x
-    u_corr[1] = 4.3634378137510987E-01  # y
+    u_corr[0] = -1.1479648031549271E-03  # x
+    u_corr[1] = 4.2938807074010504E-01  # y
 
-    v_corr[0] = 2.4552649815923753E-04  # x
-    v_corr[1] = 1.0568727524009384E-02  # y
+    v_corr[0] = 2.4318826367094364E-04  # x
+    v_corr[1] = 1.0716676348368152E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

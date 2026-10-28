@@ -264,9 +264,9 @@ class PhasefieldProblem(problem_base):
 
     def set_variational_forms_residual(self):
         if self.is_ale:
-            # mid-point representation of ALE velocity
+            # phasefield mid-point representation of ALE velocity
             self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
-            # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
+            # phasefield mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
             self.alevar["Fale_mid"] = (
                 self.timefac * self.alevar["Fale"] + (1.0 - self.timefac) * self.alevar["Fale_old"]
             )
@@ -280,7 +280,7 @@ class PhasefieldProblem(problem_base):
             self.alevar["w_mid"] = None
 
         if self.is_advected:
-            # mid-point representation of fluid velocity and pressure
+            # phasefield mid-point representation of fluid velocity and pressure
             self.fluidvar["v_mid"] = self.timefac * self.fluidvar["v"] + (1.0 - self.timefac) * self.fluidvar["v_old"]
             self.fluidvar["p_mid"] = self.timefac * self.fluidvar["p"] + (1.0 - self.timefac) * self.fluidvar["p_old"]
         else:
@@ -720,7 +720,7 @@ class PhasefieldProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -754,7 +754,7 @@ class PhasefieldProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"

@@ -33,7 +33,7 @@ def test_main():
         "write_results_every": -999,
         "write_restart_every": 8,
         "restart_step": restart_step,
-        "restart_io_type": "plaintext",  # petscvector, plaintext
+        "restart_io_type": "petscvector",
         "output_path": basepath + "/tmp/",
         "results_to_write": [""],
         "simname": "solid_robin_genalpha",

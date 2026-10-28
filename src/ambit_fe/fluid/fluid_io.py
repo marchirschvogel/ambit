@@ -276,30 +276,30 @@ class IO_fluid(IO_field):
 
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
-        vecs_to_read[self.pb.v] = "v"
-        vecs_to_read[self.pb.v_old] = "v_old"
-        vecs_to_read[self.pb.v_veryold] = "v_veryold" # for BDF2 scheme
+        vecs_to_read["v"] = self.pb.v.x.petsc_vec
+        vecs_to_read["v_old"] = self.pb.v_old.x.petsc_vec
+        vecs_to_read["v_veryold"] = self.pb.v_veryold.x.petsc_vec  # for BDF2 scheme
         if self.pb.ti.discretely_conservative:
             for n in range(self.pb.num_domains):
-                vecs_to_read[self.pb.amom_old[n]] = "amom_old" + str(n+1)
+                vecs_to_read["amom_old" + str(n+1)] = self.pb.amom_old[n].x.petsc_vec
         else:
-            vecs_to_read[self.pb.a_old] = "a_old"
-        vecs_to_read[self.pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
-        vecs_to_read[self.pb.uf_veryold] = "uf_veryold"  # for BDF2 scheme
+            vecs_to_read["a_old"] = self.pb.a_old.x.petsc_vec
+        vecs_to_read["uf_old"] = self.pb.uf_old.x.petsc_vec  # needed for ALE fluid / FSI / FrSI
+        vecs_to_read["uf_veryold"] = self.pb.uf_veryold.x.petsc_vec  # for BDF2 scheme
         if any(self.pb.mem_active_stress):  # for active membrane model (FrSI)
-            vecs_to_read[self.pb.tau_a] = "tau_a"
-            vecs_to_read[self.pb.tau_a_old] = "tau_a"
+            vecs_to_read["tau_a"] = self.pb.tau_a.x.petsc_vec
+            vecs_to_read["tau_a_old"] = self.pb.tau_a_old.x.petsc_vec
 
         # pressure may be discontinuous across domains
         if bool(self.pb.io.duplicate_mesh_domains):
             for m, mp in enumerate(self.pb.io.duplicate_mesh_domains):
-                vecs_to_read[self.pb.p__[m + 1]] = "p" + str(m + 1)
-                vecs_to_read[self.pb.p_old__[m + 1]] = "p_old" + str(m + 1)
+                vecs_to_read["p" + str(m + 1)] = self.pb.p__[m + 1].x.petsc_vec
+                vecs_to_read["p_old" + str(m + 1)] = self.pb.p_old__[m + 1].x.petsc_vec
         else:
-            vecs_to_read[self.pb.p] = "p"
-            vecs_to_read[self.pb.p_old] = "p_old"
+            vecs_to_read["p"] = self.pb.p.x.petsc_vec
+            vecs_to_read["p_old"] = self.pb.p_old.x.petsc_vec
 
-        for key in vecs_to_read:
+        for key, value in vecs_to_read.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -310,7 +310,7 @@ class IO_fluid(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + "_"
@@ -319,55 +319,57 @@ class IO_fluid(IO_field):
                     "r",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.load(viewer)
-                key.x.petsc_vec.ghostUpdate(
+                value.load(viewer)
+                value.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.readfunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + ".txt",
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")
 
     def writecheckpoint(self, N):
         vecs_to_write = {}
-        vecs_to_write[self.pb.v] = "v"
-        vecs_to_write[self.pb.v_old] = "v_old"
-        vecs_to_write[self.pb.v_veryold] = "v_veryold" # for BDF2 scheme
+        vecs_to_write["v"] = self.pb.v.x.petsc_vec
+        vecs_to_write["v_old"] = self.pb.v_old.x.petsc_vec
+        vecs_to_write["v_veryold"] = self.pb.v_veryold.x.petsc_vec  # for BDF2 scheme
         if self.pb.ti.discretely_conservative:
             for n in range(self.pb.num_domains):
-                vecs_to_write[self.pb.amom_old[n]] = "amom_old" + str(n+1)
+                vecs_to_write["amom_old" + str(n+1)] = self.pb.amom_old[n].x.petsc_vec
         else:
-            vecs_to_write[self.pb.a_old] = "a_old"
-        vecs_to_write[self.pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
-        vecs_to_write[self.pb.uf_veryold] = "uf_veryold" # for BDF2 scheme
+            vecs_to_write["a_old"] = self.pb.a_old.x.petsc_vec
+        vecs_to_write["uf_old"] = self.pb.uf_old.x.petsc_vec  # needed for ALE fluid / FSI / FrSI
+        vecs_to_write["uf_veryold"] = self.pb.uf_veryold.x.petsc_vec  # for BDF2 scheme
         if any(self.pb.mem_active_stress):
-            vecs_to_write[self.pb.tau_a] = "tau_a"
+            vecs_to_write["tau_a"] = self.pb.tau_a.x.petsc_vec
+            vecs_to_write["tau_a_old"] = self.pb.tau_a_old.x.petsc_vec
 
         # pressure may be discontinuous across domains
         if bool(self.pb.io.duplicate_mesh_domains):
             for m, mp in enumerate(self.pb.io.duplicate_mesh_domains):
-                vecs_to_write[self.pb.p__[m + 1]] = "p" + str(m + 1)
-                vecs_to_write[self.pb.p_old__[m + 1]] = "p_old" + str(m + 1)
+                vecs_to_write["p" + str(m + 1)] = self.pb.p__[m + 1].x.petsc_vec
+                vecs_to_write["p_old" + str(m + 1)] = self.pb.p_old__[m + 1].x.petsc_vec
         else:
-            vecs_to_write[self.pb.p] = "p"
-            vecs_to_write[self.pb.p_old] = "p_old"
+            vecs_to_write["p"] = self.pb.p.x.petsc_vec
+            vecs_to_write["p_old"] = self.pb.p_old.x.petsc_vec
 
-        for key in vecs_to_write:
+        for key, value in vecs_to_write.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -378,7 +380,7 @@ class IO_fluid(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N)
                     + "_"
@@ -387,21 +389,22 @@ class IO_fluid(IO_field):
                     "w",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.view(viewer)
+                value.view(viewer)
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.writefunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N),
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")

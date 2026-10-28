@@ -178,7 +178,7 @@ class FSIProblem(problem_base):
         self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "no_slip")  # no_slip, slip
         self.fsi_kinematic_quantity = self.coupling_params.get("fsi_kinematic_quantity", "displacement")  # displacement, velocity
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann")  # neumann_neumann, neumann_dirichlet
-        self.fsi_traction_timepoints = self.coupling_params.get("fsi_traction_timepoints", "endpoint")  # endpoint, midpoint
+        self.fsi_traction_timepoints = self.coupling_params.get("fsi_traction_timepoints", "midpoint")  # midpoint, endpoint
         self.fluid_solid_surface_tension = self.coupling_params.get("fluid_solid_surface_tension", {})  # only for multiphase FSI
 
     def get_problem_var_list(self):
@@ -309,6 +309,15 @@ class FSIProblem(problem_base):
             self.rows_fs = self.fdofs_solid_global_sub.getIndices()
             self.cols_fs = self.fdofs_fluid_global_sub.getIndices()
 
+            # reaction forces on fluid side - need to be defined here since restart routine has to know them
+            self.r_reac_on_fluid = self.usf.x.petsc_vec.copy()
+            with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
+            # t_{n+1} and t_{n} old state for midpoint traction evaluation
+            self.r_reac_on_fluid_np = self.usf.x.petsc_vec.copy()
+            with self.r_reac_on_fluid_np.localForm() as r_local: r_local.set(0.0)
+            self.r_reac_on_fluid_old = self.usf.x.petsc_vec.copy()
+            with self.r_reac_on_fluid_old.localForm() as r_local: r_local.set(0.0)
+
         if self.fsi_system == "neumann_neumann":
             if self.fsi_kinematic_coupling=="no_slip":  # positive on solid, negative on fluid (actio = reactio)
                 self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -325,10 +334,9 @@ class FSIProblem(problem_base):
 
             if self.fsi_traction_timepoints == "endpoint":
                 # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
-                # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
                 self.pbs.weakform_u += self.work_coupling_solid
                 self.pbf.weakform_v += self.power_coupling_fluid
-            elif self.fsi_traction_timepoints == "midpoint":
+            elif self.fsi_traction_timepoints == "midpoint":  # more consistent if different time schemes are used for solid and fluid (with different midpoints)
                 # may opt for midpoint of single-field time integrators...
                 self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
                 self.pbf.weakform_v += self.pbf.timefac * self.power_coupling_fluid + (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
@@ -529,14 +537,6 @@ class FSIProblem(problem_base):
             # solid reaction forces
             self.r_reac_sol = fem.petsc.assemble_vector(self.pbs.res_u)
             with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
-            # reaction forces on fluid side
-            self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
-            with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
-            # t_{n+1} and t_{n} old state for midpoint traction evaluation
-            self.r_reac_on_fluid_np = fem.petsc.assemble_vector(self.pbf.res_v)
-            with self.r_reac_on_fluid_np.localForm() as r_local: r_local.set(0.0)
-            self.r_reac_on_fluid_old = fem.petsc.assemble_vector(self.pbf.res_v)
-            with self.r_reac_on_fluid_old.localForm() as r_local: r_local.set(0.0)
 
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
@@ -746,6 +746,8 @@ class FSIProblem(problem_base):
 
                 self.Diag_sol.transposeMatMult(self.K_up_work, result=self.K_vps)
                 self.K_vps.assemble()
+                if self.fsi_traction_timepoints == "midpoint":
+                    self.K_vps.scale(fac2)
 
         if self.fsi_interface_motion=="solid_governed":
             # do stiffness from Dirichlet conditions solid-to-ALE
@@ -1007,9 +1009,8 @@ class FSIProblem(problem_base):
         # read restart information
         self.pbs.read_restart(sname, N)
         self.pbfa.read_restart(sname, N)
-        if self.fsi_system == "neumann_neumann":
-            if N > 0:
-                self.io_field.readcheckpoint(N)
+        if N > 0:
+            self.io_field.readcheckpoint(N)
 
     def evaluate_initial(self):
         self.pbs.evaluate_initial()
@@ -1072,8 +1073,7 @@ class FSIProblem(problem_base):
     def write_restart(self, sname, N, force=False):
         self.pbs.write_restart(sname, N, force=force)
         self.pbfa.write_restart(sname, N, force=force)
-        if self.fsi_system == "neumann_neumann":
-            self.io_field.write_restart(N, force=force)
+        self.io_field.write_restart(N, force=force)
 
     def check_abort(self, t):
         return False

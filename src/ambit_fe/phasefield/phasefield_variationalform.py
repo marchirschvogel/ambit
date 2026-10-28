@@ -93,6 +93,10 @@ class variationalform(variationalform_base):
     ):
         return sc * ufl.dot(tau_m * ufl.dot(ufl.grad(self.var_phi), v), res_phi_strong) * ddomain
 
+    def stab_rbvms_chcoup(self, sc, phi, rho, res_v_strong, tau_m, ddomain, w=None, F=None, chi=None):
+        rho_ = self.get_density(rho, chi=chi)
+        return sc * tau_m * (phi/rho_) * ufl.dot(ufl.grad(self.var_phi), res_v_strong) * ddomain
+
     def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
         return tau_cip * ufl.jump(Jflux, self.n0) * ufl.jump(-Mob * ufl.grad(var_), self.n0) * dboundary
 
@@ -187,6 +191,11 @@ class variationalform_ale(variationalform):
     ):
         # NOTE: J=det(F) already included in res_phi_strong
         return sc * ufl.dot(tau_m * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), v-w), res_phi_strong) * ddomain
+
+    def stab_rbvms_chcoup(self, sc, phi, rho, res_v_strong, tau_m, ddomain, w=None, F=None, chi=None):
+        # NOTE: J=det(F) already included in res_v_strong
+        rho_ = self.get_density(rho, chi=chi)
+        return sc * tau_m * (phi/rho_) * ufl.dot(ufl.inv(F).T*ufl.grad(self.var_phi), res_v_strong) * ddomain
 
     def stab_cip(self, tau_cip, Jflux, Mob, dboundary, var_, F=None):
         J = ufl.det(F)

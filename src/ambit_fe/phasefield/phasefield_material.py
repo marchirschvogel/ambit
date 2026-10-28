@@ -23,6 +23,40 @@ class materiallaw_potential:
 
         return ufl.diff(psi,self.phi), psi
 
+    def mat_flory_huggins_regularized(self, params):
+        theta, theta0 = params["theta"], params["theta0"]
+        delta = params["delta"]
+        assert(self.a==-1.0)
+        assert(self.b==1.0)
+
+        assert(theta0 - theta >= 0.0)  # requirement for double-well potential
+        assert(theta0/theta <= 1.0/(delta*(2.0-delta)))  # convexity condition
+
+        def psi_1(s):
+            return (theta0/2.0) * (1.0 - s**2.0)
+
+        def psi_2(s):
+            return (theta/2.0) * ((1.0 - s)*ufl.ln((1.0 - s)/2.0) + (1.0 + s)*ufl.ln((1.0 + s)/2.0))
+
+        def dpsi_2(s):
+            return (theta / 2.0) * ufl.ln((1.0 + s) / (1.0 - s))
+        def d2psi_2(s):
+            return theta / (1.0 - s**2)
+
+        s_lo = -1.0 + delta
+        s_hi =  1.0 - delta
+
+        psi = ufl.conditional(
+            ufl.ge(self.phi, s_hi),
+            psi_2(s_hi) + dpsi_2(s_hi) * (self.phi - s_hi) + 0.5 * d2psi_2(s_hi) * (self.phi - s_hi)**2.0,
+            ufl.conditional(ufl.le(self.phi, s_lo),
+                psi_2(s_lo) + dpsi_2(s_lo) * (self.phi - s_lo) + 0.5 * d2psi_2(s_lo) * (self.phi - s_lo)**2.0,
+                psi_2(self.phi)
+            )
+        )
+
+        return ufl.diff(psi,self.phi), psi
+
 
 class materiallaw_flux:
     def __init__(self, mu, phi, a=0.0, b=1.0):

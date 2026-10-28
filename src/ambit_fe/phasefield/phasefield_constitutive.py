@@ -53,6 +53,10 @@ class constitutive:
                 dpsi_dphi_, psi_ = mat.mat_ginzburg_landau(value)
                 dpsi_dphi += dpsi_dphi_
                 psi += psi_
+            elif key == "flory_huggins_regularized":
+                dpsi_dphi_, psi_ = mat.mat_flory_huggins_regularized(value)
+                dpsi_dphi += dpsi_dphi_
+                psi += psi_
             else:
                 raise NameError("Unknown Cahn-Hilliard material law for potential '%s'!" % (key))
 

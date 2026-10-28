@@ -69,12 +69,12 @@ class IO_scatra(IO_field):
     def readcheckpoint(self, N_rest):
         vecs_to_read = {}
         for i in range(self.pb.num_species):
-            vecs_to_read[self.pb.c["c" + str(i+1)]] = "c" + str(i+1)
-            vecs_to_read[self.pb.c_old["c" + str(i+1)]] = "c_old" + str(i+1)
-            vecs_to_read[self.pb.c_veryold[i]] = "c_veryold" + str(i+1)  # for BDF2 scheme
-            vecs_to_read[self.pb.cdot_old[i]] = "cdot_old" + str(i+1)
+            vecs_to_read["c" + str(i+1)] = self.pb.c["c" + str(i+1)].x.petsc_vec
+            vecs_to_read["c_old" + str(i+1)] = self.pb.c_old["c" + str(i+1)].x.petsc_vec
+            vecs_to_read["c_veryold" + str(i+1)] = self.pb.c_veryold[i].x.petsc_vec # for BDF2 scheme
+            vecs_to_read["cdot_old" + str(i+1)] = self.pb.cdot_old[i].x.petsc_vec
 
-        for key in vecs_to_read:
+        for key, value in vecs_to_read.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -85,7 +85,7 @@ class IO_scatra(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + "_"
@@ -94,26 +94,27 @@ class IO_scatra(IO_field):
                     "r",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.load(viewer)
-                key.x.petsc_vec.ghostUpdate(
+                value.load(viewer)
+                value.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.readfunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_read[key]
+                    + key
                     + "_"
                     + str(N_rest)
                     + ".txt",
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")
@@ -121,12 +122,12 @@ class IO_scatra(IO_field):
     def writecheckpoint(self, N):
         vecs_to_write = {}
         for i in range(self.pb.num_species):
-            vecs_to_write[self.pb.c["c" + str(i+1)]] = "c" + str(i+1)
-            vecs_to_write[self.pb.c_old["c" + str(i+1)]] = "c_old" + str(i+1)
-            vecs_to_write[self.pb.c_veryold[i]] = "c_veryold" + str(i+1)
-            vecs_to_write[self.pb.cdot_old[i]] = "cdot_old" + str(i+1)
+            vecs_to_write["c" + str(i+1)] = self.pb.c["c" + str(i+1)].x.petsc_vec
+            vecs_to_write["c_old" + str(i+1)] = self.pb.c_old["c" + str(i+1)].x.petsc_vec
+            vecs_to_write["c_veryold" + str(i+1)] = self.pb.c_veryold[i].x.petsc_vec
+            vecs_to_write["cdot_old" + str(i+1)] = self.pb.cdot_old[i].x.petsc_vec
 
-        for key in vecs_to_write:
+        for key, value in vecs_to_write.items():
             if self.pb.io.restart_io_type == "petscvector":
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
@@ -137,7 +138,7 @@ class IO_scatra(IO_field):
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N)
                     + "_"
@@ -146,21 +147,22 @@ class IO_scatra(IO_field):
                     "w",
                     self.pb.comm,
                 )
-                key.x.petsc_vec.view(viewer)
+                value.view(viewer)
                 viewer.destroy()
             elif self.pb.io.restart_io_type == "plaintext":  # only working for nodal fields!
+                raise RuntimeError("Plain text checkpointing currently disabled! Do we really need it?!")
                 self.writefunction(
-                    key,
+                    value,
                     self.pb.io.output_path
                     + "/checkpoint_"
                     + self.pb.pbase.simname
                     + "_"
                     + self.pb.problem_physics
                     + "_"
-                    + vecs_to_write[key]
+                    + key
                     + "_"
                     + str(N),
-                    filetype='plaintext',
+                    filetype="plaintext",
                 )
             else:
                 raise ValueError("Unknown restart_io_type!")

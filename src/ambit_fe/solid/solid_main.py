@@ -1601,7 +1601,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1636,7 +1636,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1679,7 +1679,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
@@ -1745,7 +1745,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.dt.value):
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
                     mode = "wt"
                 else:
                     mode = "a"
