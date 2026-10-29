@@ -424,6 +424,9 @@ class FSIProblem(problem_base):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
                     self.dbc_dofs_fluid_global.append( meshutils.get_index_set(self.pbf.V_v, self.comm, pb=self.pbf, identifier=self.pbf.bc_dict["dirichlet"][k]["id"], codim=self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.mesh.topology.dim-1), sub=sub, mask_owned=False) )
+                # additionally include ALE to fluid DBCs
+                if bool(self.pbfa.coupling_ale_fluid):
+                    self.dbc_dofs_fluid_global.append(self.pbfa.fdofs_ale_fluid)
                 dbcs_dofs_fluid_all = []
                 for k in range(len(self.dbc_dofs_fluid_global)):
                     dbcs_dofs_fluid_all.append( self.dbc_dofs_fluid_global[k].allGather().array )
@@ -609,7 +612,7 @@ class FSIProblem(problem_base):
 
     def assemble_residual_coupling(self, t, subsolver=None):
         if self.fsi_system == "neumann_dirichlet":
-            self.evaluate_residual_dbc_coupling() # prior to solid residual assemble!
+            self.evaluate_residual_dbc_coupling()  # prior to solid residual assemble!
 
         if self.fsi_system == "neumann_neumann":
             with self.r_l.localForm() as r_local:

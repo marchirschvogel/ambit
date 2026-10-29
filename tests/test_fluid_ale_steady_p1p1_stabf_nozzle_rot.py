@@ -73,7 +73,7 @@ def test_main():
             pmax = 0.001
             t_ramp = CONTROL_PARAMS["maxtime"]
             return 0.5 * (-(pmax)) * (1.0 - np.cos(np.pi * t / t_ramp))
-        def tc2(self, t):
+        def tc2(self, t):  # not used...
             l_i = 100.
             l_o = 150.
             h_i = 100.
@@ -81,16 +81,40 @@ def test_main():
             val = -(l_i+l_o + h_i/2. + h_o/2.)
             return val*t/CONTROL_PARAMS["maxtime"]
 
+    # impose a time-dependent rigid-body rotation about xc
+    class expression1:
+        def __init__(self):
+            self.t = 0.0
+
+        def evaluate(self, x):
+            phi = (np.pi/2.) * self.t/CONTROL_PARAMS["maxtime"]
+
+            Qrot = np.array([[ np.cos(phi), np.sin(phi), 0.0],
+                             [-np.sin(phi), np.cos(phi), 0.0],
+                             [0.0,          0.0,         1.0]])
+
+            xc = np.array([0.0, -50.0, 0.0])
+            d_rigid = (Qrot - np.eye(3)) @ (x - xc[:, None])
+
+            return (
+                np.full(x.shape[1], d_rigid[0]),
+                np.full(x.shape[1], d_rigid[1]),
+            )
 
     BC_DICT_FLUID = {
         "neumann" : [{"id" : [1], "dir":"normal_cur", "curve":1}], # inlet
     }
 
 
-    BC_DICT_ALE = { # point DBCs
+    # BC_DICT_ALE = { # point DBCs
+    #     "dirichlet": [
+    #         {"id": [1], "dir": "all", "val": 0., "codimension":0},
+    #         {"id": [2], "dir": "y", "curve": 2, "codimension":0},
+    #     ]
+    # }
+    BC_DICT_ALE = { # full boundary
         "dirichlet": [
-            {"id": [1], "dir": "all", "val": 0., "codimension":0},
-            {"id": [2], "dir": "y", "curve": 2, "codimension":0},
+            {"id": [1,2,3,5,6], "dir": "all", "expression": expression1},
         ]
     }
 
@@ -119,10 +143,10 @@ def test_main():
     v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 8.5378522799288383E+00  # x
-    v_corr[1] = -4.4531337037709484E+00  # y
+    v_corr[0] = 8.4315146297064150E+00  # x
+    v_corr[1] = -5.4803851120022689E+00  # y
 
-    p_corr[0] = -1.4697266781934673E-07
+    p_corr[0] = -1.4690768835793883E-07
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
