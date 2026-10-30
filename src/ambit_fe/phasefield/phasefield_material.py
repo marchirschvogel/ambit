@@ -46,7 +46,7 @@ class materiallaw_potential:
         s_lo = -1.0 + delta
         s_hi =  1.0 - delta
 
-        psi = ufl.conditional(
+        psi_2_reg = ufl.conditional(
             ufl.ge(self.phi, s_hi),
             psi_2(s_hi) + dpsi_2(s_hi) * (self.phi - s_hi) + 0.5 * d2psi_2(s_hi) * (self.phi - s_hi)**2.0,
             ufl.conditional(ufl.le(self.phi, s_lo),
@@ -54,6 +54,8 @@ class materiallaw_potential:
                 psi_2(self.phi)
             )
         )
+
+        psi = psi_1(self.phi) + psi_2_reg
 
         return ufl.diff(psi,self.phi), psi
 

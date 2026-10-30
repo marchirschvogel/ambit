@@ -4,6 +4,7 @@
 Two-phase flow FSI simulation of a collapsing water column against an elastic obstacle, surrounded by air
 Neumann-Neumann formulation (with Lagrange multiplier)
 BDF2 time-integration scheme for both fluid and phasefield
+Regularized Flory-Huggins potential of phase field
 Full RBVMS stabilization scheme
 Outer BGS4x4(S2x2-S3x3) preconditioner - direct solver used so far... TODO: Tune for better convergence!
 """
@@ -142,7 +143,7 @@ def test_main():
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True,
                                   "clip_phi_range": True,
                                   "smooth_clip": "cubic", # cubic, quintic, cos
-                                  "epsilon_clip": 1e-1} # 1e-2
+                                  "epsilon_clip": 1e-1}
 
     # fluid1 is air, fluid2 is water
     rho1 = 1e0
@@ -179,9 +180,13 @@ def test_main():
                                                              "exponent": 2.0,
                                                              "truncate": False,
                                                              "mobility": "degenerate"}},
-                            "potential": {"ginzburg_landau": {"D": sigtilde/(4.*eps),
-                                                              "kappa": sigtilde*eps}},
-                                                              "id": 1}}
+                            # "potential": {"ginzburg_landau": {"D": sigtilde/(4.*eps),
+                            #                                   "kappa": sigtilde*eps}},
+                            "potential": {"flory_huggins_regularized": {"theta": 1.24*sigtilde/(4.*eps),
+                                                                        "theta0": 3.*1.24*sigtilde/(4.*eps),
+                                                                        "kappa": sigtilde*eps,
+                                                                        "delta": 1e-3}},
+                            "id": 1}}
 
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": 1}}
 
@@ -235,11 +240,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -2.6777353339667551E-06  # x
-    u_corr[1] = -3.5464541579708622E-05  # y
+    u_corr[0] = -2.6766121781376334E-06  # x
+    u_corr[1] = -3.5463749572094263E-05  # y
 
-    v_corr[0] = -1.6420124719255034E-03  # x
-    v_corr[1] = -2.1956724501799068E-02  # y
+    v_corr[0] = -1.6413301374087128E-03  # x
+    v_corr[1] = -2.1956333686729189E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,
