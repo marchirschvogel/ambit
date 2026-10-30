@@ -1404,11 +1404,10 @@ class FluidmechanicsProblem(problem_base):
             assert "neumann_prestress" not in self.bc_dict.keys()
 
         # now take care of body forces - collect forces first, later dot with test function and integrate over domain (since forces can enter strong residual expressions in case of residual-based stabilization)
-
-        f_body, f_body_old, f_body_mid = [], [], []
+        self.f_body, f_body_old, f_body_mid = [], [], []
         for n, M in enumerate(self.domain_ids):
             if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                f_body.append(self.bc.bodyforce(
+                self.f_body.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho[n],
@@ -1439,14 +1438,14 @@ class FluidmechanicsProblem(problem_base):
                     return_type="strong",
                 ))
             else:
-                f_body.append(ufl.constantvalue.zero(self.dim))
+                self.f_body.append(ufl.constantvalue.zero(self.dim))
                 f_body_old.append(ufl.constantvalue.zero(self.dim))
                 f_body_mid.append(ufl.constantvalue.zero(self.dim))
 
         # now calculate body force virtual work
         for n, M in enumerate(self.domain_ids):
             if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                w_body += ufl.dot(f_body[n], self.var_v) * self.dx(M)
+                w_body += ufl.dot(self.f_body[n], self.var_v) * self.dx(M)
                 w_body_old += ufl.dot(f_body_old[n], self.var_v) * self.dx(M)
                 w_body_mid += ufl.dot(f_body_mid[n], self.var_v) * self.dx(M)
 
@@ -1614,7 +1613,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
-                                f_body[n],
+                                self.f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
@@ -1657,7 +1656,7 @@ class FluidmechanicsProblem(problem_base):
                                 self.rho[n],
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
-                            ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"]) - f_body[n]
+                            ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"]) - self.f_body[n]
                             self.residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
@@ -1684,7 +1683,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
-                                f_body[n],
+                                self.f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
@@ -1753,7 +1752,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
-                                f_body[n],
+                                self.f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 chi=self.phasevar["chi"],
@@ -1825,7 +1824,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
-                                f_body[n],
+                                self.f_body[n],
                                 F=self.alevar["Fale"],
                             )
                             self.residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
@@ -2325,54 +2324,11 @@ class FluidmechanicsProblem(problem_base):
                 else:
                     mode = "a"
                 fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_internalpower.txt",
+                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_internal_power.txt",
                     mode,
                 )
                 fp.write("%.16E %.16E\n" % (t, internal_power))
                 fp.close()
-
-    # computes the total strain energy and internal power of a membrane (reduced) solid model
-    def compute_strain_energy_power_membrane(self, N, t):
-        se_mem_all, ip_mem_all = ufl.as_ufl(0), ufl.as_ufl(0)
-        for nm in range(len(self.bc_dict["membrane"])):
-            internal = self.bc_dict["membrane"][nm].get("internal", False)
-
-            if internal:
-                fcts = self.bc_dict["membrane"][nm].get("facet_side", "+")
-                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
-                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
-            else:
-                se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
-                ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
-
-        se_mem = fem.assemble_scalar(fem.form(se_mem_all, entity_maps=self.io.entity_maps))
-        se_mem = self.comm.allgather(se_mem)
-        strain_energy_mem = sum(se_mem)
-
-        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all, entity_maps=self.io.entity_maps))
-        ip_mem = self.comm.allgather(ip_mem)
-        internal_power_mem = sum(ip_mem)
-
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                if "strainenergy_membrane" in self.results_to_write:
-                    fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_strainenergy_membrane.txt",
-                        mode,
-                    )
-                    fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
-                    fe.close()
-                if "internalpower_membrane" in self.results_to_write:
-                    fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_internalpower_membrane.txt",
-                        mode,
-                    )
-                    fp.write("%.16E %.16E\n" % (t, internal_power_mem))
-                    fp.close()
 
     def compute_mass_conservation(self, N, t):
         mass_form = ufl.as_ufl(0)
@@ -2419,6 +2375,102 @@ class FluidmechanicsProblem(problem_base):
                 )
                 fp.write("%.16E %.16E\n" % (t, dissipation))
                 fp.close()
+
+    def compute_kinetic_energy(self, N, t):
+        if self.is_ale:
+            J = ufl.det(self.alevar["Fale"])
+        else:
+            J = 1.0
+        e_kin_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            rho_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU"])
+            e_kin_all += 0.5 * J * rho_ * ufl.dot(self.v, self.v) * self.dx(M)
+
+        e_kin = fem.assemble_scalar(fem.form(e_kin_all, entity_maps=self.io.entity_maps))
+        e_kin = self.comm.allgather(e_kin)
+        energy_kin = sum(e_kin)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_kinetic_energy.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, energy_kin))
+                fp.close()
+
+    def compute_energy_bodyforce(self, N, t):
+        if self.is_ale:
+            d = self.alevar["d"]
+        else:
+            d = ufl.constantvalue.zero(self.dim)
+        e_body_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):  # NOTE: In ALE fluid, J is already in f_body
+            e_body_all += -ufl.dot(self.f_body[n], self.x_ref + d) * self.dx(M)
+
+        e_body = fem.assemble_scalar(fem.form(e_body_all, entity_maps=self.io.entity_maps))
+        e_body = self.comm.allgather(e_body)
+        energy_body = sum(e_body)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_energy_bodyforce.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, energy_body))
+                fp.close()
+
+    # computes the total strain energy and internal power of a membrane (reduced) solid model
+    def compute_strain_energy_power_membrane(self, N, t):
+        se_mem_all, ip_mem_all = ufl.as_ufl(0), ufl.as_ufl(0)
+        for nm in range(len(self.bc_dict["membrane"])):
+            internal = self.bc_dict["membrane"][nm].get("internal", False)
+
+            if internal:
+                fcts = self.bc_dict["membrane"][nm].get("facet_side", "+")
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
+                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
+            else:
+                se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
+                ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
+
+        se_mem = fem.assemble_scalar(fem.form(se_mem_all, entity_maps=self.io.entity_maps))
+        se_mem = self.comm.allgather(se_mem)
+        strain_energy_mem = sum(se_mem)
+
+        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all, entity_maps=self.io.entity_maps))
+        ip_mem = self.comm.allgather(ip_mem)
+        internal_power_mem = sum(ip_mem)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                if "strainenergy_membrane" in self.results_to_write:
+                    fe = open(
+                        self.io.output_path + "/results_" + self.pbase.simname + "_fluid_strain_energy_membrane.txt",
+                        mode,
+                    )
+                    fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
+                    fe.close()
+                if "internalpower_membrane" in self.results_to_write:
+                    fp = open(
+                        self.io.output_path + "/results_" + self.pbase.simname + "_fluid_internal_power_membrane.txt",
+                        mode,
+                    )
+                    fp.write("%.16E %.16E\n" % (t, internal_power_mem))
+                    fp.close()
 
     def compute_geometric_conservation_law(self, N, t):  # Not used so far...
         geocons = ufl.as_ufl(0)
@@ -3113,14 +3165,18 @@ class FluidmechanicsProblem(problem_base):
             )
         if self.have_robin_valve:
             self.evaluate_robin_valve(t, self.dp_)
-        if "internalpower" in self.results_to_write:
+        if "internal_power" in self.results_to_write:
             self.compute_power(N, t)
         if "membrane" in self.bc_dict.keys() and (
-            "strainenergy_membrane" in self.results_to_write or "internalpower_membrane" in self.results_to_write
+            "strain_energy_membrane" in self.results_to_write or "internal_power_membrane" in self.results_to_write
         ):
             self.compute_strain_energy_power_membrane(N, t)
         if "dissipation" in self.results_to_write:
             self.compute_energy_dissipation(N, t)
+        if "kinetic_energy" in self.results_to_write:
+            self.compute_kinetic_energy(N, t)
+        if "energy_bodyforce" in self.results_to_write:
+            self.compute_energy_bodyforce(N, t)
         # report mass conservation if requested
         if self.io.report_conservation_properties:
             self.compute_mass_conservation(N, t)

@@ -42,8 +42,10 @@ def test_main():
             "eastrain_principal",
             "jacobian",
             "fibers",
-            "strainenergy",
-            "internalpower",
+            "strain_energy",
+            "internal_power",
+            "strain_energy_local",
+            "internal_power_local",
         ],
         "simname": "solid_mat_uniax_hex_2field",
     }

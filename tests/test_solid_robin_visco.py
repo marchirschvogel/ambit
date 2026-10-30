@@ -32,7 +32,7 @@ def test_main():
         "write_restart_every": 1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["displacement","velocity","acceleration","cauchystress"],
+        "results_to_write": ["displacement", "velocity", "acceleration", "cauchystress", "kinetic_energy"],
         "simname": "solid_robin_visc",
         "output_midpoint": True,
     }

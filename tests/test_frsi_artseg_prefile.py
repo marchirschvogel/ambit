@@ -23,7 +23,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-quad_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-quad_boundary.xdmf",
-        "results_to_write": {"fluid": ["fluiddisplacement", "velocity", "pressure", "strainenergy_membrane", "internalpower_membrane"], "ale": ["aledisplacement", "alevelocity"]},
+        "results_to_write": {"fluid": ["fluiddisplacement", "velocity", "pressure", "strain_energy_membrane", "internal_power_membrane", "strain_energy_membrane_local", "internal_power_membrane_local"], "ale": ["aledisplacement", "alevelocity"]},
         "simname": "frsi_artseg_prefile",
     }
 

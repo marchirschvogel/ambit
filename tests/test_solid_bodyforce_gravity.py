@@ -30,7 +30,7 @@ def test_main():
         "write_restart_every": 1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["displacement", "velocity", "acceleration"],
+        "results_to_write": ["displacement", "velocity", "acceleration", "energy_bodyforce"],
         "simname": "solid_bodyforce_gravity",
     }
 

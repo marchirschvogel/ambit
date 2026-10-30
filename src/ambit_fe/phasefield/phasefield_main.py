@@ -731,6 +731,37 @@ class PhasefieldProblem(problem_base):
                 fp.write("%.16E %.16E\n" % (t, dissipation))
                 fp.close()
 
+    def compute_energy(self, N, t):
+        if self.is_ale:
+            F = self.alevar["Fale"]
+            J = ufl.det(F)
+        else:
+            F = ufl.Identity(self.dim)
+            J = 1.0
+        energ_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            energ_all += J * (
+                self.ma[n].driv_force(self.phi, returnquantity="pot")
+                + 0.5 * self.kappa[n] * ufl.dot(ufl.inv(F).T*ufl.grad(self.phi), ufl.inv(F).T*ufl.grad(self.phi))
+            ) * self.dx(M)
+
+        energ = fem.assemble_scalar(fem.form(energ_all, entity_maps=self.io.entity_maps))
+        energ = self.comm.allgather(energ)
+        energy = sum(energ)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_energy.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, energy))
+                fp.close()
+
     def compute_phase_volumes(self, N, t):
         if self.is_ale:
             J = ufl.det(self.alevar["Fale"])
@@ -940,6 +971,8 @@ class PhasefieldProblem(problem_base):
             self.compute_phasefield_conservation(N, t)
         if "dissipation" in self.results_to_write:
             self.compute_energy_dissipation(N, t)
+        if "energy" in self.results_to_write:
+            self.compute_energy(N, t)
         if "phasevolumes" in self.results_to_write:
             self.compute_phase_volumes(N, t)
 

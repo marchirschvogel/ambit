@@ -62,7 +62,7 @@ class constitutive:
 
         if returnquantity=="deriv":
             return dpsi_dphi
-        elif returnquantity=="doublewell":
+        elif returnquantity=="pot":
             return psi
         else:
             raise ValueError("Unknown returnquantity!")

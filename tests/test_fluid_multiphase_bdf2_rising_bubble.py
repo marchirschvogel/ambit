@@ -31,7 +31,7 @@ def test_main():
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[32,64]},
-        "results_to_write": {"fluid": ["velocity", "pressure", "acceleration", "cauchystress", "density", "dissipation"],
+        "results_to_write": {"fluid": ["velocity", "pressure", "acceleration", "cauchystress", "density", "dissipation", "kinetic_energy"],
                              "phasefield": ["phase", "potential", "dissipation"]},
         "simname": "fluid_multiphase_rising_bubble",
         "write_initial_fields": True,

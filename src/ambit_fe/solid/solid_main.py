@@ -1077,30 +1077,45 @@ class SolidmechanicsProblem(problem_base):
         else:
             assert "neumann_prestress" not in self.bc_dict.keys()
 
-        # now take care of body forces
+        # now take care of body forces - first store in f_body and then compute virtual work, since we might want to use f_body for energy/work computations
+        self.f_body, f_body_old, f_body_mid = [], [], []
         for n, M in enumerate(self.domain_ids):
             if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                w_body += self.bc.bodyforce(
+                self.f_body.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho0,
                     funcs_to_update=self.ti.funcs_to_update,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update,
-                )
-                w_body_old += self.bc.bodyforce(
+                    return_type="strong",
+                ))
+                f_body_old.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho0,
                     funcs_to_update=self.ti.funcs_to_update_old,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-                )
-                w_body_mid += self.bc.bodyforce(
+                    return_type="strong",
+                ))
+                f_body_mid.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho0,
                     funcs_to_update=self.ti.funcs_to_update_mid,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-                )
+                    return_type="strong",
+                ))
+            else:
+                self.f_body.append(ufl.constantvalue.zero(self.dim))
+                f_body_old.append(ufl.constantvalue.zero(self.dim))
+                f_body_mid.append(ufl.constantvalue.zero(self.dim))
+
+        # now calculate body force virtual work
+        for n, M in enumerate(self.domain_ids):
+            if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                w_body += ufl.dot(self.f_body[n], self.var_u) * self.dx(M)
+                w_body_old += ufl.dot(f_body_old[n], self.var_u) * self.dx(M)
+                w_body_mid += ufl.dot(f_body_mid[n], self.var_u) * self.dx(M)
 
         self.deltaW_ext = w_neumann + w_body + w_robin + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_membrane_old
@@ -1610,6 +1625,29 @@ class SolidmechanicsProblem(problem_base):
                 f.write("%.16E %.16E\n" % (t, self.growth_rate))
                 f.close()
 
+    # computes the solid's kinetic energy
+    def compute_kinetic_energy(self, N, t):
+        e_kin_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            e_kin_all += 0.5 * self.rho0[n] * ufl.dot(self.vel, self.vel) * self.dx(M)
+
+        e_kin = fem.assemble_scalar(fem.form(e_kin_all, entity_maps=self.io.entity_maps))
+        e_kin = self.comm.allgather(e_kin)
+        energy_kin = sum(e_kin)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_solid_kinetic_energy.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, energy_kin))
+                fp.close()
+
     # computes the solid's total strain energy and internal power
     def compute_strain_energy_power(self, N, t):
         se_all, ip_all = ufl.as_ufl(0), ufl.as_ufl(0)
@@ -1642,18 +1680,40 @@ class SolidmechanicsProblem(problem_base):
                     mode = "a"
                 if "strainenergy" in self.results_to_write:
                     fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_strainenergy.txt",
+                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy.txt",
                         mode,
                     )
                     fe.write("%.16E %.16E\n" % (t, strain_energy))
                     fe.close()
                 if "internalpower" in self.results_to_write:
                     fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_internalpower.txt",
+                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power.txt",
                         mode,
                     )
                     fp.write("%.16E %.16E\n" % (t, internal_power))
                     fp.close()
+
+    def compute_energy_bodyforce(self, N, t):
+        e_body_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            e_body_all += -ufl.dot(self.f_body[n], self.x_ref + self.u) * self.dx(M)
+
+        e_body = fem.assemble_scalar(fem.form(e_body_all, entity_maps=self.io.entity_maps))
+        e_body = self.comm.allgather(e_body)
+        energy_body = sum(e_body)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t, self.io.write_results_every*self.dt.value):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.io.output_path + "/results_" + self.pbase.simname + "_solid_energy_bodyforce.txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, energy_body))
+                fp.close()
 
     # computes the total strain energy and internal power of a membrane (reduced) solid model
     def compute_strain_energy_power_membrane(self, N, t):
@@ -1685,14 +1745,14 @@ class SolidmechanicsProblem(problem_base):
                     mode = "a"
                 if "strainenergy_membrane" in self.results_to_write:
                     fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_strainenergy_membrane.txt",
+                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy_membrane.txt",
                         mode,
                     )
                     fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
                     fe.close()
                 if "internalpower_membrane" in self.results_to_write:
                     fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_internalpower_membrane.txt",
+                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power_membrane.txt",
                         mode,
                     )
                     fp.write("%.16E %.16E\n" % (t, internal_power_mem))
@@ -2098,13 +2158,16 @@ class SolidmechanicsProblem(problem_base):
         # compute the growth rate (has to be called before update_timestep)
         if any(self.mat_growth):
             self.compute_solid_growth_rate(N, t)
-        if "strainenergy" in self.results_to_write or "internalpower" in self.results_to_write:
+        if "kinetic_energy" in self.results_to_write:
+            self.compute_kinetic_energy(N, t)
+        if "strain_energy" in self.results_to_write or "internal_power" in self.results_to_write:
             self.compute_strain_energy_power(N, t)
+        if "energy_bodyforce" in self.results_to_write:
+            self.compute_energy_bodyforce(N, t)
         if "membrane" in self.bc_dict.keys() and (
-            "strainenergy_membrane" in self.results_to_write or "internalpower_membrane" in self.results_to_write
+            "strain_energy_membrane" in self.results_to_write or "internal_power_membrane" in self.results_to_write
         ):
             self.compute_strain_energy_power_membrane(N, t)
-
         if self.have_diffusion:
             self.pbscat.evaluate_post_solve(t, N)
 

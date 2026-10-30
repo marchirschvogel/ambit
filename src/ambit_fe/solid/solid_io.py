@@ -17,7 +17,7 @@ from ..ioroutines import IO_field
 class IO_solid(IO_field):
     def __init__(self, pb):
         self.pb = pb
-        self.results_pre = ["fibers"]
+        self.results_pre = ["fibers", "kinetic_energy", "strain_energy", "energy_bodyforce", "internal_power", "strain_energy_membrane", "internal_power_membrane"]
 
     def write_output(self, writemesh=False, N=1, t=0):
         if self.pb.io.indicate_results_by == "time":
@@ -196,7 +196,7 @@ class IO_solid(IO_field):
                         )
                         cauchystress_membrane_principal_out.interpolate(self.cauchystress_membrane_principal)
                         self.pb.resultsfiles[res].write_function(cauchystress_membrane_principal_out, indicator)
-                    elif res == "strainenergy_membrane":
+                    elif res == "strain_energy_membrane_local":
                         sefuncs = []
                         for n in range(len(self.pb.bstrainenergy)):
                             sefuncs.append(self.pb.bstrainenergy[n])
@@ -212,7 +212,7 @@ class IO_solid(IO_field):
                         strainenergy_membrane_out = fem.Function(self.pb.V_out_scalar, name=strainenergy_membrane.name)
                         strainenergy_membrane_out.interpolate(strainenergy_membrane)
                         self.pb.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
-                    elif res == "internalpower_membrane":
+                    elif res == "internal_power_membrane_local":
                         pwfuncs = []
                         for n in range(len(self.pb.bintpower)):
                             pwfuncs.append(self.pb.bintpower[n])
@@ -439,7 +439,7 @@ class IO_solid(IO_field):
                         eastrain_principal_out = fem.Function(self.pb.V_out_vector, name=eastrain_principal.name)
                         eastrain_principal_out.interpolate(eastrain_principal)
                         self.pb.resultsfiles[res].write_function(eastrain_principal_out, indicator)
-                    elif res == "strainenergy":
+                    elif res == "strain_energy_local":
                         if self.pb.io.output_midpoint:
                             u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
@@ -467,7 +467,7 @@ class IO_solid(IO_field):
                         se_out = fem.Function(self.pb.V_out_scalar, name=se.name)
                         se_out.interpolate(se)
                         self.pb.resultsfiles[res].write_function(se_out, indicator)
-                    elif res == "internalpower":
+                    elif res == "internal_power_local":
                         if self.pb.io.output_midpoint:
                             u, v, pp, ivars = self.pb.us_mid, self.pb.vel_mid, self.pb.pressures_mid, self.pb.internalvars_mid
                         else:
@@ -596,6 +596,24 @@ class IO_solid(IO_field):
                         self.pb.resultsfiles[res].write_function(tau_out, indicator)
                     elif res == "fibers":
                         # written only once at the beginning, not after each time step (since constant in time)
+                        pass
+                    elif res == "kinetic_energy":
+                        # only global output supported, not as field
+                        pass
+                    elif res == "strain_energy":
+                        # global output - use strain_energy_local for distributed version
+                        pass
+                    elif res == "energy_bodyforce":
+                        # only global output supported, not as field
+                        pass
+                    elif res == "internal_power":
+                        # global output - use internal_power_local for distributed version
+                        pass
+                    elif res == "strain_energy_membrane":
+                        # global output - use strain_energy_membrane_local for distributed version
+                        pass
+                    elif res == "internal_power_membrane":
+                        # global output - use internal_power_membrane_local for distributed version
                         pass
                     else:
                         raise NameError("Unknown output to write for solid mechanics!")

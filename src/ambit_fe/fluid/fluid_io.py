@@ -16,7 +16,7 @@ from ..ioroutines import IO_field
 class IO_fluid(IO_field):
     def __init__(self, pb):
         self.pb = pb
-        self.results_pre = ["fibers", "dissipation"]
+        self.results_pre = ["fibers", "dissipation", "kinetic_energy", "energy_bodyforce", "internal_power", "strain_energy_membrane", "internal_power_membrane"]
 
     def write_output(self, writemesh=False, N=1, t=0):
         if self.pb.io.indicate_results_by == "time":
@@ -157,7 +157,7 @@ class IO_fluid(IO_field):
                         cauchystress_membrane_out = fem.Function(self.pb.V_out_tensor, name=cauchystress_membrane.name)
                         cauchystress_membrane_out.interpolate(cauchystress_membrane)
                         self.pb.resultsfiles[res].write_function(cauchystress_membrane_out, indicator)
-                    elif res == "strainenergy_membrane":
+                    elif res == "strain_energy_membrane_local":
                         sefuncs = []
                         for n in range(len(self.pb.bstrainenergy)):
                             sefuncs.append(self.pb.bstrainenergy[n])
@@ -231,7 +231,7 @@ class IO_fluid(IO_field):
                             # a_out.interpolate(fem.Expression(afuncs[n], self.pb.V_out_scalar.element.interpolation_points), cells0=cells_n)
                             a_out.interpolate(fem.Expression(afuncs[n], self.pb.V_out_scalar.element.interpolation_points))
                         self.pb.resultsfiles[res].write_function(a_out, indicator)
-                    elif res == "internalpower_membrane":
+                    elif res == "internal_power_membrane_local":
                         pwfuncs = []
                         for n in range(len(self.pb.bintpower)):
                             pwfuncs.append(self.pb.bintpower[n])
@@ -247,7 +247,7 @@ class IO_fluid(IO_field):
                         internalpower_membrane_out = fem.Function(self.pb.V_out_scalar, name=internalpower_membrane.name)
                         internalpower_membrane_out.interpolate(internalpower_membrane)
                         self.pb.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
-                    elif res == "internalpower":
+                    elif res == "internal_power_local":
                         pwfuncs = []
                         for n in range(self.pb.num_domains):
                             pwfuncs.append(
@@ -270,6 +270,21 @@ class IO_fluid(IO_field):
                         self.pb.resultsfiles[res].write_function(pw_out, indicator)
                     elif res == "dissipation":
                         # only global output supported, not as field
+                        pass
+                    elif res == "kinetic_energy":
+                        # only global output supported, not as field
+                        pass
+                    elif res == "energy_bodyforce":
+                        # only global output supported, not as field
+                        pass
+                    elif res == "internal_power":
+                        # global output - use internal_power_local for distributed version
+                        pass
+                    elif res == "strain_energy_membrane":
+                        # global output - use strain_energy_membrane_local for distributed version
+                        pass
+                    elif res == "internal_power_membrane":
+                        # global output - use internal_power_membrane_local for distributed version
                         pass
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")

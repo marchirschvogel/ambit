@@ -24,7 +24,8 @@ def test_main():
         "results_to_write": [
             "displacement",
             "cauchystress_membrane_principal",
-            "strainenergy_membrane",
+            "strain_energy_membrane",
+            "strain_energy_membrane_local",
         ],
         "simname": "solid_membrane",
     }
