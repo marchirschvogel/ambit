@@ -41,18 +41,17 @@ class materiallaw_potential:
         def dpsi_2(s):
             return (theta / 2.0) * ufl.ln((1.0 + s) / (1.0 - s))
         def d2psi_2(s):
-            return theta / (1.0 - s**2)
+            return theta / (1.0 - s**2.0)
 
-        s_lo = -1.0 + delta
-        s_hi =  1.0 - delta
+        phi_bar = ufl.max_value(
+            -1.0 + delta,
+            ufl.min_value(self.phi, 1.0 - delta)
+        )
 
-        psi_2_reg = ufl.conditional(
-            ufl.ge(self.phi, s_hi),
-            psi_2(s_hi) + dpsi_2(s_hi) * (self.phi - s_hi) + 0.5 * d2psi_2(s_hi) * (self.phi - s_hi)**2.0,
-            ufl.conditional(ufl.le(self.phi, s_lo),
-                psi_2(s_lo) + dpsi_2(s_lo) * (self.phi - s_lo) + 0.5 * d2psi_2(s_lo) * (self.phi - s_lo)**2.0,
-                psi_2(self.phi)
-            )
+        psi_2_reg = (
+            psi_2(phi_bar)
+            + dpsi_2(phi_bar) * (self.phi - phi_bar)
+            + 0.5 * d2psi_2(phi_bar) * (self.phi - phi_bar)**2.0
         )
 
         psi = psi_1(self.phi) + psi_2_reg

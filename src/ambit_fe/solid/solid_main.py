@@ -1678,14 +1678,14 @@ class SolidmechanicsProblem(problem_base):
                     mode = "wt"
                 else:
                     mode = "a"
-                if "strainenergy" in self.results_to_write:
+                if "strain_energy" in self.results_to_write:
                     fe = open(
                         self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy.txt",
                         mode,
                     )
                     fe.write("%.16E %.16E\n" % (t, strain_energy))
                     fe.close()
-                if "internalpower" in self.results_to_write:
+                if "internal_power" in self.results_to_write:
                     fp = open(
                         self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power.txt",
                         mode,
@@ -1743,14 +1743,14 @@ class SolidmechanicsProblem(problem_base):
                     mode = "wt"
                 else:
                     mode = "a"
-                if "strainenergy_membrane" in self.results_to_write:
+                if "strain_energy_membrane" in self.results_to_write:
                     fe = open(
                         self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy_membrane.txt",
                         mode,
                     )
                     fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
                     fe.close()
-                if "internalpower_membrane" in self.results_to_write:
+                if "internal_power_membrane" in self.results_to_write:
                     fp = open(
                         self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power_membrane.txt",
                         mode,
