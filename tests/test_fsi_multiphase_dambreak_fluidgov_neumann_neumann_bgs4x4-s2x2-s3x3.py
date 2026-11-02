@@ -141,7 +141,7 @@ def test_main():
     }
 
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True,
-                                  "clip_phi_range": True,
+                                  "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},
                                   "smooth_clip": "cubic", # cubic, quintic, cos
                                   "epsilon_clip": 1e-1}
 

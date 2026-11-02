@@ -29,7 +29,8 @@ def main():
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
         "mesh_domain": {"type": "rectangle", "celltype": "quadrilateral", "coords_a": [0.0, 0.0], "coords_b": [1.0, 2.0], "meshsize": [128,256]}, # 32,64   64,128   128,256
         # which results to write
-        "results_to_write": {"fluid": ["velocity", "pressure", "density"], "phasefield": ["phase", "potential"]},
+        "results_to_write": {"fluid": ["velocity", "pressure", "density", "dissipation", "kinetic_energy", "energy_bodyforce"],
+                             "phasefield": ["phase", "potential",  "dissipation", "energy", "phasevolumes"]},
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
         "simname": "fluid_multiphase_rising_bubble"+str(case),
         # write the initial fields (e.g., the phase field, for visualization/checks)
@@ -41,7 +42,7 @@ def main():
     }
 
     # add elements in x direction to output name for distinction of results...
-    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0])
+    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0]) + "_NEWaffDinG_ost0.5m_ost0.5m_E"
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
     eps = 0.64*h # 1.28*h (ten Eikelder et al. (2024)), 0.64*h (Brunk and ten Eikelder (2026))
@@ -107,7 +108,7 @@ def main():
     """
     Parameters for the fluid mechanics time integration scheme
     """
-    TIME_PARAMS_FLUID = {"timint": "bdf2",
+    TIME_PARAMS_FLUID = {"timint": "ost",
                          "theta_ost": 0.5, # not used (only for OST timint)
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
@@ -117,7 +118,7 @@ def main():
     """
     Parameters for the Cahn-Hilliard time integration scheme
     """
-    TIME_PARAMS_PF = {"timint": "bdf2",
+    TIME_PARAMS_PF = {"timint": "ost",
                       "theta_ost": 0.5, # not used (only for OST timint)
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
                       "potential_at_midpoint": False} # irrelevant for BDF2 scheme
@@ -129,7 +130,7 @@ def main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 9,
-                        "momentum_formulation": "conservative",  # conservative Navier-Stokes formulation - mandatory for CH-NS
+                        "momentum_formulation": "energy_split",  # conservative Navier-Stokes formulation - mandatory for CH-NS
                         "continuity_formulation": "reduced",  # conservative (standard continuity), reduced (Brunk and ten Eikelder (2026) version, where continuity is partly consolidated with Cahn-Hilliard flux term) - give identical results
                        }
 
@@ -143,8 +144,8 @@ def main():
     Parameters that govern the coupling between fluid and phase field model
     """
     COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": False,  # get capillary force from divergence of Korteweg stress; if False, use "phi \grad mu" as bulk capillary "body" force (same in theory, but has impact if fluid carries Neumann boundary conditions - if the interface could exert a force on the fluid boundary)
-                       "clip_phi_range": True,  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
-                       "smooth_clip": "cubic",  # None, "cubic", "quintic" - how to smooth the clipped region in case "clip_phi_range" is True
+                       "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
+                       "smooth_clip": "cubic",  # None, "cubic", "quintic" - how to smooth the clipped region in case "clip_phi_param_eval" is True
                        "epsilon_clip": 1e-2}  # smoothing parameter ("smooth_clip":None is reproduced for epsilon --> 0)
 
     # fluid1 is surrounding, fluid2 is bubble

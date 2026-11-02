@@ -292,6 +292,17 @@ def check_params_coupling_fsi_fluid_ale(params):
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in fluid-ALE coupling params: " + k)
 
+def check_params_coupling_fluid_multiphase(params):
+    valid_params = [
+        "capillary_force_from_korteweg_stress",
+        "clip_phi_param_eval",
+        "epsilon_clip",
+        "smooth_clip",
+    ]
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in multiphase fluid coupling params: " + k)
 
 def check_params_rom(params):
     valid_params = [

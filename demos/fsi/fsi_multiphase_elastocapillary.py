@@ -205,7 +205,7 @@ def main():
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True,
-                                  "clip_phi_range": True,
+                                  "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "viscosity": True},
                                   "smooth_clip": "cubic",
                                   "epsilon_clip": 1e-3}
 

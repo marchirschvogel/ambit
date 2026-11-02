@@ -88,7 +88,7 @@ def test_main():
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": False,
-                                  "clip_phi_range": True,
+                                  "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},
                                   "smooth_clip": "cubic",
                                   "epsilon_clip": 1e-2}
 
