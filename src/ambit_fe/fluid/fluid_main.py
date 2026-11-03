@@ -611,7 +611,7 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chi_mid"], self.phasevar["chiU_mid"] = None, None
             self.phasevar["chi_veryold"], self.phasevar["chiU_veryold"] = None, None
             self.chi_mdt, self.chi_mdt_old, self.chi_mdt_veryold, self.chi_mdt_mid = None, None, None, None
-            self.chi_m, self.chi_m_old, self.chi_m_mid = None, None, None, None
+            self.chi_m, self.chi_m_old, self.chi_m_mid = None, None, None
             self.chi_c, self.chi_c_old, self.chi_c_veryold, self.chi_c_mid = None, None, None, None
             self.chi_g, self.chi_g_old, self.chi_g_mid = None, None, None
             self.chi_v, self.chi_v_old, self.chi_v_mid = None, None, None
