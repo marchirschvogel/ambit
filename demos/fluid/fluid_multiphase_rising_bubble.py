@@ -144,7 +144,7 @@ def main():
     Parameters that govern the coupling between fluid and phase field model
     """
     COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": False,  # get capillary force from divergence of Korteweg stress; if False, use "phi \grad mu" as bulk capillary "body" force (same in theory, but has impact if fluid carries Neumann boundary conditions - if the interface could exert a force on the fluid boundary)
-                       "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
+                       "clip_phi_param_eval": {"density_mom_dt": True, "density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
                        "smooth_clip": "cubic",  # None, "cubic", "quintic" - how to smooth the clipped region in case "clip_phi_param_eval" is True
                        "epsilon_clip": 1e-2}  # smoothing parameter ("smooth_clip":None is reproduced for epsilon --> 0)
 

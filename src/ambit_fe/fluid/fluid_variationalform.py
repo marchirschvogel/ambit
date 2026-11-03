@@ -208,7 +208,6 @@ class variationalform(variationalform_base):
         ddomain,
         w=None,
         F=None,
-        chi=None,
         symmetric=False,
     ):
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
@@ -216,20 +215,20 @@ class variationalform(variationalform_base):
         else:
             return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
             return sc * ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
-            rho_ = self.get_density(rho, chi=chi)
-            return sc * (1./rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
+            rho_ = sum(rho) / len(rho)
+            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
+    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
             return sc * tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
-            rho_ = self.get_density(rho, chi=chi)
+            rho_ = sum(rho) / len(rho)
             return sc * tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
@@ -564,32 +563,31 @@ class variationalform_ale(variationalform):
         ddomain,
         w=None,
         F=None,
-        chi=None,
         symmetric=False,
     ):
-        vel = v - w # streamline direction should be relavive velocity in ALE
+        vel = v - w  # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
             return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
             return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
-    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None, chi=None):
+    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None):
         # NOTE: J=det(F) already included in res_v_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
             return sc * ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
-            rho_ = self.get_density(rho, chi=chi)
-            return sc * (1./rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            rho_ = sum(rho) / len(rho)
+            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None, chi=None):
+    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None):
         # NOTE: J=det(F) already included in res_p_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation=="advective":
             return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
-            rho_ = self.get_density(rho, chi=chi)
+            rho_ = sum(rho) / len(rho)
             return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")

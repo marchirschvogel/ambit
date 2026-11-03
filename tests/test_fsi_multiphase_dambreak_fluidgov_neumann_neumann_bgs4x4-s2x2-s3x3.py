@@ -117,17 +117,19 @@ def test_main():
         "incompressibility": "no",
     }
 
+    stabscale_m = 1.0e-2
+    stabscale_c = 1.0
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
                         "momentum_formulation": "energy_split_skewsym",
                         "continuity_formulation": "reduced",  # conservative, reduced
                         "stabilization": {"scheme": "rbvms",
-                                          "mask_bulk": {"tau_m": True, "tau_c": True, "eps": 1e-1},
-                                          "dscales": {"supg": 1.0e-2, "pspg": 1e-2, "cross": 1e-2, "reysub": 1e-2, "lsic": 1.0},
+                                          # "mask_bulk": {"tau_m": True, "tau_c": True, "eps": 0.25},
+                                          "dscales": {"supg": stabscale_m, "pspg": stabscale_m, "cross": stabscale_m, "reysub": stabscale_m, "lsic": stabscale_c},
                                           "cscales": {"ct": 2.0, "cv": 2.0, "cnu": 4.0},
-                                          "stab_params": "dt_vel",
-                                          "scheme_type": {"res_v": "full_bulk", "res_p": "reduced"},
+                                          "stab_params": "dt_vel_visc",
+                                          "scheme_type": {"res_v": "full", "res_p": "full"},
                                           "symmetric": False,
                                         }}
 
@@ -141,7 +143,7 @@ def test_main():
     }
 
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True,
-                                  "clip_phi_param_eval": {"density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},
+                                  "clip_phi_param_eval": {"density_mom_dt": True, "density_mom": True, "density_cont": False, "density_grav": True, "viscosity": True},
                                   "smooth_clip": "cubic", # cubic, quintic, cos
                                   "epsilon_clip": 1e-1}
 
@@ -240,11 +242,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = -2.6766121781376334E-06  # x
-    u_corr[1] = -3.5463749572094263E-05  # y
+    u_corr[0] = -2.6752939100706893E-06  # x
+    u_corr[1] = -3.5462839940224619E-05  # y
 
-    v_corr[0] = -1.6413301374087128E-03  # x
-    v_corr[1] = -2.1956333686729189E-02  # y
+    v_corr[0] = -1.6409323678819535E-03  # x
+    v_corr[1] = -2.1956263186089148E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

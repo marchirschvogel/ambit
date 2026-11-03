@@ -559,10 +559,15 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chiU_mid"] = (self.phasevar["phi_mid"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU_veryold"] = (self.phasevar["phi_veryold"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
 
-            if self.phasevar["clip_phi_param_eval"].get("density_mom", False):
-                self.chi_m, self.chi_m_old, self.chi_m_veryold, self.chi_m_mid = self.phasevar["chi"], self.phasevar["chi_old"], self.phasevar["chi_veryold"], self.phasevar["chi_mid"]
+            if self.phasevar["clip_phi_param_eval"].get("density_mom_dt", False):
+                self.chi_mdt, self.chi_mdt_old, self.chi_mdt_veryold, self.chi_mdt_mid = self.phasevar["chi"], self.phasevar["chi_old"], self.phasevar["chi_veryold"], self.phasevar["chi_mid"]
             else:
-                self.chi_m, self.chi_m_old, self.chi_m_veryold, self.chi_m_mid = self.phasevar["chiU"], self.phasevar["chiU_old"], self.phasevar["chiU_veryold"], self.phasevar["chiU_mid"]
+                self.chi_mdt, self.chi_mdt_old, self.chi_mdt_veryold, self.chi_mdt_mid = self.phasevar["chiU"], self.phasevar["chiU_old"], self.phasevar["chiU_veryold"], self.phasevar["chiU_mid"]
+
+            if self.phasevar["clip_phi_param_eval"].get("density_mom", False):
+                self.chi_m, self.chi_m_old, self.chi_m_mid = self.phasevar["chi"], self.phasevar["chi_old"], self.phasevar["chi_mid"]
+            else:
+                self.chi_m, self.chi_m_old, self.chi_m_mid = self.phasevar["chiU"], self.phasevar["chiU_old"], self.phasevar["chiU_mid"]
 
             if self.phasevar["clip_phi_param_eval"].get("density_cont", False):
                 self.chi_c, self.chi_c_old, self.chi_c_veryold, self.chi_c_mid = self.phasevar["chi"], self.phasevar["chi_old"], self.phasevar["chi_veryold"], self.phasevar["chi_mid"]
@@ -605,7 +610,8 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chi_old"], self.phasevar["chiU_old"] = None, None
             self.phasevar["chi_mid"], self.phasevar["chiU_mid"] = None, None
             self.phasevar["chi_veryold"], self.phasevar["chiU_veryold"] = None, None
-            self.chi_m, self.chi_m_old, self.chi_m_veryold, self.chi_m_mid = None, None, None, None
+            self.chi_mdt, self.chi_mdt_old, self.chi_mdt_veryold, self.chi_mdt_mid = None, None, None, None
+            self.chi_m, self.chi_m_old, self.chi_m_mid = None, None, None, None
             self.chi_c, self.chi_c_old, self.chi_c_veryold, self.chi_c_mid = None, None, None, None
             self.chi_g, self.chi_g_old, self.chi_g_mid = None, None, None
             self.chi_v, self.chi_v_old, self.chi_v_mid = None, None, None
@@ -635,10 +641,10 @@ class FluidmechanicsProblem(problem_base):
         self.Jrhodot_m, self.Jrhodot_m_expr, self.Jrhodot_m_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
         self.Jrhodot_c, self.Jrhodot_c_expr, self.Jrhodot_c_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
         for n, M in enumerate(self.domain_ids):
-            # density used in momentum conservation
-            rho_m = self.vf.get_density(self.rho[n], chi=self.chi_m)
-            rho_m_old = self.vf.get_density(self.rho[n], chi=self.chi_m_old)
-            rho_m_veryold = self.vf.get_density(self.rho[n], chi=self.chi_m_veryold)
+            # density used in dt part of momentum conservation
+            rho_m = self.vf.get_density(self.rho[n], chi=self.chi_mdt)
+            rho_m_old = self.vf.get_density(self.rho[n], chi=self.chi_mdt_old)
+            rho_m_veryold = self.vf.get_density(self.rho[n], chi=self.chi_mdt_veryold)
             # density used in mass conservation / continuity
             rho_c = self.vf.get_density(self.rho[n], chi=self.chi_c)
             rho_c_old = self.vf.get_density(self.rho[n], chi=self.chi_c_old)
@@ -687,9 +693,9 @@ class FluidmechanicsProblem(problem_base):
                     self.Jrhodot_m_mid[n] = self.timefac_m * self.Jrhodot_m[n] + (1.0 - self.timefac_m) * self.Jrhodot_m_old[n]
             else:
                 # time derivative of momentum for non-discretely conservative scheme - apply classical product rule
-                self.accmom[n] = self.vf.acc_momentum_dt(self.acc, self.v, self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.chi_m, phidot=self.phasevar["phidot"])
-                self.amom_old[n] = self.vf.acc_momentum_dt(self.a_old, self.v_old, self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.chi_m_old, phidot=self.phasevar["phidot_old"])
-                self.accmom_mid[n] = self.vf.acc_momentum_dt(self.acc_mid, self.vel_mid, self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.chi_m_mid, phidot=self.phasevar["phidot_mid"])
+                self.accmom[n] = self.vf.acc_momentum_dt(self.acc, self.v, self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.chi_mdt, phidot=self.phasevar["phidot"])
+                self.amom_old[n] = self.vf.acc_momentum_dt(self.a_old, self.v_old, self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.chi_mdt_old, phidot=self.phasevar["phidot_old"])
+                self.accmom_mid[n] = self.vf.acc_momentum_dt(self.acc_mid, self.vel_mid, self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.chi_mdt_mid, phidot=self.phasevar["phidot_mid"])
                 # time derivative of density (for multiphase fluid) using chain rule
                 if self.continuity_formulation=="conservative" or self.continuity_formulation=="advective":
                     self.Jrhodot_c[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.chi_c, phidot=self.phasevar["phidot"], frm=self.continuity_formulation)
@@ -702,9 +708,9 @@ class FluidmechanicsProblem(problem_base):
                 else:
                     raise ValueError("Unknown fluid continuity formulation!")
                 if self.momentum_formulation == "energy_split" or self.momentum_formulation == "energy_split_skewsym":
-                    self.Jrhodot_m[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.chi_m, phidot=self.phasevar["phidot"], frm="advective")
-                    self.Jrhodot_m_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.chi_m_old, phidot=self.phasevar["phidot_old"], frm="advective")
-                    self.Jrhodot_m_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.chi_m_mid, phidot=self.phasevar["phidot_mid"], frm="advective")
+                    self.Jrhodot_m[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w"], F=self.alevar["Fale"], phi=self.phasevar["phi"], chi=self.chi_mdt, phidot=self.phasevar["phidot"], frm="advective")
+                    self.Jrhodot_m_old[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_old"], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"], chi=self.chi_mdt_old, phidot=self.phasevar["phidot_old"], frm="advective")
+                    self.Jrhodot_m_mid[n] = self.vf.drho_dt(self.rho[n], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"], chi=self.chi_mdt_mid, phidot=self.phasevar["phidot_mid"], frm="advective")
 
         if self.pbase.have_rom:
             self.xdtr_expr, self.xintr_expr = self.acc_expr, self.ufluid_expr
@@ -1922,7 +1928,6 @@ class FluidmechanicsProblem(problem_base):
                             self.dx(M),
                             w=self.alevar["w"],
                             F=self.alevar["Fale"],
-                            chi=self.chi_m,
                             symmetric=self.stab_symm,
                         )
                         self.deltaW_int_old += self.vf.stab_supg(
@@ -1933,7 +1938,6 @@ class FluidmechanicsProblem(problem_base):
                             self.dx(M),
                             w=self.alevar["w_old"],
                             F=self.alevar["Fale_old"],
-                            chi=self.chi_m_old,
                             symmetric=self.stab_symm,
                         )
                         self.deltaW_int_mid += self.vf.stab_supg(
@@ -1944,7 +1948,6 @@ class FluidmechanicsProblem(problem_base):
                             self.dx(M),
                             w=self.alevar["w_mid"],
                             F=self.alevar["Fale_mid"],
-                            chi=self.chi_m_mid,
                             symmetric=self.stab_symm,
                         )
                         # add extra terms (cross and Reynolds subgrid stresses) from residual-based
@@ -2020,7 +2023,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale"],
-                        chi=self.chi_m,
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
                         self.scale_lsic,
@@ -2029,7 +2031,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_old"],
-                        chi=self.chi_m_old,
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         self.scale_lsic,
@@ -2038,7 +2039,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_mid"],
-                        chi=self.chi_m_mid,
                     )
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                     self.deltaW_p[n] += self.vf.stab_pspg(
@@ -2049,7 +2049,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale"],
-                        chi=self.chi_m,
                     )
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.scale_pspg,
@@ -2059,7 +2058,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
-                        chi=self.chi_m_old,
                     )
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.scale_pspg,
@@ -2069,7 +2067,6 @@ class FluidmechanicsProblem(problem_base):
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
-                        chi=self.chi_m_mid,
                     )
 
                     # now take care of stabilization for the prestress problem (only FrSI)
@@ -2090,7 +2087,6 @@ class FluidmechanicsProblem(problem_base):
                             self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
-                            chi=self.chi_m,
                         )
                         # get the respective strong residual depending on the prestress kinetic type...
                         if self.prestress_kinetic == "navierstokes_transient":
@@ -2189,7 +2185,6 @@ class FluidmechanicsProblem(problem_base):
                             self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
-                            chi=self.chi_m,
                         )
                         # SUPG term only for kinetic prestress...
                         if (
@@ -2204,7 +2199,6 @@ class FluidmechanicsProblem(problem_base):
                                 self.dx(M),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
-                                chi=self.chi_m,
                                 symmetric=self.stab_symm,
                             )
 
