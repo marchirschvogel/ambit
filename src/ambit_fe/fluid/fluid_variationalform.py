@@ -203,6 +203,7 @@ class variationalform(variationalform_base):
         self,
         sc,
         v,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -211,25 +212,25 @@ class variationalform(variationalform_base):
         symmetric=False,
     ):
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(tstfnc_v)) * v, res_v_strong) * ddomain
         else:
-            return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(tstfnc_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None):
+    def stab_pspg(self, sc, tstfnc_p, res_v_strong, tau_m, rho, ddomain, F=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return sc * ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(tstfnc_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = sum(rho) / len(rho)
-            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.grad(tstfnc_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None):
+    def stab_lsic(self, sc, tstfnc_v, res_p_strong, tau_c, rho, ddomain, F=None):
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return sc * tau_c * ufl.div(self.var_v) * res_p_strong * ddomain
+            return sc * tau_c * ufl.div(tstfnc_v) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = sum(rho) / len(rho)
-            return sc * tau_c * ufl.div(self.var_v) * rho_ * res_p_strong * ddomain
+            return sc * tau_c * ufl.div(tstfnc_v) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
@@ -238,6 +239,7 @@ class variationalform(variationalform_base):
         self,
         sc,
         v,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -245,13 +247,14 @@ class variationalform(variationalform_base):
         F=None,
         chi=None,
     ):
-        return sc * ufl.inner(tau_m * ufl.grad(self.var_v), ufl.outer(v, res_v_strong)) * ddomain
+        return sc * ufl.inner(tau_m * ufl.grad(tstfnc_v), ufl.outer(v, res_v_strong)) * ddomain
 
     # Reynolds subgrid stress from RBVMS stabilization
     def stab_reysub(
         self,
         sc,
         rho,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -260,7 +263,7 @@ class variationalform(variationalform_base):
         chi=None,
     ):
         rho_ = self.get_density(rho, chi=chi)
-        return -sc * tau_m**2.0 / (rho_) * ufl.inner(ufl.grad(self.var_v), ufl.outer(res_v_strong, res_v_strong)) * ddomain
+        return -sc * tau_m**2.0 / (rho_) * ufl.inner(ufl.grad(tstfnc_v), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)
@@ -558,6 +561,7 @@ class variationalform_ale(variationalform):
         self,
         sc,
         v,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -568,27 +572,27 @@ class variationalform_ale(variationalform):
         vel = v - w  # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.sym(ufl.grad(tstfnc_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
-            return sc * ufl.dot(tau_m * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.grad(tstfnc_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
-    def stab_pspg(self, sc, var_p, res_v_strong, tau_m, rho, ddomain, F=None):
+    def stab_pspg(self, sc, tstfnc_p, res_v_strong, tau_m, rho, ddomain, F=None):
         # NOTE: J=det(F) already included in res_v_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation == "advective":
-            return sc * ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(tstfnc_p), res_v_strong) * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = sum(rho) / len(rho)
-            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * ddomain
+            return sc * (1.0/rho_)*ufl.dot(tau_m * ufl.inv(F).T * ufl.grad(tstfnc_p), res_v_strong) * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
-    def stab_lsic(self, sc, res_p_strong, tau_c, rho, ddomain, F=None):
+    def stab_lsic(self, sc, tstfnc_v, res_p_strong, tau_c, rho, ddomain, F=None):
         # NOTE: J=det(F) already included in res_p_strong
         if self.continuity_formulation=="conservative" or self.continuity_formulation=="advective":
-            return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * res_p_strong * ddomain
+            return sc * tau_c * ufl.inner(ufl.grad(tstfnc_v), ufl.inv(F).T) * res_p_strong * ddomain
         elif self.continuity_formulation=="reduced":
             rho_ = sum(rho) / len(rho)
-            return sc * tau_c * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
+            return sc * tau_c * ufl.inner(ufl.grad(tstfnc_v), ufl.inv(F).T) * rho_ * res_p_strong * ddomain
         else:
             raise ValueError("Unknown fluid continuity formulation!")
 
@@ -597,6 +601,7 @@ class variationalform_ale(variationalform):
         self,
         sc,
         v,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -605,13 +610,14 @@ class variationalform_ale(variationalform):
         chi=None,
     ):
         vel = v - w # streamline direction should be relavive velocity in ALE
-        return sc * ufl.inner(tau_m * ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(vel, res_v_strong)) * ddomain
+        return sc * ufl.inner(tau_m * ufl.grad(tstfnc_v) * ufl.inv(F), ufl.outer(vel, res_v_strong)) * ddomain
 
     # Reynolds subgrid stress from RBVMS stabilization
     def stab_reysub(
         self,
         sc,
         rho,
+        tstfnc_v,
         res_v_strong,
         tau_m,
         ddomain,
@@ -621,7 +627,7 @@ class variationalform_ale(variationalform):
     ):
         J = ufl.det(F)
         rho_ = self.get_density(rho, chi=chi)
-        return -sc * tau_m**2.0 / (J*rho_) * ufl.inner(ufl.grad(self.var_v) * ufl.inv(F), ufl.outer(res_v_strong, res_v_strong)) * ddomain
+        return -sc * tau_m**2.0 / (J*rho_) * ufl.inner(ufl.grad(tstfnc_v) * ufl.inv(F), ufl.outer(res_v_strong, res_v_strong)) * ddomain
 
     def acc_momentum_dt(self, a, v, rho, w=None, F=None, phi=None, chi=None, phidot=None):
         rho_ = self.get_density(rho, chi=chi)

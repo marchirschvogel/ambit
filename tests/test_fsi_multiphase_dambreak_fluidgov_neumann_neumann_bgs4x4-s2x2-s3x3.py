@@ -33,7 +33,7 @@ def test_main():
         "mesh_boundary": basepath + "/input/dam-break_boundary.xdmf",
         "mesh_encoding": "ASCII",
         "results_to_write": {"solid": ["displacement", "energy_bodyforce"],
-                             "fluid": ["velocity", "pressure", "density", "energy_bodyforce"],
+                             "fluid": ["velocity", "pressure", "density", "energy_bodyforce", "stabilization_powers"],
                              "phasefield": ["phase", "potential"],
                              "ale": ["aledisplacement"]},
         "simname": "fsi_multiphase_dambreak",

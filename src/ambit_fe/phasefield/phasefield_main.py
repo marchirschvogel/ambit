@@ -718,18 +718,7 @@ class PhasefieldProblem(problem_base):
         diss = self.comm.allgather(diss)
         dissipation = sum(diss)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_dissipation.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, dissipation))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "phasefield_dissipation", dissipation)
 
     def compute_energy(self, N, t):
         if self.is_ale:
@@ -749,18 +738,7 @@ class PhasefieldProblem(problem_base):
         energ = self.comm.allgather(energ)
         energy = sum(energ)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_energy.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, energy))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "phasefield_energy", energy)
 
     def compute_phase_volumes(self, N, t):
         if self.is_ale:
@@ -783,24 +761,8 @@ class PhasefieldProblem(problem_base):
         sb = self.comm.allgather(sb)
         sbvol = sum(sb)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fa = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_volume_phase_a.txt",
-                    mode,
-                )
-                fa.write("%.16E %.16E\n" % (t, savol))
-                fa.close()
-                fb = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_phasefield_volume_phase_b.txt",
-                    mode,
-                )
-                fb.write("%.16E %.16E\n" % (t, sbvol))
-                fb.close()
+        self.io_field.write_output_timeseries(N, t, "phasefield_volume_phase_a", savol)
+        self.io_field.write_output_timeseries(N, t, "phasefield_volume_phase_b", sbvol)
 
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()

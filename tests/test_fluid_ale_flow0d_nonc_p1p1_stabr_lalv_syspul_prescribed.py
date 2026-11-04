@@ -41,7 +41,7 @@ def test_main():
         "mesh_domain": basepath + "/input/lalv_domain.xdmf",
         "mesh_boundary": basepath + "/input/lalv_boundary.xdmf",
         "mesh_encoding": "HDF5",
-        "results_to_write": {"fluid": ["velocity", "pressure"], "ale": ["aledisplacement"]},
+        "results_to_write": {"fluid": ["velocity", "pressure", "stabilization_powers"], "ale": ["aledisplacement"]},
         "output_midpoint": True,
         "simname": "fluid_ale_flow0d_nonc_lalv_syspul_prescribed",
     }

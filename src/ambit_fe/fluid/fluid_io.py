@@ -16,7 +16,7 @@ from ..ioroutines import IO_field
 class IO_fluid(IO_field):
     def __init__(self, pb):
         self.pb = pb
-        self.results_pre = ["fibers", "dissipation", "kinetic_energy", "energy_bodyforce", "internal_power", "strain_energy_membrane", "internal_power_membrane"]
+        self.results_pre = ["fibers", "dissipation", "kinetic_energy", "energy_bodyforce", "internal_power", "strain_energy_membrane", "internal_power_membrane", "stabilization_powers"]
 
     def write_output(self, writemesh=False, N=1, t=0):
         if self.pb.io.indicate_results_by == "time":
@@ -285,6 +285,9 @@ class IO_fluid(IO_field):
                         pass
                     elif res == "internal_power_membrane":
                         # global output - use internal_power_membrane_local for distributed version
+                        pass
+                    elif res == "stabilization_powers":
+                        # only global output supported, not as field
                         pass
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")

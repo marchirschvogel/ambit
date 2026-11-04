@@ -1534,6 +1534,13 @@ class FluidmechanicsProblem(problem_base):
             # stabilization for equal-order velocity-pressure approximation
             if self.stabilization is not None:
                 assert(self.stabilization["scheme"] == "supg_pspg" or self.stabilization["scheme"] == "rbvms")
+
+                # collect stab parameters, n+1 strong residuals, and n+1 masks in lists, since need for access outside of this loop (e.g., power computations of output)
+                self.tau_m, self.tau_m_old, self.tau_m_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+                self.tau_c, self.tau_c_old, self.tau_c_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+                self.residual_v_strong, self.residual_p_strong = [None]*self.num_domains, [None]*self.num_domains
+                self.mskm, self.mskc = [None]*self.num_domains, [None]*self.num_domains
+
                 for n, M in enumerate(self.domain_ids):
                     if self.num_dupl == 1:
                         j = 0
@@ -1541,13 +1548,13 @@ class FluidmechanicsProblem(problem_base):
                         j = n
 
                     if stab_params=="const":
-                        self.tau_base = h / vscale
+                        tau_base = h / vscale
 
-                        self.tau_m = self.tau_base
-                        self.tau_c = h**2.0 / self.tau_base
+                        self.tau_m[n] = tau_base
+                        self.tau_c[n] = h**2.0 / tau_base
 
-                        self.tau_m_old, self.tau_m_mid = self.tau_m, self.tau_m
-                        self.tau_c_old, self.tau_c_mid = self.tau_c, self.tau_c
+                        self.tau_m_old[n], self.tau_m_mid[n] = self.tau_m[n], self.tau_m[n]
+                        self.tau_c_old[n], self.tau_c_mid[n] = self.tau_c[n], self.tau_c[n]
                     elif stab_params=="dt_vel_visc" or stab_params=="dt_vel":
                         if self.is_ale:
                             v_eff = self.v - self.alevar["w"]
@@ -1577,22 +1584,22 @@ class FluidmechanicsProblem(problem_base):
 
                         cscales = self.stabilization.get("cscales", {"ct": 2.0, "cv": 2.0, "cnu": 4.0})
                         if stab_params=="dt_vel":
-                            self.tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
-                            self.tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
-                            self.tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
+                            tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) ) ** (-1.0/2.0)
+                            tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) ) ** (-1.0/2.0)
+                            tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) ) ** (-1.0/2.0)
                         elif stab_params=="dt_vel_visc":
-                            self.tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
-                            self.tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
-                            self.tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            tau_base = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq / h**2.0) + (cscales["cnu"]*eta_eff / (rho_eff * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            tau_base_old = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_old / h**2.0) + (cscales["cnu"]*eta_eff_old / (rho_eff_old * h**2.0))**2.0 ) ** (-1.0/2.0)
+                            tau_base_mid = ( (cscales["ct"] / self.dt)**2.0 + (cscales["cv"]**2.0*v_eff_norm_sq_mid / h**2.0) + (cscales["cnu"]*eta_eff_mid / (rho_eff_mid * h**2.0))**2.0 ) ** (-1.0/2.0)
 
-                        self.tau_m = self.tau_base
-                        self.tau_c = h**2.0 / self.tau_base
+                        self.tau_m[n] = tau_base
+                        self.tau_c[n] = h**2.0 / tau_base
 
-                        self.tau_m_old = self.tau_base_old
-                        self.tau_c_old = h**2.0 / self.tau_base_old
+                        self.tau_m_old[n] = tau_base_old
+                        self.tau_c_old[n] = h**2.0 / tau_base_old
 
-                        self.tau_m_mid = self.tau_base_mid
-                        self.tau_c_mid = h**2.0 / self.tau_base_mid
+                        self.tau_m_mid[n] = tau_base_mid
+                        self.tau_c_mid[n] = h**2.0 / tau_base_mid
                     else:
                         raise ValueError("Unknown value for 'stab_params'. Choose either 'const', 'dt_vel', or 'dt_vel_visc'.")
 
@@ -1612,28 +1619,28 @@ class FluidmechanicsProblem(problem_base):
                         if self.stab_mask["tau_m"]:
                             # to decrease degree of nonlinearity, we might want the previous converged step state as a mask
                             if use_prev_state:
-                                self.tau_m *= mskm_old
-                                self.tau_m_old *= mskm_old
-                                self.tau_m_mid *= mskm_old
+                                self.tau_m[n] *= mskm_old
+                                self.tau_m_old[n] *= mskm_old
+                                self.tau_m_mid[n] *= mskm_old
                             else:
-                                self.tau_m *= mskm
-                                self.tau_m_old *= mskm_old
-                                self.tau_m_mid *= mskm_mid
+                                self.tau_m[n] *= self.mskm[n]
+                                self.tau_m_old[n] *= mskm_old
+                                self.tau_m_mid[n] *= mskm_mid
                         if self.stab_mask["tau_c"]:
                             # to decrease degree of nonlinearity, we might want the previous converged step state as a mask
                             if use_prev_state:
-                                self.tau_c *= mskc_old
-                                self.tau_c_old *= mskc_old
-                                self.tau_c_mid *= mskc_old
+                                self.tau_c[n] *= mskc_old
+                                self.tau_c_old[n] *= mskc_old
+                                self.tau_c_mid[n] *= mskc_old
                             else:
-                                self.tau_c *= mskc
-                                self.tau_c_old *= mskc_old
-                                self.tau_c_mid *= mskc_mid
+                                self.tau_c[n] *= self.mskc[n]
+                                self.tau_c_old[n] *= mskc_old
+                                self.tau_c_mid[n] *= mskc_mid
 
                     # strong momentum residuals
                     if self.fluid_governing_type == "navierstokes_transient":
                         if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
-                            self.residual_v_strong = self.vf.res_v_strong_navierstokes_transient(
+                            self.residual_v_strong[n] = self.vf.res_v_strong_navierstokes_transient(
                                 self.accmom[n],
                                 self.v,
                                 self.rho[n],
@@ -1649,7 +1656,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             )
-                            self.residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(
+                            residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(
                                 self.amom_old[n],
                                 self.v_old,
                                 self.rho[n],
@@ -1665,7 +1672,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             )
-                            self.residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(
+                            residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(
                                 self.accmom_mid[n],
                                 self.vel_mid,
                                 self.rho[n],
@@ -1682,19 +1689,19 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.chi_m_mid,
                             )
                         elif self.scheme_type["res_v"] == "reduced":  # no viscous stress term and no dv/dt term
-                            self.residual_v_strong = self.vf.f_inert_strong_navierstokes_steady(
+                            self.residual_v_strong[n] = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v,
                                 self.rho[n],
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"]) - self.f_body[n]
-                            self.residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
+                            residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"]) - f_body_old[n]
-                            self.residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
+                            residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
                                 w=self.alevar["w_mid"],
@@ -1705,7 +1712,7 @@ class FluidmechanicsProblem(problem_base):
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "navierstokes_steady":
                         if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
-                            self.residual_v_strong = self.vf.res_v_strong_navierstokes_steady(
+                            self.residual_v_strong[n] = self.vf.res_v_strong_navierstokes_steady(
                                 self.v,
                                 self.rho[n],
                                 self.ma[n].sigma(
@@ -1719,7 +1726,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             )
-                            self.residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(
+                            residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
                                 self.ma[n].sigma(
@@ -1733,7 +1740,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             )
-                            self.residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(
+                            residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
                                 self.ma[n].sigma(
@@ -1748,21 +1755,21 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.chi_m_mid,
                             )
                         elif self.scheme_type["res_v"] == "reduced":  # no viscous stress term
-                            self.residual_v_strong = self.vf.f_inert_strong_navierstokes_steady(
+                            self.residual_v_strong[n] = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v,
                                 self.rho[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
-                            self.residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
+                            residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
-                            self.residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
+                            residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
                                 w=self.alevar["w_mid"],
@@ -1773,7 +1780,7 @@ class FluidmechanicsProblem(problem_base):
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "stokes_transient":
                         if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
-                            self.residual_v_strong = self.vf.res_v_strong_stokes_transient(
+                            self.residual_v_strong[n] = self.vf.res_v_strong_stokes_transient(
                                 self.accmom[n],
                                 self.v,
                                 self.rho[n],
@@ -1788,7 +1795,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             )
-                            self.residual_v_strong_old = self.vf.res_v_strong_stokes_transient(
+                            residual_v_strong_old = self.vf.res_v_strong_stokes_transient(
                                 self.amom_old[n],
                                 self.v_old,
                                 self.rho[n],
@@ -1803,7 +1810,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             )
-                            self.residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(
+                            residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(
                                 self.accmom_mid[n],
                                 self.vel_mid,
                                 self.rho[n],
@@ -1819,7 +1826,7 @@ class FluidmechanicsProblem(problem_base):
                                 chi=self.chi_m_mid,
                             )
                         elif self.scheme_type["res_v"] == "reduced":  # no viscous stress term
-                            self.residual_v_strong = self.vf.f_inert_strong_stokes_transient(
+                            self.residual_v_strong[n] = self.vf.f_inert_strong_stokes_transient(
                                 self.accmom[n],
                                 self.v,
                                 self.rho[n],
@@ -1827,7 +1834,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale"],
                                 chi=self.chi_m,
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
-                            self.residual_v_strong_old = self.vf.f_inert_strong_stokes_transient(
+                            residual_v_strong_old = self.vf.f_inert_strong_stokes_transient(
                                 self.amom_old[n],
                                 self.v_old,
                                 self.rho[n],
@@ -1835,7 +1842,7 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_old"],
                                 chi=self.chi_m_old,
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
-                            self.residual_v_strong_mid = self.vf.f_inert_strong_stokes_transient(
+                            residual_v_strong_mid = self.vf.f_inert_strong_stokes_transient(
                                 self.accmom_mid[n],
                                 self.vel_mid,
                                 self.rho[n],
@@ -1847,7 +1854,7 @@ class FluidmechanicsProblem(problem_base):
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     elif self.fluid_governing_type == "stokes_steady":
                         if self.scheme_type["res_v"] == "full" or self.scheme_type["res_v"] == "full_bulk":
-                            self.residual_v_strong = self.vf.res_v_strong_stokes_steady(
+                            self.residual_v_strong[n] = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
                                 self.ma[n].sigma(
                                     self.v,
@@ -1858,7 +1865,7 @@ class FluidmechanicsProblem(problem_base):
                                 self.f_body[n],
                                 F=self.alevar["Fale"],
                             )
-                            self.residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
+                            residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
                                 self.ma[n].sigma(
                                     self.v_old,
@@ -1869,7 +1876,7 @@ class FluidmechanicsProblem(problem_base):
                                 f_body_old[n],
                                 F=self.alevar["Fale_old"],
                             )
-                            self.residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
+                            residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
                                 self.ma[n].sigma(
                                     self.vel_mid,
@@ -1881,16 +1888,16 @@ class FluidmechanicsProblem(problem_base):
                                 F=self.alevar["Fale_mid"],
                             )
                         elif self.scheme_type["res_v"] == "reduced":  # no viscous stress term
-                            self.residual_v_strong = self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
-                            self.residual_v_strong_old = self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
-                            self.residual_v_strong_mid = self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
+                            self.residual_v_strong[n] = self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
+                            residual_v_strong_old = self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
+                            residual_v_strong_mid = self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
                         else:
                             raise ValueError("Unknown scheme type for momentum residual. Choose 'full' or 'reduced'.")
                     else:
                         raise ValueError("Unknown fluid_governing_type!")
 
                     # strong continuity residuals
-                    residual_p_strong = self.vf.res_p_strong(
+                    self.residual_p_strong[n] = self.vf.res_p_strong(
                         self.v,
                         self.rho[n],
                         w=self.alevar["w"],
@@ -1923,8 +1930,9 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int += self.vf.stab_supg(
                             self.scale_supg,
                             self.v,
-                            self.residual_v_strong,
-                            self.tau_m,
+                            self.var_v,
+                            self.residual_v_strong[n],
+                            self.tau_m[n],
                             self.dx(M),
                             w=self.alevar["w"],
                             F=self.alevar["Fale"],
@@ -1933,8 +1941,9 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_old += self.vf.stab_supg(
                             self.scale_supg,
                             self.v_old,
-                            self.residual_v_strong_old,
-                            self.tau_m_old,
+                            self.var_v,
+                            residual_v_strong_old,
+                            self.tau_m_old[n],
                             self.dx(M),
                             w=self.alevar["w_old"],
                             F=self.alevar["Fale_old"],
@@ -1943,8 +1952,9 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int_mid += self.vf.stab_supg(
                             self.scale_supg,
                             self.vel_mid,
-                            self.residual_v_strong_mid,
-                            self.tau_m_mid,
+                            self.var_v,
+                            residual_v_strong_mid,
+                            self.tau_m_mid[n],
                             self.dx(M),
                             w=self.alevar["w_mid"],
                             F=self.alevar["Fale_mid"],
@@ -1957,8 +1967,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int += self.vf.stab_cross(
                                 self.scale_cross,
                                 self.v,
-                                self.residual_v_strong,
-                                self.tau_m,
+                                self.var_v,
+                                self.residual_v_strong[n],
+                                self.tau_m[n],
                                 self.dx(M),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
@@ -1967,8 +1978,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int_old += self.vf.stab_cross(
                                 self.scale_cross,
                                 self.v_old,
-                                self.residual_v_strong_old,
-                                self.tau_m_old,
+                                self.var_v,
+                                residual_v_strong_old,
+                                self.tau_m_old[n],
                                 self.dx(M),
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
@@ -1977,8 +1989,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int_mid += self.vf.stab_cross(
                                 self.scale_cross,
                                 self.vel_mid,
-                                self.residual_v_strong_mid,
-                                self.tau_m_mid,
+                                self.var_v,
+                                residual_v_strong_mid,
+                                self.tau_m_mid[n],
                                 self.dx(M),
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
@@ -1988,8 +2001,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int += self.vf.stab_reysub(
                                 self.scale_reysub,
                                 self.rho[n],
-                                self.residual_v_strong,
-                                self.tau_m,
+                                self.var_v,
+                                self.residual_v_strong[n],
+                                self.tau_m[n],
                                 self.dx(M),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
@@ -1998,8 +2012,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int_old += self.vf.stab_reysub(
                                 self.scale_reysub,
                                 self.rho[n],
-                                self.residual_v_strong_old,
-                                self.tau_m_old,
+                                self.var_v,
+                                residual_v_strong_old,
+                                self.tau_m_old[n],
                                 self.dx(M),
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
@@ -2008,8 +2023,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_int_mid += self.vf.stab_reysub(
                                 self.scale_reysub,
                                 self.rho[n],
-                                self.residual_v_strong_mid,
-                                self.tau_m_mid,
+                                self.var_v,
+                                residual_v_strong_mid,
+                                self.tau_m_mid[n],
                                 self.dx(M),
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
@@ -2018,24 +2034,27 @@ class FluidmechanicsProblem(problem_base):
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
                     self.deltaW_int += self.vf.stab_lsic(
                         self.scale_lsic,
-                        residual_p_strong,
-                        self.tau_c,
+                        self.var_v,
+                        self.residual_p_strong[n],
+                        self.tau_c[n],
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale"],
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
                         self.scale_lsic,
+                        self.var_v,
                         residual_p_strong_old,
-                        self.tau_c_old,
+                        self.tau_c_old[n],
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_old"],
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         self.scale_lsic,
+                        self.var_v,
                         residual_p_strong_mid,
-                        self.tau_c_mid,
+                        self.tau_c_mid[n],
                         self.rho[n],
                         self.dx(M),
                         F=self.alevar["Fale_mid"],
@@ -2044,8 +2063,8 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p[n] += self.vf.stab_pspg(
                         self.scale_pspg,
                         self.var_p_[j],
-                        self.residual_v_strong,
-                        self.tau_m,
+                        self.residual_v_strong[n],
+                        self.tau_m[n],
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale"],
@@ -2053,8 +2072,8 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.scale_pspg,
                         self.var_p_[j],
-                        self.residual_v_strong_old,
-                        self.tau_m_old,
+                        residual_v_strong_old,
+                        self.tau_m_old[n],
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
@@ -2062,8 +2081,8 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.scale_pspg,
                         self.var_p_[j],
-                        self.residual_v_strong_mid,
-                        self.tau_m_mid,
+                        residual_v_strong_mid,
+                        self.tau_m_mid[n],
                         self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
@@ -2082,8 +2101,9 @@ class FluidmechanicsProblem(problem_base):
                         # LSIC term
                         self.deltaW_prestr_int += self.vf.stab_lsic(
                             self.scale_lsic,
+                            self.var_v,
                             residual_p_strong_prestr,
-                            self.tau_c,
+                            self.tau_c[n],
                             self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
@@ -2181,7 +2201,7 @@ class FluidmechanicsProblem(problem_base):
                             self.scale_pspg,
                             self.var_p_[j],
                             residual_v_strong_prestr,
-                            self.tau_m,
+                            self.tau_m[n],
                             self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
@@ -2194,8 +2214,9 @@ class FluidmechanicsProblem(problem_base):
                             self.deltaW_prestr_int += self.vf.stab_supg(
                                 self.scale_supg,
                                 self.v,
+                                self.var_v,
                                 residual_v_strong_prestr,
-                                self.tau_m,
+                                self.tau_m[n],
                                 self.dx(M),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
@@ -2336,18 +2357,7 @@ class FluidmechanicsProblem(problem_base):
         ip = self.comm.allgather(ip)
         internal_power = sum(ip)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_internal_power.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, internal_power))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "fluid_internal_power", internal_power)
 
     def compute_mass_conservation(self, N, t):
         mass_form = ufl.as_ufl(0)
@@ -2382,18 +2392,7 @@ class FluidmechanicsProblem(problem_base):
         diss = self.comm.allgather(diss)
         dissipation = sum(diss)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_dissipation.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, dissipation))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "fluid_dissipation", dissipation)
 
     def compute_kinetic_energy(self, N, t):
         if self.is_ale:
@@ -2409,18 +2408,7 @@ class FluidmechanicsProblem(problem_base):
         e_kin = self.comm.allgather(e_kin)
         energy_kin = sum(e_kin)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_kinetic_energy.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, energy_kin))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "fluid_kinetic_energy", energy_kin)
 
     def compute_energy_bodyforce(self, N, t):
         if self.is_ale:
@@ -2435,18 +2423,7 @@ class FluidmechanicsProblem(problem_base):
         e_body = self.comm.allgather(e_body)
         energy_body = sum(e_body)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_fluid_energy_bodyforce.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, energy_body))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "fluid_energy_bodyforce", energy_body)
 
     # computes the total strain energy and internal power of a membrane (reduced) solid model
     def compute_strain_energy_power_membrane(self, N, t):
@@ -2470,26 +2447,105 @@ class FluidmechanicsProblem(problem_base):
         ip_mem = self.comm.allgather(ip_mem)
         internal_power_mem = sum(ip_mem)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                if "strain_energy_membrane" in self.results_to_write:
-                    fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_fluid_strain_energy_membrane.txt",
-                        mode,
-                    )
-                    fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
-                    fe.close()
-                if "internal_power_membrane" in self.results_to_write:
-                    fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_fluid_internal_power_membrane.txt",
-                        mode,
-                    )
-                    fp.write("%.16E %.16E\n" % (t, internal_power_mem))
-                    fp.close()
+        if "strain_energy_membrane" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "fluid_strain_energy_membrane", strain_energy_mem)
+        if "internal_power_membrane" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "fluid_internal_power_membrane", internal_power_mem)
+
+    def compute_stabilization_powers(self, N, t):
+        # NOTE: Currently, only bulk fluid contributions are included here! No capillary forces or other "multiphase" terms...
+        p_stab_supg_all, p_stab_lsic_all, p_stab_cross_all, p_stab_reysub_all = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        p_stab_pspg_all = [None]*self.num_domains
+
+        for n, M in enumerate(self.domain_ids):
+            if self.num_dupl == 1:
+                j = 0
+            else:
+                j = n
+            p_stab_supg_all += self.vf.stab_supg(
+                self.scale_supg,
+                self.v,
+                self.v,
+                self.residual_v_strong[n],
+                self.tau_m[n],
+                self.dx(M),
+                w=self.alevar["w"],
+                F=self.alevar["Fale"],
+                symmetric=self.stab_symm,
+            )
+            p_stab_pspg_all[n] = self.vf.stab_pspg(
+                self.scale_pspg,
+                self.p_[j],
+                self.residual_v_strong[n],
+                self.tau_m[n],
+                self.rho[n],
+                self.dx_p[j](M),
+                F=self.alevar["Fale"],
+            )
+            p_stab_lsic_all += self.vf.stab_lsic(
+                self.scale_lsic,
+                self.v,
+                self.residual_p_strong[n],
+                self.tau_c[n],
+                self.rho[n],
+                self.dx(M),
+                F=self.alevar["Fale"],
+            )
+            if self.stabilization["scheme"] == "rbvms":
+                p_stab_cross_all += self.vf.stab_cross(
+                    self.scale_cross,
+                    self.v,
+                    self.v,
+                    self.residual_v_strong[n],
+                    self.tau_m[n],
+                    self.dx(M),
+                    w=self.alevar["w"],
+                    F=self.alevar["Fale"],
+                    chi=self.chi_m,
+                )
+                p_stab_reysub_all += self.vf.stab_reysub(
+                    self.scale_reysub,
+                    self.rho[n],
+                    self.v,
+                    self.residual_v_strong[n],
+                    self.tau_m[n],
+                    self.dx(M),
+                    w=self.alevar["w"],
+                    F=self.alevar["Fale"],
+                    chi=self.chi_m,
+                )
+
+        p_stab_supg = fem.assemble_scalar(fem.form(p_stab_supg_all, entity_maps=self.io.entity_maps))
+        p_stab_supg = self.comm.allgather(p_stab_supg)
+        power_supg = sum(p_stab_supg)
+
+        self.io_field.write_output_timeseries(N, t, "fluid_power_supg", power_supg)
+
+        p_stab_pspg_all = sum(p_stab_pspg_all)
+        p_stab_pspg = fem.assemble_scalar(fem.form(p_stab_pspg_all, entity_maps=self.io.entity_maps))
+        p_stab_pspg = self.comm.allgather(p_stab_pspg)
+        power_pspg = sum(p_stab_pspg)
+
+        self.io_field.write_output_timeseries(N, t, "fluid_power_pspg", power_pspg)
+
+        p_stab_lsic = fem.assemble_scalar(fem.form(p_stab_lsic_all, entity_maps=self.io.entity_maps))
+        p_stab_lsic = self.comm.allgather(p_stab_lsic)
+        power_lsic = sum(p_stab_lsic)
+
+        self.io_field.write_output_timeseries(N, t, "fluid_power_lsic", power_lsic)
+
+        if self.stabilization["scheme"] == "rbvms":
+            p_stab_cross = fem.assemble_scalar(fem.form(p_stab_cross_all, entity_maps=self.io.entity_maps))
+            p_stab_cross = self.comm.allgather(p_stab_cross)
+            power_cross = sum(p_stab_cross)
+
+            self.io_field.write_output_timeseries(N, t, "fluid_power_cross", power_cross)
+
+            p_stab_reysub = fem.assemble_scalar(fem.form(p_stab_reysub_all, entity_maps=self.io.entity_maps))
+            p_stab_reysub = self.comm.allgather(p_stab_reysub)
+            power_reysub = sum(p_stab_reysub)
+
+            self.io_field.write_output_timeseries(N, t, "fluid_power_reysub", power_reysub)
 
     def compute_geometric_conservation_law(self, N, t):  # Not used so far...
         geocons = ufl.as_ufl(0)
@@ -3196,6 +3252,8 @@ class FluidmechanicsProblem(problem_base):
             self.compute_kinetic_energy(N, t)
         if "energy_bodyforce" in self.results_to_write:
             self.compute_energy_bodyforce(N, t)
+        if "stabilization_powers" in self.results_to_write:
+            self.compute_stabilization_powers(N, t)
         # report mass conservation if requested
         if self.io.report_conservation_properties:
             self.compute_mass_conservation(N, t)

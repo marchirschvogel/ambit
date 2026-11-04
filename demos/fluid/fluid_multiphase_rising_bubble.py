@@ -42,7 +42,7 @@ def main():
     }
 
     # add elements in x direction to output name for distinction of results...
-    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0]) + "_NEWaffDinG_ost0.5m_ost0.5m_E"
+    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0])
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
     eps = 0.64*h # 1.28*h (ten Eikelder et al. (2024)), 0.64*h (Brunk and ten Eikelder (2026))
@@ -108,7 +108,7 @@ def main():
     """
     Parameters for the fluid mechanics time integration scheme
     """
-    TIME_PARAMS_FLUID = {"timint": "ost",
+    TIME_PARAMS_FLUID = {"timint": "bdf2",
                          "theta_ost": 0.5, # not used (only for OST timint)
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
@@ -118,7 +118,7 @@ def main():
     """
     Parameters for the Cahn-Hilliard time integration scheme
     """
-    TIME_PARAMS_PF = {"timint": "ost",
+    TIME_PARAMS_PF = {"timint": "bdf2",
                       "theta_ost": 0.5, # not used (only for OST timint)
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
                       "potential_at_midpoint": False} # irrelevant for BDF2 scheme
@@ -130,7 +130,7 @@ def main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 9,
-                        "momentum_formulation": "energy_split",  # conservative Navier-Stokes formulation - mandatory for CH-NS
+                        "momentum_formulation": "energy_split",  # conservative or energy_split Navier-Stokes formulation - mandatory for CH-NS
                         "continuity_formulation": "reduced",  # conservative (standard continuity), reduced (Brunk and ten Eikelder (2026) version, where continuity is partly consolidated with Cahn-Hilliard flux term) - give identical results
                        }
 

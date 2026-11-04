@@ -613,6 +613,21 @@ class IO_field:
         outfile.write_function(func_out, t)
         outfile.close()
 
+    # write a time series output - first column t, second column the scalar of interest
+    def write_output_timeseries(self, N, t, sffx, scalar):
+        if self.pb.comm.rank == 0:
+            if self.pb.io.write_results_every > 0 and N % self.pb.io.write_results_every == 0:
+                if np.isclose(t, self.pb.io.write_results_every*self.pb.pbase.dt):
+                    mode = "wt"
+                else:
+                    mode = "a"
+                fp = open(
+                    self.pb.io.output_path + "/results_" + self.pb.pbase.simname + "_"+sffx+".txt",
+                    mode,
+                )
+                fp.write("%.16E %.16E\n" % (t, scalar))
+                fp.close()
+
     def write_restart(self, N, force=False):
         if (self.pb.io.write_restart_every > 0 and N % self.pb.io.write_restart_every == 0) or force:
             self.writecheckpoint(N)

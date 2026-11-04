@@ -1614,16 +1614,7 @@ class SolidmechanicsProblem(problem_base):
 
         utilities.print_status("Solid growth rate: %.4e" % (self.growth_rate), self.pbase.comm)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fl = self.io.output_path + "/results_" + self.pbase.simname + "_growthrate.txt"
-                f = open(fl, mode)
-                f.write("%.16E %.16E\n" % (t, self.growth_rate))
-                f.close()
+        self.io_field.write_output_timeseries(N, t, "solid_growthrate", self.growth_rate)
 
     # computes the solid's kinetic energy
     def compute_kinetic_energy(self, N, t):
@@ -1635,18 +1626,7 @@ class SolidmechanicsProblem(problem_base):
         e_kin = self.comm.allgather(e_kin)
         energy_kin = sum(e_kin)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_solid_kinetic_energy.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, energy_kin))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "solid_kinetic_energy", energy_kin)
 
     # computes the solid's total strain energy and internal power
     def compute_strain_energy_power(self, N, t):
@@ -1672,26 +1652,10 @@ class SolidmechanicsProblem(problem_base):
         ip = self.pbase.comm.allgather(ip)
         internal_power = sum(ip)
 
-        if self.pbase.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                if "strain_energy" in self.results_to_write:
-                    fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy.txt",
-                        mode,
-                    )
-                    fe.write("%.16E %.16E\n" % (t, strain_energy))
-                    fe.close()
-                if "internal_power" in self.results_to_write:
-                    fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power.txt",
-                        mode,
-                    )
-                    fp.write("%.16E %.16E\n" % (t, internal_power))
-                    fp.close()
+        if "strain_energy" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "solid_strain_energy", strain_energy)
+        if "internal_power" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "solid_internal_power", internal_power)
 
     def compute_energy_bodyforce(self, N, t):
         e_body_all = ufl.as_ufl(0)
@@ -1702,18 +1666,7 @@ class SolidmechanicsProblem(problem_base):
         e_body = self.comm.allgather(e_body)
         energy_body = sum(e_body)
 
-        if self.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                fp = open(
-                    self.io.output_path + "/results_" + self.pbase.simname + "_solid_energy_bodyforce.txt",
-                    mode,
-                )
-                fp.write("%.16E %.16E\n" % (t, energy_body))
-                fp.close()
+        self.io_field.write_output_timeseries(N, t, "solid_energy_bodyforce", energy_body)
 
     # computes the total strain energy and internal power of a membrane (reduced) solid model
     def compute_strain_energy_power_membrane(self, N, t):
@@ -1730,33 +1683,17 @@ class SolidmechanicsProblem(problem_base):
                 ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all, entity_maps=self.io.entity_maps))
-        se_mem = self.pbase.comm.allgather(se_mem)
+        se_mem = self.comm.allgather(se_mem)
         strain_energy_mem = sum(se_mem)
 
         ip_mem = fem.assemble_scalar(fem.form(ip_mem_all, entity_maps=self.io.entity_maps))
-        ip_mem = self.pbase.comm.allgather(ip_mem)
+        ip_mem = self.comm.allgather(ip_mem)
         internal_power_mem = sum(ip_mem)
 
-        if self.pbase.comm.rank == 0:
-            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t, self.io.write_results_every*self.dt.value):
-                    mode = "wt"
-                else:
-                    mode = "a"
-                if "strain_energy_membrane" in self.results_to_write:
-                    fe = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_strain_energy_membrane.txt",
-                        mode,
-                    )
-                    fe.write("%.16E %.16E\n" % (t, strain_energy_mem))
-                    fe.close()
-                if "internal_power_membrane" in self.results_to_write:
-                    fp = open(
-                        self.io.output_path + "/results_" + self.pbase.simname + "_solid_internal_power_membrane.txt",
-                        mode,
-                    )
-                    fp.write("%.16E %.16E\n" % (t, internal_power_mem))
-                    fp.close()
+        if "strain_energy_membrane" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "solid_strain_energy_membrane", strain_energy_mem)
+        if "internal_power_membrane" in self.results_to_write:
+            self.io_field.write_output_timeseries(N, t, "solid_internal_power_membrane", internal_power_mem)
 
     # rate equations
     def evaluate_rate_equations(self, t_abs):
