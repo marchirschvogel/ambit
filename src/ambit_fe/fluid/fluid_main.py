@@ -1609,10 +1609,10 @@ class FluidmechanicsProblem(problem_base):
                         eps_msk = self.stab_mask.get("eps", 1e-3)
                         use_prev_state = self.stab_mask.get("previous_state", False)
                         # mask that is mostly zero within chi [0,1] and smoothly transits to 1 over eps at interface bounds
-                        mskm = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_m)
+                        self.mskm[n] = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_m)
                         mskm_old = self.chi_mask(self.phasevar["chiU_old"], eps_msk, dmin_m)
                         mskm_mid = self.chi_mask(self.phasevar["chiU_mid"], eps_msk, dmin_m)
-                        mskc = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_c)
+                        self.mskc[n] = self.chi_mask(self.phasevar["chiU"], eps_msk, dmin_c)
                         mskc_old = self.chi_mask(self.phasevar["chiU_old"], eps_msk, dmin_c)
                         mskc_mid = self.chi_mask(self.phasevar["chiU_mid"], eps_msk, dmin_c)
 
