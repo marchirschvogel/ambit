@@ -13,7 +13,6 @@ import pytest
 
 
 @pytest.mark.fsi
-@pytest.mark.fluid_solid
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 

@@ -15,7 +15,6 @@ import pytest
 
 
 @pytest.mark.fsi_flow0d
-@pytest.mark.fluid_solid_flow0d
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 

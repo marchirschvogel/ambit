@@ -3252,7 +3252,7 @@ class FluidmechanicsProblem(problem_base):
             self.compute_kinetic_energy(N, t)
         if "energy_bodyforce" in self.results_to_write:
             self.compute_energy_bodyforce(N, t)
-        if "stabilization_powers" in self.results_to_write:
+        if "stabilization_powers" in self.results_to_write and self.stabilization is not None:
             self.compute_stabilization_powers(N, t)
         # report mass conservation if requested
         if self.io.report_conservation_properties:

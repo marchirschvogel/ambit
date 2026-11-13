@@ -268,8 +268,8 @@ class ModelOrderReduction:
 
         if nconv > 0:
             # create the results vectors
-            vr, _ = C_d.getVecs()
-            vi, _ = C_d.getVecs()
+            vr, _ = C_d.createVecs()
+            vi, _ = C_d.createVecs()
 
             if self.print_eigenproblem:
                 utilities.print_status(
