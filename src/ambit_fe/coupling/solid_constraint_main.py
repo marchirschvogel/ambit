@@ -786,6 +786,6 @@ class SolidmechanicsConstraintSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N, localdata=self.pb.pbs.localdata)
 
-    def print_timestep_info(self, N, t, dt, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, Nmax, ni, li, wt):
         # print time step info to screen
-        self.pb.pbs.ti.print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.pbs.ti.print_timestep(N, t, dt, Nmax, self.solnln.lsp, ni=ni, li=li, wt=wt)

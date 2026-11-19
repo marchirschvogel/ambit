@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+
+"""
+tests solver divergence continue action with PTC on detection of large residual values/nans
+"""
+
+import ambit_fe
+
+import numpy as np
+from pathlib import Path
+import pytest
+
+
+@pytest.mark.solid
+def test_main():
+    basepath = str(Path(__file__).parent.absolute())
+
+    IO_PARAMS = {
+        "problem_type": "solid",
+        "mesh_domain": basepath + "/input/block2_domain.xdmf",
+        "mesh_boundary": basepath + "/input/block2_boundary.xdmf",
+        "write_results_every": -999,
+        "output_path": basepath + "/tmp/",
+        "results_to_write": ["displacement"],
+        "simname": "solid_divcont_ptc",
+    }
+
+    CONTROL_PARAMS = {"maxtime": 0.1, "dt": 0.1}
+
+    SOLVER_PARAMS = {
+        "solve_type": "direct",
+        "divergence_continue": "stepsize",
+        "stepsize_max_adapt": 5,
+        "num_steps_adapt": 5,
+        "dt_factor": 0.5,
+        "tol_res": 1.0e-8,
+        "tol_inc": 1.0e-8,
+        "maxiter": 25,
+    }
+
+    TIME_PARAMS = {"timint": "static"}
+
+    FEM_PARAMS = {"order_disp": 1, "quad_degree": 1}
+
+    MATERIALS = {
+        "MAT1": {
+            "exponential_dev": {"a_0": 10.0, "b_0": 120.0},
+            "sussmanbathe_vol": {"kappa": 1.0e3},
+            "inertia": {"rho0": 1.0e-6},
+        }
+    }
+
+    # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
+    class time_curves:
+        def tc1(self, t):
+            return -60.0 * t
+
+    class loc1:
+        def evaluate(self, x):
+            return np.isclose(x[0], 1.0)
+    BC_DICT = {
+        "dirichlet": [{"id": [2], "dir": "all", "val": 0.0}],
+        "neumann": [{"id": [loc1()], "dir": "xyz_ref", "curve": [0, 1, 1]}], # at x=1 - test version with locator; could also use "id":[3] instead
+    }
+
+    # problem setup
+    problem = ambit_fe.ambit_main.Ambit(
+        IO_PARAMS,
+        CONTROL_PARAMS,
+        [TIME_PARAMS],
+        SOLVER_PARAMS,
+        [FEM_PARAMS],
+        [MATERIALS],
+        [BC_DICT],
+        time_curves=time_curves(),
+    )
+
+    # solve time-dependent problem
+    problem.solve_problem()
+
+    # --- results check
+    tol = 1.0e-6
+
+    check_node = []
+    check_node.append(np.array([1.0, 1.0, 10.0]))
+
+    u_corr = np.zeros(3 * len(check_node))
+
+    ## correct results
+    u_corr[0] = 6.2386920489744674E-02  # x
+    u_corr[1] = -2.2693085233413562E-01  # y
+    u_corr[2] = -1.7719820565332892E-01  # z
+
+    check1 = ambit_fe.resultcheck.results_check_node(
+        problem.mp.u,
+        check_node,
+        u_corr,
+        problem.mp.V_u,
+        problem.mp.comm,
+        tol=tol,
+        nm="u",
+    )
+
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
+
+    if not success:
+        raise RuntimeError("Test failed!")
+
+
+if __name__ == "__main__":
+    test_main()

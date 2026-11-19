@@ -44,7 +44,7 @@ class solver_nonlinear:
         self.solver_params = solver_params
 
         self.x, self.is_ghosted = [[] for _ in range(self.nprob)], [[] for _ in range(self.nprob)]
-        self.nfields, self.ptype = [], []
+        self.nfields, self.ptype, self.err = [], [], []
 
         # problem variables list
         for npr in range(self.nprob):
@@ -174,7 +174,7 @@ class solver_nonlinear:
     def set_solver_params(self, solver_params):
         self.maxiter_initial = solver_params.get("maxiter", 25)
         self.maxiter = self.maxiter_initial
-        # BEGIN: PTC settings
+        # BEGIN: PTC / adptive solver settings
         self.divcont = solver_params.get("divergence_continue", None)
         self.ptc = solver_params.get("ptc", False)
         self.k_ptc_initial = solver_params.get("k_ptc_initial", 0.1)
@@ -185,6 +185,9 @@ class solver_nonlinear:
         self.ptc_max_adapt = solver_params.get("ptc_max_adapt", 10)
         self.ptc_field = solver_params.get("ptc_field", 0)
         self.ptc_maxiter = solver_params.get("ptc_maxiter", 100)
+        self.dt_factor = solver_params.get("dt_factor", 0.5)  # in case of "divergence_continue": "stepsize"
+        self.stepsize_max_adapt = solver_params.get("stepsize_max_adapt", 10)
+        self.num_steps_adapt = solver_params.get("num_steps_adapt", 5)
         # END
         self.direct_solver = solver_params.get("direct_solver", "mumps")
         self.iterative_solver = solver_params.get("iterative_solver", "gmres")
@@ -670,6 +673,7 @@ class solver_nonlinear:
             )
 
     def newton(self, t, N, localdata={}):
+        self.localdata = localdata
         # set start vectors
         for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
@@ -695,7 +699,7 @@ class solver_nonlinear:
             tes = time.time()
 
             # initial residual actions due to predictor
-            self.residual_problem_actions(t, npr, localdata)
+            self.residual_problem_actions(t, npr)
 
             te = time.time() - tes
 
@@ -704,7 +708,7 @@ class solver_nonlinear:
         it += 1
 
         while it < self.maxiter+1 and counter_adapt < max_adapt:
-            converged, err, linconv = [], [], 1
+            converged, self.err, linconv = [], [], 1
 
             # problem loop (in case of partitioned solves)
             for npr in range(self.nprob):
@@ -873,13 +877,13 @@ class solver_nonlinear:
                     self.pb[npr].update_condensed_vars(self.del_x_sol[npr])
 
                 # compute new residual actions after updated solution
-                self.residual_problem_actions(t, npr, localdata)
+                self.residual_problem_actions(t, npr)
 
                 # for partitioned solves, we now have to update all dependent other residuals, too
                 if self.nprob > 1:
                     for mpr in range(self.nprob):
                         if mpr != npr:
-                            self.residual_problem_actions(t, mpr, localdata)
+                            self.residual_problem_actions(t, mpr)
 
                 te += time.time() - tes
 
@@ -908,10 +912,11 @@ class solver_nonlinear:
                     k_ptc = max(self.k_ptc_min, k_ptc * self.resnorms[npr]["res"+str(self.ptc_field+1)] / res_norm_main_last)
 
                 # adaptive PTC
-                if self.divcont == "ptc":
-                    self.maxiter = self.ptc_maxiter
+                if self.divcont is not None:
+                    if self.divcont == "ptc":
+                        self.maxiter = self.ptc_maxiter
                     # collect errors
-                    err.append(
+                    self.err.append(
                         self.solutils.catch_solver_errors(
                             resnorm=max(self.resnorms[npr].values()),
                             incnorm=max(self.incnorms[npr].values()),
@@ -921,7 +926,7 @@ class solver_nonlinear:
                         )
                     )
                 if self.ignore_unconverged:
-                    err.append(
+                    self.err.append(
                         self.solutils.catch_solver_errors(
                             resnorm=max(self.resnorms[npr].values()),
                             incnorm=max(self.incnorms[npr].values()),
@@ -935,9 +940,11 @@ class solver_nonlinear:
             # iteration update after all problems have been solved
             it += 1
             self.ni_all += 1
+            if any(self.err) and self.divcont == "stepsize":
+                break
 
             # now check if errors occurred
-            if any(err) and self.divcont == "ptc":
+            if any(self.err) and self.divcont == "ptc":
                 self.ptc = True
                 # reset Newton step
                 it, k_ptc = 1, self.k_ptc_initial
@@ -953,19 +960,7 @@ class solver_nonlinear:
 
                 counter_adapt += 1
 
-                for npr in range(self.nprob):
-                    # reset solver
-                    for n in range(self.nfields[npr]):
-                        self.reset_step(
-                            self.x[npr][n],
-                            self.x_start[npr][n],
-                            self.is_ghosted[npr][n],
-                        )
-                        if self.pb[npr].sub_solve:  # can only be a 0D model so far...
-                            self.reset_step(self.pb[npr].pb0.s, self.s_start, 0)
-
-                    # re-set residual actions
-                    self.residual_problem_actions(t, npr, localdata)
+                self.reset_solver(t)
 
             # check if all problems have converged
             if all(converged):
@@ -977,20 +972,22 @@ class solver_nonlinear:
                 break
 
         else:
-            if not self.ignore_unconverged:
+            if not self.ignore_unconverged and self.divcont != "stepsize":
                 self.pb[npr].destroy()
                 raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed in time step %i." % (it-1, self.pb[npr].pbase.simname, N))
-            else: # use with care...
-                if any(err):
+            if self.ignore_unconverged:  # use with care...
+                if any(self.err):
                     self.pb[npr].destroy()
                     raise RuntimeError("Errors encountered! Newton finally terminates...")
                 self.unc_stp.append(t)
                 utilities.print_status("*** WARNING: Newton did not converge, but continuation is requested! ***", self.comm)
+            if self.divcont == "stepsize":
+                self.err.append(1)
 
-    def residual_problem_actions(self, t, npr, localdata):
+    def residual_problem_actions(self, t, npr):
         # any local solve that is needed
         if self.pb[npr].localsolve:
-            self.solve_local(localdata)
+            self.solve_local(self.localdata)
 
         # if we have two problems in a partitioned solve which exchange DBCs, we need to take care
         # of this separately by calling a coupled problem function
@@ -1048,6 +1045,20 @@ class solver_nonlinear:
         if self.ptc:
             # computes K + k_ptc * I
             self.K_list_sol[npr][self.ptc_field][self.ptc_field].shift(k_ptc)
+
+    def reset_solver(self, t):
+        for npr in range(self.nprob):
+            # reset solver
+            for n in range(self.nfields[npr]):
+                self.reset_step(
+                    self.x[npr][n],
+                    self.x_start[npr][n],
+                    self.is_ghosted[npr][n],
+                )
+                if self.pb[npr].sub_solve:  # can only be a 0D model so far...
+                    self.reset_step(self.pb[npr].pb0.s, self.s_start, 0)
+            # re-set residual actions
+            self.residual_problem_actions(t, npr)
 
     def reset_step(self, vec, vec_start, ghosted):
         vec.axpby(1.0, 0.0, vec_start)
@@ -1173,6 +1184,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         ioparams.check_params_solver(solver_params)
 
         self.comm, self.comm_sq = pb[0].comm, pb[0].comm_sq
+        self.err = []
 
         self.pb = pb[0]  # only one problem considered here
         self.nprob = 1
@@ -1248,6 +1260,8 @@ class solver_nonlinear_ode(solver_nonlinear):
         it += 1
 
         while it < self.maxiter+1:
+            self.err = []  # not used so far for 0D Newton...
+
             tes = time.time()
 
             # compute Jacobian

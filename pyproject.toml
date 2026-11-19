@@ -29,6 +29,7 @@ dependencies = [
     "mpmath",
     "sympy",
     "scipy",
+    "gmsh",
     "h5py",
     "pytest"
 ]

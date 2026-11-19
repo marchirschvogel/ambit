@@ -39,52 +39,18 @@ class problem_base:
             self.times = np.concatenate(([0.0], np.cumsum(self.dts)))
         elif "dt" in ctrl_params.keys():
             assert "numstep" not in ctrl_params.keys()
+
             dt = ctrl_params["dt"]
-            # user input function fot dt
+
             if callable(dt):
-                times = [0.0]
-                dts = []
-                t = 0.0
-                tol = 100.0 * np.finfo(float).eps * max(1.0, abs(self.maxtime))
-
-                while self.maxtime - t > tol:
-                    dt_n = float(dt(t))
-
-                    if dt_n <= 0.0:
-                        raise RuntimeError("dt(t) must be positive!")
-
-                    remaining = self.maxtime - t
-
-                    # final step: land exactly on maxtime
-                    if dt_n >= remaining - tol:
-                        dt_n = remaining
-                        dts.append(dt_n)
-                        t = self.maxtime
-                        times.append(t)
-                        break
-
-                    dts.append(dt_n)
-
-                    # more accurate than repeated t += dt_n
-                    t = math.fsum(dts)
-                    times.append(t)
-
-                self.dts = np.asarray(dts)
-                self.times = np.asarray(times)
-                self.numstep = len(self.dts)
-
-                self.dt = self.dts[0]
+                self.dt_func = dt
             else:
-                # constant dt
-                self.dt = dt
-                self.numstep = int(np.ceil(self.maxtime / self.dt))
+                self.dt_func = lambda t, dt=dt: dt
 
-                self.dts = np.full(self.numstep, self.dt)
+            self.n_retry = 0  # for adaptive stepping
 
-                # shorten final step if necessary
-                self.dts[-1] = self.maxtime - (self.numstep - 1) * self.dt
+            self.rebuild_time_grid()
 
-                self.times = np.concatenate(([0.0], np.cumsum(self.dts)))
         else:
             raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
@@ -175,6 +141,70 @@ class problem_base:
                 if Klist[n][m] is not None:
                     Klist[n][m].scale(self.pbase.residual_scale[n])
 
+    def rebuild_time_grid(self, start_step=1, dt_reduce=1.0, n_reduced=0):
+        tol = 100.0 * np.finfo(float).eps * max(1.0, abs(self.maxtime))
+
+        if not 0.0 < dt_reduce <= 1.0:
+            raise ValueError("dt_reduce must be in (0, 1].")
+
+        if n_reduced < 0:
+            raise ValueError("n_reduced must be nonnegative.")
+
+        if start_step == 1:
+            # initial construction of complete time grid
+            dts = []
+            times = [0.0]
+
+        else:
+            # retain accepted time history up to step start_step-1
+            dts = self.dts[:start_step-1].tolist()
+            times = self.times[:start_step].tolist()
+
+        t = times[-1]
+        n = 0
+
+        while self.maxtime - t > tol:
+            # nominal timestep
+            dt_n = float(self.dt_func(t))
+
+            # apply reduction for n_reduced steps
+            if n < n_reduced:
+                dt_n *= dt_reduce
+
+            if not np.isfinite(dt_n) or dt_n <= 0.0:
+                raise RuntimeError("dt(t) must be finite and positive!")
+
+            remaining = self.maxtime - t
+
+            # final step: land exactly on maxtime
+            if dt_n >= remaining - tol:
+                dt_n = remaining
+                t_new = self.maxtime
+            else:
+                t_new = math.fsum([*dts, dt_n])
+
+            if t_new <= t:
+                raise RuntimeError("Time step is too small to advance time!")
+
+            dts.append(dt_n)
+            times.append(t_new)
+
+            t = t_new
+            n += 1
+
+        self.dts = np.asarray(dts)
+        self.times = np.asarray(times)
+        self.numstep = len(self.dts)
+        self.numstep_stop = self.numstep
+
+        # timestep ratios, om_N = dt_N / dt_{N-1}
+        self.oms = np.ones(self.numstep)
+        self.oms[1:] = self.dts[1:] / self.dts[:-1]
+
+        # current timestep
+        if start_step <= self.numstep:
+            self.dt = self.dts[start_step-1]
+
 
 class solver_base:
     def __init__(self, problem, solver_params):
@@ -211,6 +241,9 @@ class solver_base:
 
         self.wt, self.ni, self.li = 0.0, 0, 0
         self.wt_, self.ni_, self.li_ = [], [], []
+
+        self.dt_reduce = self.solnln.dt_factor  # for adaptive time stepping
+        self.is_adapted = False
 
     def evaluate_system_initial(self):
         # evaluate old initial state of model
@@ -259,8 +292,12 @@ class solver_base:
 
         utilities.print_sep(self.pb.comm)
 
+        n_adpt = 0
+
+        N = self.pb.pbase.restart_step + 1
+
         # Ambit main time loop
-        for N in range(self.pb.pbase.restart_step + 1, self.pb.pbase.numstep_stop + 1):
+        while N <= self.pb.pbase.numstep_stop:
             wts = time.time()
 
             # current time step size and step ratio
@@ -269,11 +306,24 @@ class solver_base:
             # current time
             t = self.pb.pbase.times[N]
 
+            if self.solnln.divcont == "stepsize" and not any(self.solnln.err):
+                utilities.print_status("Error-adaptive stepping enabled, dt = %.2E, level = %i, na: %i / %i" % (self.pb.pbase.dt, self.pb.pbase.n_retry, n_adpt+1, self.solnln.num_steps_adapt), self.pb.comm)
+
             # evaluate any (solution-independent) time curves or other functions
             self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt, om=self.pb.pbase.om)
 
             # solve the nonlinear problem
             self.solve_nonlinear_problem(t, N)
+
+            if self.solnln.divcont == "stepsize":
+                if any(self.solnln.err):
+                    self.adapt_step(t, N)
+                    self.is_adapted = True
+                    n_adpt = 0
+                    continue
+
+            if self.is_adapted:
+                n_adpt += 1
 
             # any post-solve evaluates
             self.pb.evaluate_post_solve(t, N)
@@ -294,7 +344,7 @@ class solver_base:
             wt = time.time() - wts
 
             # print timestep info
-            self.print_timestep_info(N, t, self.pb.pbase.dt, self.solnln.ni, self.solnln.li, wt)
+            self.print_timestep_info(N, t, self.pb.pbase.dt, self.pb.pbase.numstep_stop, self.solnln.ni, self.solnln.li, wt)
 
             # apply any "on-the-fly" changes of model state/parameters
             self.pb.induce_state_change()
@@ -308,13 +358,47 @@ class solver_base:
 
             # set final step
             self.Nfinal = N - self.pb.pbase.restart_step
+            # restore adaption
+            if n_adpt == self.solnln.num_steps_adapt:
+                self.dt_reduce = self.solnln.dt_factor
+                self.pb.pbase.n_retry = 0
+                self.is_adapted, n_adpt = False, 0
 
             # check any abort criterion
             if self.pb.check_abort(t):
                 break
 
+            N += 1
+
         # print final info
         self.print_final()
+
+    def adapt_step(self, t, N):
+        utilities.print_status("Solver error encountered. Adapting time step with factor %.4f" % (self.solnln.dt_factor), self.pb.comm)
+
+        self.solnln.reset_solver(t)
+
+        self.pb.pbase.n_retry += 1
+
+        if self.pb.pbase.n_retry > self.solnln.stepsize_max_adapt:
+            raise RuntimeError(
+                f"Nonlinear solver failed after {self.solnln.stepsize_max_adapt} timestep reductions at step {N}."
+            )
+
+        # reduce failed step and four subsequent steps
+        self.pb.pbase.rebuild_time_grid(
+            start_step=N,
+            dt_reduce=self.dt_reduce,
+            n_reduced=self.solnln.num_steps_adapt,
+        )
+
+        # update if numstep_stop represents the full simulation
+        self.pb.pbase.numstep_stop = self.pb.pbase.numstep
+
+        utilities.print_status("New time step size and planned steps: dt = %.2E, N = %i" % (self.pb.pbase.dt, self.pb.pbase.numstep_stop), self.pb.comm)
+
+        # further reduction on every failure
+        self.dt_reduce *= self.solnln.dt_factor
 
     def print_final(self):
         utilities.print_status(

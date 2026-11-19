@@ -194,7 +194,6 @@ class ScatraProblem(problem_base):
                 self.time_params[i],
                 self.dt,
                 self.om,
-                self.pbase.numstep,
                 V=[self.V_c],
                 time_curves=time_curves,
                 t_init=self.pbase.t_init,
@@ -548,6 +547,6 @@ class ScatraSolver(solver_base):
     def solve_nonlinear_problem(self, t, N):
         self.solnln.newton(t, N)
 
-    def print_timestep_info(self, N, t, dt, ni, li, wt):
+    def print_timestep_info(self, N, t, dt, Nmax, ni, li, wt):
         # print time step info to screen
-        self.pb.ti[0].print_timestep(N, t, dt, self.solnln.lsp, ni=ni, li=li, wt=wt)
+        self.pb.ti[0].print_timestep(N, t, dt, Nmax, self.solnln.lsp, ni=ni, li=li, wt=wt)

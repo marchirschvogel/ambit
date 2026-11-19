@@ -24,7 +24,6 @@ class timeintegration:
         time_params,
         dt,
         om,
-        Nmax,
         V=[None],
         time_curves=None,
         t_init=0.0,
@@ -36,7 +35,6 @@ class timeintegration:
 
         self.dt = dt  # time step
         self.om = om  # step ratio (needed for BDF2 schemes when dt is variable)
-        self.numstep = Nmax
 
         self.time_curves = time_curves
         self.V = V
@@ -98,10 +96,10 @@ class timeintegration:
         self.funcs_data = []
 
     # print timestep info
-    def print_timestep(self, N, t, dt, lsp, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, dt, Nmax, lsp, ni=0, li=0, wt=0):
         msg = "### TIME STEP %i / %i completed | TIME: %.4f | dt: %.4f | ni = %i | li = %i | wt = %.2e" % (
             N,
-            self.numstep,
+            Nmax,
             t,
             dt,
             ni,
@@ -441,7 +439,6 @@ class timeintegration_solid(timeintegration):
         time_params,
         dt,
         om,
-        Nmax,
         V=[None],
         time_curves=None,
         t_init=0.0,
@@ -454,7 +451,6 @@ class timeintegration_solid(timeintegration):
             time_params,
             dt,
             om,
-            Nmax,
             V=V,
             time_curves=time_curves,
             t_init=t_init,
@@ -663,7 +659,6 @@ class timeintegration_fluid(timeintegration):
         time_params,
         dt,
         om,
-        Nmax,
         V=[None],
         time_curves=None,
         t_init=0.0,
@@ -676,7 +671,6 @@ class timeintegration_fluid(timeintegration):
             time_params,
             dt,
             om,
-            Nmax,
             V=V,
             time_curves=time_curves,
             t_init=t_init,
@@ -962,7 +956,6 @@ class timeintegration_phasefield(timeintegration_fluid):
         time_params,
         dt,
         om,
-        Nmax,
         V=[None],
         time_curves=None,
         t_init=0.0,
@@ -975,7 +968,6 @@ class timeintegration_phasefield(timeintegration_fluid):
             time_params,
             dt,
             om,
-            Nmax,
             V=V,
             time_curves=time_curves,
             t_init=t_init,
@@ -1058,7 +1050,6 @@ class timeintegration_scatra(timeintegration_fluid):
         time_params,
         dt,
         om,
-        Nmax,
         V=[None],
         time_curves=None,
         t_init=0.0,
@@ -1071,7 +1062,6 @@ class timeintegration_scatra(timeintegration_fluid):
             time_params,
             dt,
             om,
-            Nmax,
             V=V,
             time_curves=time_curves,
             t_init=t_init,
@@ -1138,13 +1128,12 @@ class timeintegration_scatra(timeintegration_fluid):
 # Flow0d time integration class
 class timeintegration_flow0d(timeintegration):
     # initialize base class
-    def __init__(self, time_params, dt, om, Nmax, time_curves=None, t_init=0.0, comm=None):
+    def __init__(self, time_params, dt, om, time_curves=None, t_init=0.0, comm=None):
         timeintegration.__init__(
             self,
             time_params,
             dt,
             om,
-            Nmax,
             time_curves=time_curves,
             t_init=t_init,
             comm=comm,
@@ -1154,7 +1143,7 @@ class timeintegration_flow0d(timeintegration):
         self.cycleerror = [1.0]
 
     # print time step info
-    def print_timestep(self, N, t, dt, lsp, Nmax, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, dt, Nmax, lsp, ni=0, li=0, wt=0):
         if self.cycle[0] == 1:  # cycle error does not make sense in first cycle
             msg = (
                 "### TIME STEP %i / %i completed | TIME: %.4f | dt: %.4f | CYCLE: %i | CYCLE ERROR: - | ni = %i | li = %i | wt = %.2e"
@@ -1176,20 +1165,19 @@ class timeintegration_flow0d(timeintegration):
 # SignallingNetwork time integration class
 class timeintegration_signet(timeintegration):
     # initialize base class
-    def __init__(self, time_params, dt, om, Nmax, time_curves=None, t_init=0.0, comm=None):
+    def __init__(self, time_params, dt, om, time_curves=None, t_init=0.0, comm=None):
         timeintegration.__init__(
             self,
             time_params,
             dt,
             om,
-            Nmax,
             time_curves=time_curves,
             t_init=t_init,
             comm=comm,
         )
 
     # print time step info
-    def print_timestep(self, N, t, dt, lsp, Nmax, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, dt, Nmax, lsp, ni=0, li=0, wt=0):
         msg = "### TIME STEP %i / %i completed | TIME: %.4f | dt: %.4f | ni = %i | wt = %.2e" % (
             N,
             Nmax,
