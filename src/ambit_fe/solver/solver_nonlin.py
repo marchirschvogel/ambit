@@ -1204,7 +1204,10 @@ class solver_nonlinear_ode(solver_nonlinear):
         # dicts for residual and increment norms
         self.resnorms, self.incnorms = {}, {}
 
-        self.ptc = False  # don't think we'll ever need PTC for the 0D ODE problem...
+        self.divcont = None  # currently, no divergence continue action implemented for 0D problems
+        self.ptc = False  # not implemented
+        self.dt_factor = 1.0  # no error-adaptive stepping implemented so far for 0D problems
+        
         self.solvetype = "direct"  # only a direct solver is available for ODE problems
 
         self.solutils = sol_utils(self)

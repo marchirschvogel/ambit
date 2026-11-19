@@ -358,11 +358,13 @@ class solver_base:
 
             # set final step
             self.Nfinal = N - self.pb.pbase.restart_step
+
             # restore adaption
-            if n_adpt == self.solnln.num_steps_adapt:
-                self.dt_reduce = self.solnln.dt_factor
-                self.pb.pbase.n_retry = 0
-                self.is_adapted, n_adpt = False, 0
+            if self.solnln.divcont == "stepsize":
+                if n_adpt == self.solnln.num_steps_adapt:
+                    self.dt_reduce = self.solnln.dt_factor
+                    self.pb.pbase.n_retry = 0
+                    self.is_adapted, n_adpt = False, 0
 
             # check any abort criterion
             if self.pb.check_abort(t):
