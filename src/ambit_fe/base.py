@@ -354,7 +354,7 @@ class solver_base:
             self.write_step_time(N, t)
 
             # update nonlinear and linear iteration counters
-            self.update_counters(wt, t)
+            self.update_counters(wt, N, t)
 
             # set final step
             self.Nfinal = N - self.pb.pbase.restart_step
@@ -495,7 +495,7 @@ class solver_base:
 
         utilities.print_status("-" * 63, self.pb.comm)
 
-    def update_counters(self, wt, t):
+    def update_counters(self, wt, N, t):
         self.wt += wt
         self.ni += self.solnln.ni
         self.li += self.solnln.li
@@ -519,6 +519,13 @@ class solver_base:
                     mode,
                 )
                 f.write("%.16E %.16E %i %i\n" % (t, wt, self.solnln.ni, self.solnln.li))
+                f.close()
+                # also write time stepping data
+                f = open(
+                    self.pb.pbase.output_path + "/results_" + self.pb.pbase.simname + "_timestepping_data.txt",
+                    mode,
+                )
+                f.write("%.16E %.16E %i\n" % (t, self.pb.pbase.dt, N))
                 f.close()
 
     def write_step_time(self, N, t):

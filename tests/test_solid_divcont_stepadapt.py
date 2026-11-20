@@ -22,7 +22,8 @@ def test_main():
         "write_results_every": -999,
         "output_path": basepath + "/tmp/",
         "results_to_write": ["displacement"],
-        "simname": "solid_divcont_ptc",
+        "simname": "solid_divcont_stepadapt",
+        "write_counters": True,
     }
 
     CONTROL_PARAMS = {"maxtime": 0.1, "dt": 0.1}
